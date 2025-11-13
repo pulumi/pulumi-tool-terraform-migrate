@@ -110,9 +110,10 @@ func Preview(ctx context.Context, stack auto.Stack, opts *PreviewOptions) (map[r
 		}
 	}()
 
-	// Build preview options
+	// Build preview options with refresh enabled
 	previewOpts := append([]optpreview.Option{
 		optpreview.EventStreams(eventChannel),
+		optpreview.Refresh(),
 	}, opts.AdditionalOptions...)
 
 	// Run preview
