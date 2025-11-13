@@ -10,3 +10,5 @@ When asked to translate source code:
 - do not run tf2pulumi
 - do not run `pulumi convert`
 - instead translate the source code directly into the appropriate Pulumi language preserving as much structure as possible
+
+Do not timeout `pulumi-terraform-migrate` as it can take a while. Allow 30 minutes.
