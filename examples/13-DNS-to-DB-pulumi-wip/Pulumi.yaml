@@ -1,0 +1,10 @@
+name: 13-DNS-to-DB-pulumi-wip
+description: Testing migrating projects from Terraform to Pulumi
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-typescript
