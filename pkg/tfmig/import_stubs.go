@@ -13,7 +13,11 @@ import (
 )
 
 // ImportFile represents the structure of import.json and import-stub.json
+//
+// The canonical structure is private so cannot be imported here:
+// https://github.com/pulumi/pulumi/blob/e00d20f2724b0b0b8f5ac27cc4fe46a7bf957d9f/pkg/cmd/pulumi/operations/import.go#L169
 type ImportFile struct {
+	NameTable map[string]resource.URN     `json:"nameTable,omitempty"`
 	Resources []*optimport.ImportResource `json:"resources"`
 }
 
@@ -116,6 +120,16 @@ func ResolveImportStubs(opts ResolveImportStubsOptions) (*ResolveImportStubsResu
 			return nil, err
 		}
 
+		// Component resources such as awsx:ec2:Vpc. These are typically skipped but if they are not included
+		// in the import file but featured as parents of other resources, they Pulumi CLI will complain and
+		// refuse to import based on the import file.
+		if stub.Component {
+			validatedStubs = append(validatedStubs, validatedStub{
+				stub: stub,
+			})
+			continue
+		}
+
 		// Check if resource is marked as skipped
 		if resourceConfig.Migrate == "skip" {
 			fmt.Fprintf(os.Stderr, "Skipping resource %s (marked as skip in migration config)\n", stub.Name)
@@ -151,6 +165,11 @@ func ResolveImportStubs(opts ResolveImportStubsOptions) (*ResolveImportStubsResu
 		stub := validated.stub
 		tfResource := validated.tfResource
 
+		// Preserve components as-is through this pass.
+		if stub.Component {
+			resolvedResources = append(resolvedResources, stub)
+		}
+
 		// Try to infer the import ID
 		pulumiType := tokens.Type(stub.Type)
 		fmt.Fprintf(os.Stderr, "Attempting to infer import ID for %s...\n", stub.Name)
@@ -171,6 +190,7 @@ func ResolveImportStubs(opts ResolveImportStubsOptions) (*ResolveImportStubsResu
 
 	// Write output file
 	output := ImportFile{
+		NameTable: stubs.NameTable,
 		Resources: resolvedResources,
 	}
 
