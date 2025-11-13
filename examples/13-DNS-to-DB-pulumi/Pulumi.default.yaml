@@ -1,0 +1,7 @@
+config:
+  pulumi-translation:dbName: webappdb
+  pulumi-translation:dbInstanceIdentifier: webappdb
+  pulumi-translation:dbUsername:
+    secure: AAABAA2KYUpYRf0h3kui9At9jjxWAZTcWeIvON4wSvQzAuYnw8L3
+  pulumi-translation:dbPassword:
+    secure: AAABANdpjaGnafztJdy00jP8BLMulSLQAkK+gp6u8l8awcQZxaGuGonyJ8Q=
