@@ -42,28 +42,8 @@ func init() {
 func next(migrationFile string) {
 	ctx := context.Background()
 
-	migrationFileExists := false
-	if migrationFile != "" {
-		if _, err := os.Stat(migrationFile); err == nil {
-			migrationFileExists = true
-		}
-	} else {
-		if _, err := os.Stat("migration.json"); err == nil {
-			migrationFile = "migration.json"
-			migrationFileExists = true
-		}
-	}
-
-	// Check if migration file exists
-	if !migrationFileExists {
-		fmt.Printf("Migration file '%s' does not exist.\n\n", migrationFile)
-		fmt.Println("To get started, initialize a migration file by running:")
-		fmt.Println()
-		fmt.Println("  pulumi-terraform-migrate init-migration \\")
-		fmt.Println("    --migration migration.json \\")
-		fmt.Println("    --tf-sources <path-to-terraform-sources> \\")
-		fmt.Println("    --pulumi-sources <path-to-pulumi-project>")
-		fmt.Println()
+	// Check that the migration file exists
+	if !ensureMigrationFileExists(migrationFile) {
 		return
 	}
 
@@ -95,6 +75,34 @@ func next(migrationFile string) {
 	}
 
 	fmt.Println("STOP")
+}
+
+func ensureMigrationFileExists(migrationFile string) bool {
+	migrationFileExists := false
+	if migrationFile != "" {
+		if _, err := os.Stat(migrationFile); err == nil {
+			migrationFileExists = true
+		}
+	} else {
+		if _, err := os.Stat("migration.json"); err == nil {
+			migrationFile = "migration.json"
+			migrationFileExists = true
+		}
+	}
+
+	// Check if migration file exists
+	if !migrationFileExists {
+		fmt.Printf("Migration file '%s' does not exist.\n\n", migrationFile)
+		fmt.Println("To get started, initialize a migration file by running:")
+		fmt.Println()
+		fmt.Println("  pulumi-terraform-migrate init-migration \\")
+		fmt.Println("    --migration migration.json \\")
+		fmt.Println("    --tf-sources <path-to-terraform-sources> \\")
+		fmt.Println("    --pulumi-sources <path-to-pulumi-project>")
+		fmt.Println()
+		return false
+	}
+	return true
 }
 
 func ensurePulumiStacksExist(ctx context.Context, mf *tfmig.MigrationFile) bool {
