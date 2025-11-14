@@ -94,6 +94,9 @@ func visitModule(module *tfjson.StateModule, visitor func(*tfjson.StateResource)
 
 	// Visit resources in this module
 	for _, res := range module.Resources {
+		if res.Mode == tfjson.DataResourceMode {
+			continue
+		}
 		if err := visitor(res); err != nil {
 			return err
 		}

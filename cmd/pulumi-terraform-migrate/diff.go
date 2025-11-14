@@ -123,21 +123,20 @@ func runDiff(migrationFile string, details bool) error {
 		}
 
 		// Display summary
-		fmt.Printf("\n--- Summary ---\n\n")
-		fmt.Printf("Total Terraform resources:     %d\n", summary.TotalResources)
-		fmt.Printf("Fully migrated resources:      %d\n", summary.TranslatedResources[tfmig.TranslatedStatusMigrated])
-		fmt.Printf("Skipped resources:             %d\n", summary.SkippedResources)
-		fmt.Printf("Not tracked resources:         %d\n", summary.NotTrackedResources)
-		fmt.Printf("Not translated resources:      %d\n", summary.NotTranslatedResources)
 		tres := summary.TranslatedResources[tfmig.TranslatedStatusMigrated] +
 			summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate] +
 			summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
-		fmt.Printf("Translated resources:          %d\n",
-			tres)
+
+		fmt.Printf("\n--- Summary ---\n\n")
+		fmt.Printf("Total Terraform resources:     %d\n", summary.TotalResources)
+		fmt.Printf("  fully migrated:              %d\n", summary.TranslatedResources[tfmig.TranslatedStatusMigrated])
+		fmt.Printf("  skipped:                     %d\n", summary.SkippedResources)
+		fmt.Printf("  not tracked:                 %d\n", summary.NotTrackedResources)
+		fmt.Printf("  not translated:              %d\n", summary.NotTranslatedResources)
+		fmt.Printf("  translated:                  %d\n", tres)
 		if tres > 0 {
-			fmt.Printf("  - Needs update:              %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate])
-			fmt.Printf("  - Needs replace:             %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace])
-			fmt.Printf("\n")
+			fmt.Printf("    needs update:              %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate])
+			fmt.Printf("    needs replace:             %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace])
 		}
 
 		// Display detailed status for problematic resources if --details flag is set
@@ -148,7 +147,7 @@ func runDiff(migrationFile string, details bool) error {
 			needsReplace := summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
 
 			if notTracked > 0 || notTranslated > 0 || needsUpdate > 0 || needsReplace > 0 {
-				fmt.Printf("--- Issues Detected ---\n\n")
+				fmt.Printf("\n--- Issues Detected ---\n\n")
 
 				// 1. Not tracked resources (easiest to fix)
 				if notTracked > 0 {
