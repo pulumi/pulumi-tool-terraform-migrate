@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/pulumi/pulumi-terraform-migrate/pkg/pulumix"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
@@ -50,7 +51,7 @@ var _ ResourceStatus = (*ResourceTranslated)(nil)
 
 // ComputeDiff analyzes Terraform resources and computes their migration status.
 // Returns a map of Terraform addresses to their ResourceStatus.
-func ComputeDiff(ctx context.Context, stackConfig StackConfig, ws auto.Workspace, tfState *TerraformState) (map[string]ResourceStatus, error) {
+func ComputeDiff(ctx context.Context, stackConfig Stack, ws auto.Workspace, tfState *tfjson.State) (map[string]ResourceStatus, error) {
 	// Get all TF resources
 	allTFResources, err := AllResources(tfState)
 	if err != nil {

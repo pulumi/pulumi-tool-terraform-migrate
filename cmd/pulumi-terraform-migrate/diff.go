@@ -111,7 +111,7 @@ func runDiff(migrationFile string) error {
 		}
 
 		// Display summary
-		fmt.Printf("\n--- Summary ---\n")
+		fmt.Printf("\n--- Summary ---\n\n")
 		fmt.Printf("Total Terraform resources:     %d\n", summary.TotalResources)
 		fmt.Printf("Fully migrated resources:      %d\n", summary.TranslatedResources[tfmig.TranslatedStatusMigrated])
 		fmt.Printf("Skipped resources:             %d\n", summary.SkippedResources)
