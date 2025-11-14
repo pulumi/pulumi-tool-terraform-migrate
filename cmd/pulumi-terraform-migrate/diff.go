@@ -125,7 +125,8 @@ func runDiff(migrationFile string, details bool) error {
 		// Display summary
 		tres := summary.TranslatedResources[tfmig.TranslatedStatusMigrated] +
 			summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate] +
-			summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
+			summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace] +
+			summary.TranslatedResources[tfmig.TranslatedStatusNoState]
 
 		fmt.Printf("\n--- Summary ---\n\n")
 		fmt.Printf("Total Terraform resources:     %d\n", summary.TotalResources)
@@ -135,6 +136,8 @@ func runDiff(migrationFile string, details bool) error {
 		fmt.Printf("  not translated:              %d\n", summary.NotTranslatedResources)
 		fmt.Printf("  translated:                  %d\n", tres)
 		if tres > 0 {
+			noState := summary.TranslatedResources[tfmig.TranslatedStatusNoState]
+			fmt.Printf("    no state:                  %d\n", noState)
 			fmt.Printf("    needs update:              %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate])
 			fmt.Printf("    needs replace:             %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace])
 		}

@@ -129,8 +129,11 @@ func ComputeDiff(ctx context.Context, stackConfig Stack, ws auto.Workspace, tfSt
 				translatedStatus = TranslatedStatusNeedsUpdate
 			} else if previewStat.WillNotChange() {
 				translatedStatus = TranslatedStatusMigrated
+			} else if previewStat.WillCreate() {
+				// Resource will be created - this means no state exists yet
+				translatedStatus = TranslatedStatusNoState
 			} else {
-				// Other operations (create, delete, etc.) - treat as needs update
+				// Other operations (delete, etc.) - treat as needs update
 				translatedStatus = TranslatedStatusNeedsUpdate
 			}
 
