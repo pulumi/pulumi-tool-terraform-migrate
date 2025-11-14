@@ -129,13 +129,16 @@ func runDiff(migrationFile string, details bool) error {
 		fmt.Printf("Skipped resources:             %d\n", summary.SkippedResources)
 		fmt.Printf("Not tracked resources:         %d\n", summary.NotTrackedResources)
 		fmt.Printf("Not translated resources:      %d\n", summary.NotTranslatedResources)
+		tres := summary.TranslatedResources[tfmig.TranslatedStatusMigrated] +
+			summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate] +
+			summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
 		fmt.Printf("Translated resources:          %d\n",
-			summary.TranslatedResources[tfmig.TranslatedStatusMigrated]+
-				summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate]+
-				summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace])
-		fmt.Printf("  - Needs update:              %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate])
-		fmt.Printf("  - Needs replace:             %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace])
-		fmt.Printf("\n")
+			tres)
+		if tres > 0 {
+			fmt.Printf("  - Needs update:              %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate])
+			fmt.Printf("  - Needs replace:             %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace])
+			fmt.Printf("\n")
+		}
 
 		// Display detailed status for problematic resources if --details flag is set
 		if details {
