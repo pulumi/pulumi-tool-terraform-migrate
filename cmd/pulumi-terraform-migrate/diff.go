@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/pulumi/pulumi-terraform-migrate/pkg/tfmig"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
@@ -27,7 +28,8 @@ Example:
 
 	Run: func(cmd *cobra.Command, args []string) {
 		migrationFile := cmd.Flag("migration").Value.String()
-		if err := runDiff(migrationFile); err != nil {
+		details, _ := cmd.Flags().GetBool("details")
+		if err := runDiff(migrationFile, details); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -37,6 +39,7 @@ Example:
 func init() {
 	rootCmd.AddCommand(diffCmd)
 	diffCmd.Flags().String("migration", "migration.json", "Path to migration.json file")
+	diffCmd.Flags().Bool("details", false, "Show detailed list of resources with issues")
 }
 
 // DiffSummary contains the overall diff results
@@ -59,7 +62,7 @@ func (ds DiffSummary) MigratedResources() int {
 	return ds.TranslatedResources[tfmig.TranslatedStatusMigrated]
 }
 
-func runDiff(migrationFile string) error {
+func runDiff(migrationFile string, details bool) error {
 	ctx := context.Background()
 
 	// Load migration file
@@ -77,6 +80,10 @@ func runDiff(migrationFile string) error {
 	// Process each stack
 	for _, stackConfig := range mf.Migration.Stacks {
 		fmt.Printf("\n=== Stack: %s ===\n\n", stackConfig.PulumiStack)
+		fmt.Printf("Terraform project: %s\n", mf.Migration.TFSources)
+		fmt.Printf("Terraform state:   %s\n", stackConfig.TFState)
+		fmt.Printf("Pulumi project:    %s\n", mf.Migration.PulumiSources)
+		fmt.Printf("\n")
 
 		// Load Terraform state to get all TF resources
 		tfState, err := tfmig.LoadTerraformState(stackConfig.TFState)
@@ -126,46 +133,102 @@ func runDiff(migrationFile string) error {
 		fmt.Printf("  - Needs replace:             %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace])
 		fmt.Printf("\n")
 
-		// Display detailed status for problematic resources
-		needsUpdate := summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate]
-		needsReplace := summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
-		noState := summary.TranslatedResources[tfmig.TranslatedStatusNoState]
+		// Display detailed status for problematic resources if --details flag is set
+		if details {
+			notTracked := summary.NotTrackedResources
+			noState := summary.TranslatedResources[tfmig.TranslatedStatusNoState]
+			needsUpdate := summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate]
+			needsReplace := summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
 
-		if needsReplace > 0 || needsUpdate > 0 || noState > 0 {
-			fmt.Printf("--- Issues Detected ---\n\n")
+			if notTracked > 0 || noState > 0 || needsUpdate > 0 || needsReplace > 0 {
+				fmt.Printf("--- Issues Detected ---\n\n")
 
-			if needsReplace > 0 {
-				fmt.Printf("Resources that will be REPLACED:\n")
-				for tfAddr, status := range statusMap {
-					if rt, ok := status.(*tfmig.ResourceTranslated); ok && rt.TranslatedStatus == tfmig.TranslatedStatusNeedsReplace {
-						fmt.Printf("  - %s (URN: %s)\n", tfAddr, rt.URN)
+				// 1. Not tracked resources (easiest to fix)
+				if notTracked > 0 {
+					fmt.Printf("NOT TRACKED resources (%d):\n", notTracked)
+					fmt.Printf("These resources need to be added to the Pulumi program.\n\n")
+
+					var addrs []string
+					for tfAddr, status := range statusMap {
+						if _, ok := status.(*tfmig.ResourceNotTracked); ok {
+							addrs = append(addrs, tfAddr)
+						}
 					}
-				}
-				fmt.Printf("\n")
-			}
+					sort.Strings(addrs)
 
-			if needsUpdate > 0 {
-				fmt.Printf("Resources that will be UPDATED:\n")
-				for tfAddr, status := range statusMap {
-					if rt, ok := status.(*tfmig.ResourceTranslated); ok && rt.TranslatedStatus == tfmig.TranslatedStatusNeedsUpdate {
-						fmt.Printf("  - %s (URN: %s)\n", tfAddr, rt.URN)
+					for _, tfAddr := range addrs {
+						fmt.Printf("  - %s\n", tfAddr)
 					}
+					fmt.Printf("\n")
 				}
-				fmt.Printf("\n")
-			}
 
-			if noState > 0 {
-				fmt.Printf("Resources with NO STATE (missing from Pulumi):\n")
-				for tfAddr, status := range statusMap {
-					if rt, ok := status.(*tfmig.ResourceTranslated); ok && rt.TranslatedStatus == tfmig.TranslatedStatusNoState {
-						fmt.Printf("  - %s (URN: %s)\n", tfAddr, rt.URN)
+				// 2. No Pulumi State resources
+				if noState > 0 {
+					fmt.Printf("NO PULUMI STATE resources (%d):\n", noState)
+					fmt.Printf("These resources exist in the program but are missing from Pulumi state.\n\n")
+
+					var addrs []string
+					for tfAddr, status := range statusMap {
+						if rt, ok := status.(*tfmig.ResourceTranslated); ok && rt.TranslatedStatus == tfmig.TranslatedStatusNoState {
+							addrs = append(addrs, tfAddr)
+						}
 					}
+					sort.Strings(addrs)
+
+					for _, tfAddr := range addrs {
+						status := statusMap[tfAddr].(*tfmig.ResourceTranslated)
+						fmt.Printf("  - %s\n    URN: %s\n", tfAddr, status.URN)
+					}
+					fmt.Printf("\n")
 				}
-				fmt.Printf("\n")
+
+				// 3. Needs update resources
+				if needsUpdate > 0 {
+					fmt.Printf("NEEDS UPDATE resources (%d):\n", needsUpdate)
+					fmt.Printf("These resources will be updated when you run pulumi up.\n\n")
+
+					var addrs []string
+					for tfAddr, status := range statusMap {
+						if rt, ok := status.(*tfmig.ResourceTranslated); ok && rt.TranslatedStatus == tfmig.TranslatedStatusNeedsUpdate {
+							addrs = append(addrs, tfAddr)
+						}
+					}
+					sort.Strings(addrs)
+
+					for _, tfAddr := range addrs {
+						status := statusMap[tfAddr].(*tfmig.ResourceTranslated)
+						fmt.Printf("  - %s\n    URN: %s\n", tfAddr, status.URN)
+					}
+					fmt.Printf("\n")
+				}
+
+				// 4. Needs replace resources
+				if needsReplace > 0 {
+					fmt.Printf("NEEDS REPLACE resources (%d):\n", needsReplace)
+					fmt.Printf("WARNING: These resources will be REPLACED (destroyed and recreated) when you run pulumi up.\n\n")
+
+					var addrs []string
+					for tfAddr, status := range statusMap {
+						if rt, ok := status.(*tfmig.ResourceTranslated); ok && rt.TranslatedStatus == tfmig.TranslatedStatusNeedsReplace {
+							addrs = append(addrs, tfAddr)
+						}
+					}
+					sort.Strings(addrs)
+
+					for _, tfAddr := range addrs {
+						status := statusMap[tfAddr].(*tfmig.ResourceTranslated)
+						fmt.Printf("  - %s\n    URN: %s\n", tfAddr, status.URN)
+					}
+					fmt.Printf("\n")
+				}
 			}
 		}
 
 		// Success indicator
+		needsUpdate := summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate]
+		needsReplace := summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
+		noState := summary.TranslatedResources[tfmig.TranslatedStatusNoState]
+
 		if needsReplace == 0 && needsUpdate == 0 && noState == 0 && summary.NotTrackedResources == 0 {
 			fmt.Printf("✓ All resources migrated successfully!\n\n")
 		}
