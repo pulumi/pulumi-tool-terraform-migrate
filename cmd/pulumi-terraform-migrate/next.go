@@ -47,6 +47,10 @@ func next(migrationFile string) {
 		return
 	}
 
+	if !ensureMigrationFileIntegrity(migrationFile) {
+		return
+	}
+
 	// Load the migration file
 	mf, err := tfmig.LoadMigration(migrationFile)
 	if err != nil {
@@ -75,6 +79,34 @@ func next(migrationFile string) {
 	}
 
 	fmt.Println("STOP")
+}
+
+func ensureMigrationFileIntegrity(migrationFile string) bool {
+	// Load the migration file
+	mf, err := tfmig.LoadMigration(migrationFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading migration file: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Check migration integrity
+	result, err := tfmig.CheckMigrationIntegrity(mf)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error checking migration integrity: %v\n", err)
+		os.Exit(1)
+	}
+
+	// If there are errors, print instructions
+	if result.HasErrors() {
+		fmt.Printf("Migration file has %d integrity issue(s).\n\n", len(result.Errors))
+		fmt.Println("Please run the check command to see details and follow its suggestions:")
+		fmt.Println()
+		fmt.Printf("  pulumi-terraform-migrate check --migration %s\n", migrationFile)
+		fmt.Println()
+		return false
+	}
+
+	return true
 }
 
 func ensureMigrationFileExists(migrationFile string) bool {
