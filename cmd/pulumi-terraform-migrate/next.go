@@ -560,7 +560,7 @@ func findMissingResources(stack *tfmig.Stack, importStubs *tfmig.ImportFile) []t
 
 	// Find resources in migration.json that aren't in import-stub.json
 	for _, res := range stack.Resources {
-		if res.Migrate == "skip" {
+		if res.Migrate == tfmig.MigrateModeSkip {
 			continue
 		}
 		// Skip resources without TFAddr

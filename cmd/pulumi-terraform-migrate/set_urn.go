@@ -90,8 +90,8 @@ func setResourceUrn(migrationFile, tfAddress, urn string) error {
 			if res.TFAddr == tfAddress {
 				res.URN = string(parsedURNSpecialized)
 				// Clear migrate flag if it was set to skip
-				if res.Migrate == "skip" {
-					res.Migrate = ""
+				if res.Migrate == tfmig.MigrateModeSkip {
+					res.Migrate = tfmig.MigrateModeEmpty
 				}
 				matchCount++
 				found = true

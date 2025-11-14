@@ -131,7 +131,7 @@ func ResolveImportStubs(opts ResolveImportStubsOptions) (*ResolveImportStubsResu
 		}
 
 		// Check if resource is marked as skipped
-		if resourceConfig.Migrate == "skip" {
+		if resourceConfig.Migrate == MigrateModeSkip {
 			fmt.Fprintf(os.Stderr, "Skipping resource %s (marked as skip in migration config)\n", stub.Name)
 			skippedCount++
 			continue
@@ -277,7 +277,7 @@ func (e *noMatchingResourceError) Error() string {
 
 	var exampleSkipEntry Resource = Resource{
 		URN:     urn,
-		Migrate: "skip",
+		Migrate: MigrateModeSkip,
 	}
 
 	var b bytes.Buffer

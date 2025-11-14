@@ -50,7 +50,7 @@ func skipResource(migrationFile, tfAddress string) error {
 		for j := range stack.Resources {
 			res := &stack.Resources[j]
 			if res.TFAddr == tfAddress {
-				res.Migrate = "skip"
+				res.Migrate = tfmig.MigrateModeSkip
 				matchCount++
 			}
 		}

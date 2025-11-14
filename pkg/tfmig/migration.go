@@ -14,6 +14,22 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )
 
+// MigrateMode represents the migration status or handling of a resource
+type MigrateMode string
+
+const (
+	// MigrateModeEmpty indicates the resource should be migrated normally
+	MigrateModeEmpty MigrateMode = ""
+	// MigrateModeSkip indicates the resource should be skipped in the migration
+	MigrateModeSkip MigrateMode = "skip"
+	// MigrateModeIgnoreNoState indicates that a resource that did not finish migrating state can be skipped
+	MigrateModeIgnoreNoState MigrateMode = "ignore-no-state"
+	// MigrateModeIgnoreNeedsUpdate indicates the resource that has state but wants to update on preview can be skipped
+	MigrateModeIgnoreNeedsUpdate MigrateMode = "ignore-needs-update"
+	// MigrateModeIgnoreNeedsUpdate indicates the resource that has state but wants to replace on preview can be skipped
+	MigrateModeIgnoreNeedsReplace MigrateMode = "ignore-needs-replace"
+)
+
 // MigrationFile represents the top-level structure of migration.json
 type MigrationFile struct {
 	Migration Migration `json:"migration"`
@@ -41,9 +57,9 @@ type Stack struct {
 
 // Resource represents a mapping between a Terraform resource and a Pulumi resource
 type Resource struct {
-	TFAddr  string `json:"tf-addr,omitempty"`
-	URN     string `json:"urn,omitempty"`
-	Migrate string `json:"migrate,omitempty"` // e.g., "skip"
+	TFAddr  string      `json:"tf-addr,omitempty"`
+	URN     string      `json:"urn,omitempty"`
+	Migrate MigrateMode `json:"migrate,omitempty"`
 }
 
 // LoadMigration reads and parses a migration.json file
@@ -258,7 +274,7 @@ func initResourceMapping(state *tfjson.State, projectName, stackName string) ([]
 			// If mapping fails, mark resource as skip
 			resources = append(resources, Resource{
 				TFAddr:  res.Address,
-				Migrate: "skip",
+				Migrate: MigrateModeSkip,
 			})
 			return nil
 		}
@@ -286,7 +302,7 @@ func initResourceMapping(state *tfjson.State, projectName, stackName string) ([]
 		} else {
 			resources = append(resources, Resource{
 				TFAddr:  res.Address,
-				Migrate: "skip",
+				Migrate: MigrateModeSkip,
 			})
 		}
 		return nil

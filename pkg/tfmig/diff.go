@@ -92,7 +92,7 @@ func ComputeDiff(ctx context.Context, stackConfig Stack, ws auto.Workspace, tfSt
 		}
 
 		// Check if skipped
-		if migRes.Migrate == "skip" {
+		if migRes.Migrate == MigrateModeSkip {
 			result[tfRes.Address] = &ResourceSkipped{}
 			continue
 		}
