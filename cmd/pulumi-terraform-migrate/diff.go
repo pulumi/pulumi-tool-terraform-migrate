@@ -152,7 +152,9 @@ func runDiff(migrationFile string, details bool) error {
 				// 1. Not tracked resources (easiest to fix)
 				if notTracked > 0 {
 					fmt.Printf("NOT TRACKED resources (%d):\n", notTracked)
-					fmt.Printf("These resources need to be added to migration.json.\n\n")
+					fmt.Printf("These resources need to be added to migration.json.\n")
+					fmt.Printf("  - use `pulumi-terraform-migrate set-urn` to track them.\n")
+					fmt.Printf("  - use `pulumi-terraform-migrate skip` to skip them during migration.\n")
 
 					var addrs []string
 					for tfAddr, status := range statusMap {
@@ -171,8 +173,8 @@ func runDiff(migrationFile string, details bool) error {
 				// 2. Not translated resources
 				if notTranslated > 0 {
 					fmt.Printf("NOT TRANSLATED resources (%d):\n", notTranslated)
-					fmt.Printf("These resources are tracked but not found in Pulumi preview.\n")
-					fmt.Printf("They need to be translated to Pulumi source code.\n\n")
+					fmt.Printf("These resources are tracked but not found by running preview.\n")
+					fmt.Printf("Please add Pulumi source code for these resources.\n\n")
 
 					var addrs []string
 					for tfAddr, status := range statusMap {
@@ -191,7 +193,7 @@ func runDiff(migrationFile string, details bool) error {
 				// 3. Needs update resources
 				if needsUpdate > 0 {
 					fmt.Printf("NEEDS UPDATE resources (%d):\n", needsUpdate)
-					fmt.Printf("These resources will be updated when you run pulumi up.\n\n")
+					fmt.Printf("These resources will be updated when you run `pulumi up`.\n\n")
 
 					var addrs []string
 					for tfAddr, status := range statusMap {
@@ -211,7 +213,7 @@ func runDiff(migrationFile string, details bool) error {
 				// 4. Needs replace resources
 				if needsReplace > 0 {
 					fmt.Printf("NEEDS REPLACE resources (%d):\n", needsReplace)
-					fmt.Printf("WARNING: These resources will be REPLACED (destroyed and recreated) when you run pulumi up.\n\n")
+					fmt.Printf("WARNING: These resources will be REPLACED (destroyed and recreated) when you run `pulumi up`.\n\n")
 
 					var addrs []string
 					for tfAddr, status := range statusMap {
