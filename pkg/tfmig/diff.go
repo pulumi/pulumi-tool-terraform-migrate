@@ -125,9 +125,24 @@ func ComputeDiff(ctx context.Context, stackConfig Stack, ws auto.Workspace, tfSt
 				translatedStatus = TranslatedStatusNeedsUpdate
 			}
 
-			result[tfRes.Address] = &ResourceTranslated{
-				URN:              pulumi.URN(migRes.URN),
-				TranslatedStatus: translatedStatus,
+			// Check if this resource should be ignored based on its translated status
+			shouldIgnore := false
+			switch migRes.Migrate {
+			case MigrateModeIgnoreNoState:
+				shouldIgnore = translatedStatus == TranslatedStatusNoState
+			case MigrateModeIgnoreNeedsUpdate:
+				shouldIgnore = translatedStatus == TranslatedStatusNeedsUpdate
+			case MigrateModeIgnoreNeedsReplace:
+				shouldIgnore = translatedStatus == TranslatedStatusNeedsReplace
+			}
+
+			if shouldIgnore {
+				result[tfRes.Address] = &ResourceSkipped{}
+			} else {
+				result[tfRes.Address] = &ResourceTranslated{
+					URN:              pulumi.URN(migRes.URN),
+					TranslatedStatus: translatedStatus,
+				}
 			}
 		}
 	}
