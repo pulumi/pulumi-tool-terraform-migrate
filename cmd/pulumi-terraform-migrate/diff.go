@@ -53,6 +53,9 @@ type DiffSummary struct {
 	// How many resources are in [ResourceNotTracked] status.
 	NotTrackedResources int
 
+	// How many resources are in [ResourceNotTranslated] status.
+	NotTranslatedResources int
+
 	// How many resources are in [ResourceTranslated] status.
 	TranslatedResources map[tfmig.TranslatedStatus]int
 }
@@ -112,6 +115,8 @@ func runDiff(migrationFile string, details bool) error {
 				summary.SkippedResources++
 			case *tfmig.ResourceNotTracked:
 				summary.NotTrackedResources++
+			case *tfmig.ResourceNotTranslated:
+				summary.NotTranslatedResources++
 			case *tfmig.ResourceTranslated:
 				summary.TranslatedResources[s.TranslatedStatus]++
 			}
@@ -123,12 +128,11 @@ func runDiff(migrationFile string, details bool) error {
 		fmt.Printf("Fully migrated resources:      %d\n", summary.TranslatedResources[tfmig.TranslatedStatusMigrated])
 		fmt.Printf("Skipped resources:             %d\n", summary.SkippedResources)
 		fmt.Printf("Not tracked resources:         %d\n", summary.NotTrackedResources)
+		fmt.Printf("Not translated resources:      %d\n", summary.NotTranslatedResources)
 		fmt.Printf("Translated resources:          %d\n",
 			summary.TranslatedResources[tfmig.TranslatedStatusMigrated]+
 				summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate]+
-				summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]+
-				summary.TranslatedResources[tfmig.TranslatedStatusNoState])
-		fmt.Printf("  - No Pulumi state:           %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNoState])
+				summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace])
 		fmt.Printf("  - Needs update:              %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate])
 		fmt.Printf("  - Needs replace:             %d\n", summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace])
 		fmt.Printf("\n")
@@ -136,17 +140,17 @@ func runDiff(migrationFile string, details bool) error {
 		// Display detailed status for problematic resources if --details flag is set
 		if details {
 			notTracked := summary.NotTrackedResources
-			noState := summary.TranslatedResources[tfmig.TranslatedStatusNoState]
+			notTranslated := summary.NotTranslatedResources
 			needsUpdate := summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate]
 			needsReplace := summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
 
-			if notTracked > 0 || noState > 0 || needsUpdate > 0 || needsReplace > 0 {
+			if notTracked > 0 || notTranslated > 0 || needsUpdate > 0 || needsReplace > 0 {
 				fmt.Printf("--- Issues Detected ---\n\n")
 
 				// 1. Not tracked resources (easiest to fix)
 				if notTracked > 0 {
 					fmt.Printf("NOT TRACKED resources (%d):\n", notTracked)
-					fmt.Printf("These resources need to be added to the Pulumi program.\n\n")
+					fmt.Printf("These resources need to be added to migration.json.\n\n")
 
 					var addrs []string
 					for tfAddr, status := range statusMap {
@@ -162,22 +166,22 @@ func runDiff(migrationFile string, details bool) error {
 					fmt.Printf("\n")
 				}
 
-				// 2. No Pulumi State resources
-				if noState > 0 {
-					fmt.Printf("NO PULUMI STATE resources (%d):\n", noState)
-					fmt.Printf("These resources exist in the program but are missing from Pulumi state.\n\n")
+				// 2. Not translated resources
+				if notTranslated > 0 {
+					fmt.Printf("NOT TRANSLATED resources (%d):\n", notTranslated)
+					fmt.Printf("These resources are tracked but not found in Pulumi preview.\n")
+					fmt.Printf("They need to be translated to Pulumi source code.\n\n")
 
 					var addrs []string
 					for tfAddr, status := range statusMap {
-						if rt, ok := status.(*tfmig.ResourceTranslated); ok && rt.TranslatedStatus == tfmig.TranslatedStatusNoState {
+						if _, ok := status.(*tfmig.ResourceNotTranslated); ok {
 							addrs = append(addrs, tfAddr)
 						}
 					}
 					sort.Strings(addrs)
 
 					for _, tfAddr := range addrs {
-						status := statusMap[tfAddr].(*tfmig.ResourceTranslated)
-						fmt.Printf("  - %s\n    URN: %s\n", tfAddr, status.URN)
+						fmt.Printf("  - %s\n", tfAddr)
 					}
 					fmt.Printf("\n")
 				}
@@ -227,9 +231,8 @@ func runDiff(migrationFile string, details bool) error {
 		// Success indicator
 		needsUpdate := summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate]
 		needsReplace := summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
-		noState := summary.TranslatedResources[tfmig.TranslatedStatusNoState]
 
-		if needsReplace == 0 && needsUpdate == 0 && noState == 0 && summary.NotTrackedResources == 0 {
+		if needsReplace == 0 && needsUpdate == 0 && summary.NotTrackedResources == 0 && summary.NotTranslatedResources == 0 {
 			fmt.Printf("✓ All resources migrated successfully!\n\n")
 		}
 	}

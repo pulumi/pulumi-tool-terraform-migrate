@@ -30,6 +30,14 @@ func (ResourceNotTracked) isResourceStatus() {}
 
 var _ ResourceStatus = (*ResourceNotTracked)(nil)
 
+// Resource is tracked in migration.json but not found in Pulumi preview results.
+// This happens when the resource hasn't been translated to Pulumi source code yet.
+type ResourceNotTranslated struct{}
+
+func (ResourceNotTranslated) isResourceStatus() {}
+
+var _ ResourceStatus = (*ResourceNotTranslated)(nil)
+
 // Sources have been translated to Pulumi and the resource has an URN.
 type ResourceTranslated struct {
 	URN              pulumi.URN
@@ -100,7 +108,7 @@ func ComputeDiff(ctx context.Context, stackConfig Stack, ws auto.Workspace, tfSt
 		// Resource is tracked and not skipped
 		if migRes.URN == "" {
 			// No URN mapping yet - not translated
-			result[tfRes.Address] = &ResourceNotTracked{}
+			result[tfRes.Address] = &ResourceNotTranslated{}
 		} else {
 			// Check if URN exists in preview status
 			urn, err := resource.ParseURN(migRes.URN)
@@ -112,8 +120,9 @@ func ComputeDiff(ctx context.Context, stackConfig Stack, ws auto.Workspace, tfSt
 			var translatedStatus TranslatedStatus
 
 			if !hasPreviewStatus {
-				// URN not found in preview - no state
-				translatedStatus = TranslatedStatusNoState
+				// URN not found in preview - resource not translated in source code
+				result[tfRes.Address] = &ResourceNotTranslated{}
+				continue
 			} else if previewStat.WillReplace() {
 				translatedStatus = TranslatedStatusNeedsReplace
 			} else if previewStat.WillUpdate() {
