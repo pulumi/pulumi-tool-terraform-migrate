@@ -8,14 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var skipCmd = &cobra.Command{
-	Use:   "skip [tf-resource-address]",
-	Short: "Mark a Terraform resource to be skipped during migration",
-	Long: `Marks a specific Terraform resource to be skipped during migration by setting migrate: "skip"
-for that resource in all stacks in the migration.json file.
+var untrackCmd = &cobra.Command{
+	Use:   "untrack [tf-resource-address]",
+	Short: "Remove a Terraform resource from migration tracking",
+	Long: `Removes a specific Terraform resource from migration.json by deleting its entry
+from all stacks in the migration file.
 
 Example:
-  pulumi-terraform-migrate skip --migration migration.json aws_instance.example`,
+  pulumi-terraform-migrate untrack --migration migration.json aws_instance.example`,
 
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -23,7 +23,7 @@ Example:
 		tfAddress := args[0]
 		force, _ := cmd.Flags().GetBool("force")
 
-		if err := skipResource(migrationFile, tfAddress, force); err != nil {
+		if err := untrackResource(migrationFile, tfAddress, force); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -31,12 +31,12 @@ Example:
 }
 
 func init() {
-	rootCmd.AddCommand(skipCmd)
-	skipCmd.Flags().String("migration", "migration.json", "Path to migration.json file")
-	skipCmd.Flags().Bool("force", false, "Force the operation even if it introduces new integrity errors")
+	rootCmd.AddCommand(untrackCmd)
+	untrackCmd.Flags().String("migration", "migration.json", "Path to migration.json file")
+	untrackCmd.Flags().Bool("force", false, "Force the operation even if it introduces new integrity errors")
 }
 
-func skipResource(migrationFile, tfAddress string, force bool) error {
+func untrackResource(migrationFile, tfAddress string, force bool) error {
 	// Load the migration file
 	mf, err := tfmig.LoadMigration(migrationFile)
 	if err != nil {
@@ -50,22 +50,30 @@ func skipResource(migrationFile, tfAddress string, force bool) error {
 	}
 	beforeErrorCount := len(beforeResult.Errors)
 
-	// Track how many resources were marked as skip
-	matchCount := 0
+	// Track how many resources were removed
+	removeCount := 0
 
-	// Iterate through all stacks and mark matching resources as skip
+	// Iterate through all stacks and remove matching resources
 	for i := range mf.Migration.Stacks {
 		stack := &mf.Migration.Stacks[i]
+		var filteredResources []tfmig.Resource
+
 		for j := range stack.Resources {
 			res := &stack.Resources[j]
 			if res.TFAddr == tfAddress {
-				res.Migrate = tfmig.MigrateModeSkip
-				matchCount++
+				// Skip this resource (don't add it to filtered list)
+				removeCount++
+			} else {
+				// Keep this resource
+				filteredResources = append(filteredResources, *res)
 			}
 		}
+
+		// Replace resources with filtered list
+		stack.Resources = filteredResources
 	}
 
-	if matchCount == 0 {
+	if removeCount == 0 {
 		return fmt.Errorf("no resources found with address %q", tfAddress)
 	}
 
@@ -87,7 +95,7 @@ func skipResource(migrationFile, tfAddress string, force bool) error {
 		return fmt.Errorf("failed to save migration file: %w", err)
 	}
 
-	fmt.Printf("Marked %d resource(s) with address %q as skip in %s\n", matchCount, tfAddress, migrationFile)
+	fmt.Printf("Removed %d resource(s) with address %q from %s\n", removeCount, tfAddress, migrationFile)
 	if afterErrorCount > beforeErrorCount {
 		fmt.Printf("Warning: introduced %d new integrity error(s) (--force was used)\n", afterErrorCount-beforeErrorCount)
 	} else if afterErrorCount < beforeErrorCount {

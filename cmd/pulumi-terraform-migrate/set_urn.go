@@ -29,6 +29,7 @@ Example:
 		migrationFile := cmd.Flag("migration").Value.String()
 		urn := cmd.Flag("urn").Value.String()
 		tfAddress := cmd.Flag("tf-addr").Value.String()
+		force, _ := cmd.Flags().GetBool("force")
 
 		if urn == "" {
 			fmt.Fprintf(os.Stderr, "Error: --urn flag is required\n")
@@ -40,7 +41,7 @@ Example:
 			os.Exit(1)
 		}
 
-		if err := setResourceUrn(migrationFile, tfAddress, urn); err != nil {
+		if err := setResourceUrn(migrationFile, tfAddress, urn, force); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -52,16 +53,24 @@ func init() {
 	setUrnCmd.Flags().String("migration", "migration.json", "Path to migration.json file")
 	setUrnCmd.Flags().String("urn", "", "URN identifying the Pulumi resource")
 	setUrnCmd.Flags().String("tf-addr", "", "Address identifying the Terraform resource")
+	setUrnCmd.Flags().Bool("force", false, "Force the operation even if it introduces new integrity errors")
 	setUrnCmd.MarkFlagRequired("urn")
 	setUrnCmd.MarkFlagRequired("tf-addr")
 }
 
-func setResourceUrn(migrationFile, tfAddress, urn string) error {
+func setResourceUrn(migrationFile, tfAddress, urn string, force bool) error {
 	// Load the migration file
 	mf, err := tfmig.LoadMigration(migrationFile)
 	if err != nil {
 		return fmt.Errorf("failed to load migration file: %w", err)
 	}
+
+	// Run integrity checks before the edit
+	beforeResult, err := tfmig.CheckMigrationIntegrity(mf)
+	if err != nil {
+		return fmt.Errorf("failed to check migration integrity before edit: %w", err)
+	}
+	beforeErrorCount := len(beforeResult.Errors)
 
 	// Track how many resources were updated
 	matchCount := 0
@@ -109,11 +118,29 @@ func setResourceUrn(migrationFile, tfAddress, urn string) error {
 		}
 	}
 
+	// Run integrity checks after the edit
+	afterResult, err := tfmig.CheckMigrationIntegrity(mf)
+	if err != nil {
+		return fmt.Errorf("failed to check migration integrity after edit: %w", err)
+	}
+	afterErrorCount := len(afterResult.Errors)
+
+	// Check if the edit introduced new errors
+	if afterErrorCount > beforeErrorCount && !force {
+		return fmt.Errorf("operation would introduce %d new integrity error(s) (had %d, now would have %d). Use --force to proceed anyway",
+			afterErrorCount-beforeErrorCount, beforeErrorCount, afterErrorCount)
+	}
+
 	// Save the modified migration file
 	if err := mf.Save(migrationFile); err != nil {
 		return fmt.Errorf("failed to save migration file: %w", err)
 	}
 
 	fmt.Printf("Updated URN for %d resource(s) with address %q in %s\n", matchCount, tfAddress, migrationFile)
+	if afterErrorCount > beforeErrorCount {
+		fmt.Printf("Warning: introduced %d new integrity error(s) (--force was used)\n", afterErrorCount-beforeErrorCount)
+	} else if afterErrorCount < beforeErrorCount {
+		fmt.Printf("Fixed %d integrity error(s)\n", beforeErrorCount-afterErrorCount)
+	}
 	return nil
 }
