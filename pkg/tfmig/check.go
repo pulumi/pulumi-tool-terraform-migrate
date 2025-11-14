@@ -207,7 +207,7 @@ func checkStateConsistency(mf *MigrationFile, result *CheckResult) error {
 				result.AddErrorWithSuggestion("state-consistency",
 					fmt.Sprintf("%s: resource '%s' exists in migration.json but not in Terraform state",
 						stackPrefix, addr),
-					fmt.Sprintf("pulumi-terraform-migrate untrack --addr '%s' --stack '%s'", addr, stack.PulumiStack))
+					fmt.Sprintf("pulumi-terraform-migrate untrack '%s'", addr))
 			}
 		}
 	}
