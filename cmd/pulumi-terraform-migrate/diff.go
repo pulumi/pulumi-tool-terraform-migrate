@@ -176,7 +176,7 @@ func runDiff(migrationFile string, details bool) error {
 				// 2. Not translated resources
 				if notTranslated > 0 {
 					fmt.Printf("NOT TRANSLATED resources (%d):\n", notTranslated)
-					fmt.Printf("These resources are tracked but not found by running preview.\n")
+					fmt.Printf("These resources are tracked in migration.json but not in Pulumi preview results.\n")
 					fmt.Printf("Please add Pulumi source code for these resources.\n\n")
 
 					var addrs []string
@@ -196,7 +196,17 @@ func runDiff(migrationFile string, details bool) error {
 				// 3. Needs update resources
 				if needsUpdate > 0 {
 					fmt.Printf("NEEDS UPDATE resources (%d):\n", needsUpdate)
-					fmt.Printf("These resources will be updated when you run `pulumi up`.\n\n")
+					fmt.Printf("These resources will be updated when you run `pulumi up`.\n")
+					// How do we resolve needs update resources?
+					// Perhaps the state is incorrect, perhaps the sources are.
+					fmt.Printf("Options for resolving this include:\n")
+					fmt.Printf("- `pulumi refresh`\n")
+					fmt.Printf("- `pulumi preview --diff` and analyze which properties are changing\n")
+					fmt.Printf("  To fix property mismatches:\n")
+					fmt.Printf("  - Ensure your code matches the actual resource state\n")
+					fmt.Printf("  - Check for case sensitivity, formatting differences\n")
+					fmt.Printf("  - Verify default values are explicitly set\n")
+					fmt.Printf("  - Verify default values are explicitly set\n")
 
 					var addrs []string
 					for tfAddr, status := range statusMap {
