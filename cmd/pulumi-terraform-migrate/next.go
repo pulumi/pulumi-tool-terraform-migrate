@@ -78,6 +78,11 @@ func next(migrationFile string) {
 		return
 	}
 
+	// Ensure all stacks have empty diffs
+	if !ensureEmptyDiff(ctx, mf, migrationFile) {
+		return
+	}
+
 	fmt.Println("STOP")
 }
 
@@ -614,4 +619,78 @@ func findMissingResources(stack *tfmig.Stack, importStubs *tfmig.ImportFile) []t
 	}
 
 	return missing
+}
+
+func ensureEmptyDiff(ctx context.Context, mf *tfmig.MigrationFile, migrationFile string) bool {
+	// Create workspace
+	ws, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(mf.Migration.PulumiSources))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating Pulumi workspace: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Track stacks with issues
+	stacksWithIssues := make(map[string]map[string]int)
+
+	// Process each stack
+	for _, stackConfig := range mf.Migration.Stacks {
+		// Load Terraform state to get all TF resources
+		tfState, err := tfmig.LoadTerraformState(stackConfig.TFState)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading Terraform state for stack %s: %v\n", stackConfig.PulumiStack, err)
+			os.Exit(1)
+		}
+
+		// Compute diff
+		statusMap, err := tfmig.ComputeDiff(ctx, stackConfig, ws, tfState)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error computing diff for stack %s: %v\n", stackConfig.PulumiStack, err)
+			os.Exit(1)
+		}
+
+		// Count issues
+		issues := make(map[string]int)
+		for _, status := range statusMap {
+			switch s := status.(type) {
+			case *tfmig.ResourceNotTracked:
+				issues["not tracked"]++
+			case *tfmig.ResourceNotTranslated:
+				issues["not translated"]++
+			case *tfmig.ResourceTranslated:
+				switch s.TranslatedStatus {
+				case tfmig.TranslatedStatusNoState:
+					issues["no state"]++
+				case tfmig.TranslatedStatusNeedsUpdate:
+					issues["needs update"]++
+				case tfmig.TranslatedStatusNeedsReplace:
+					issues["needs replace"]++
+				}
+			}
+		}
+
+		// If there are issues, record them
+		if len(issues) > 0 {
+			stacksWithIssues[stackConfig.PulumiStack] = issues
+		}
+	}
+
+	// If any stacks have issues, report them
+	if len(stacksWithIssues) > 0 {
+		fmt.Println("Some stacks have unresolved migration issues:")
+		fmt.Println()
+		for stackName, issues := range stacksWithIssues {
+			fmt.Printf("Stack %q:\n", stackName)
+			for issueType, count := range issues {
+				fmt.Printf("  - %s: %d\n", issueType, count)
+			}
+		}
+		fmt.Println()
+		fmt.Println("Please run the diff command for detailed information:")
+		fmt.Println()
+		fmt.Printf("  pulumi-terraform-migrate diff --migration %s --details\n", migrationFile)
+		fmt.Println()
+		return false
+	}
+
+	return true
 }
