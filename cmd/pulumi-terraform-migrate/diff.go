@@ -197,8 +197,6 @@ func runDiff(migrationFile string, details bool) error {
 				if needsUpdate > 0 {
 					fmt.Printf("NEEDS UPDATE resources (%d):\n", needsUpdate)
 					fmt.Printf("These resources will be updated when you run `pulumi up`.\n")
-					// How do we resolve needs update resources?
-					// Perhaps the state is incorrect, perhaps the sources are.
 					fmt.Printf("Options for resolving this include:\n")
 					fmt.Printf("- `pulumi refresh`\n")
 					fmt.Printf("- `pulumi preview --diff` and analyze which properties are changing\n")
@@ -206,7 +204,7 @@ func runDiff(migrationFile string, details bool) error {
 					fmt.Printf("  - Ensure your code matches the actual resource state\n")
 					fmt.Printf("  - Check for case sensitivity, formatting differences\n")
 					fmt.Printf("  - Verify default values are explicitly set\n")
-					fmt.Printf("  - Verify default values are explicitly set\n")
+					fmt.Printf("- ignore this: `pulumi-terraform-migrate skip --ignore-needs-update <tf-addr>`\n")
 
 					var addrs []string
 					for tfAddr, status := range statusMap {
@@ -227,6 +225,15 @@ func runDiff(migrationFile string, details bool) error {
 				if needsReplace > 0 {
 					fmt.Printf("NEEDS REPLACE resources (%d):\n", needsReplace)
 					fmt.Printf("WARNING: These resources will be REPLACED (destroyed and recreated) when you run `pulumi up`.\n\n")
+					fmt.Printf("Options for resolving this include:\n")
+					fmt.Printf("- `pulumi refresh`\n")
+					fmt.Printf("- `pulumi preview --diff` and analyze which properties are changing\n")
+					fmt.Printf("  To fix property mismatches:\n")
+					fmt.Printf("  - Ensure your code matches the actual resource state\n")
+					fmt.Printf("  - Check for case sensitivity, formatting differences\n")
+					fmt.Printf("  - Verify default values are explicitly set\n")
+					fmt.Printf("- judicious use of `ignoreChanges` resource option in the sources")
+					fmt.Printf("- ignore this: `pulumi-terraform-migrate skip --ignore-needs-replace <tf-addr>`\n")
 
 					var addrs []string
 					for tfAddr, status := range statusMap {
