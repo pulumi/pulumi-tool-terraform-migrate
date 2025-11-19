@@ -148,8 +148,9 @@ func runDiff(migrationFile string, details bool) error {
 			notTranslated := summary.NotTranslatedResources
 			needsUpdate := summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate]
 			needsReplace := summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
+			noState := summary.TranslatedResources[tfmig.TranslatedStatusNoState]
 
-			if notTracked > 0 || notTranslated > 0 || needsUpdate > 0 || needsReplace > 0 {
+			if notTracked > 0 || notTranslated > 0 || needsUpdate > 0 || needsReplace > 0 || noState > 0 {
 				fmt.Printf("\n--- Issues Detected ---\n\n")
 
 				// 1. Not tracked resources (easiest to fix)
@@ -193,7 +194,39 @@ func runDiff(migrationFile string, details bool) error {
 					fmt.Printf("\n")
 				}
 
-				// 3. Needs update resources
+				if noState > 0 {
+					fmt.Printf("NO STATE resources (%d):\n", noState)
+					fmt.Printf("These resources are tracked in migration.json and exist in the Pulumi preview,\n")
+					fmt.Printf("but do not have state in the Pulumi stack yet.\n\n")
+
+					// Check if import-resolved-file exists in the stack config
+					if stackConfig.ImportResolvedFile != "" {
+						fmt.Printf("Options for resolving this:\n")
+						fmt.Printf("- Run: pulumi import --file %s --stack %s\n",
+							stackConfig.ImportResolvedFile, stackConfig.PulumiStack)
+					} else {
+						fmt.Printf("Options for resolving this:\n")
+						fmt.Printf("- Run: pulumi-terraform-migrate next\n")
+						fmt.Printf("  This will walk you through preparing an import file for `pulumi import`\n")
+					}
+					fmt.Printf("- Or skip these resources: pulumi-terraform-migrate skip --ignore-no-state <tf-addr>\n")
+
+					var addrs []string
+					for tfAddr, status := range statusMap {
+						if rt, ok := status.(*tfmig.ResourceTranslated); ok && rt.TranslatedStatus == tfmig.TranslatedStatusNoState {
+							addrs = append(addrs, tfAddr)
+						}
+					}
+					sort.Strings(addrs)
+
+					for _, tfAddr := range addrs {
+						status := statusMap[tfAddr].(*tfmig.ResourceTranslated)
+						fmt.Printf("  - %s\n    URN: %s\n", tfAddr, status.URN)
+					}
+					fmt.Printf("\n")
+				}
+
+				// 4. Needs update resources
 				if needsUpdate > 0 {
 					fmt.Printf("NEEDS UPDATE resources (%d):\n", needsUpdate)
 					fmt.Printf("These resources will be updated when you run `pulumi up`.\n")
@@ -221,7 +254,7 @@ func runDiff(migrationFile string, details bool) error {
 					fmt.Printf("\n")
 				}
 
-				// 4. Needs replace resources
+				// 5. Needs replace resources
 				if needsReplace > 0 {
 					fmt.Printf("NEEDS REPLACE resources (%d):\n", needsReplace)
 					fmt.Printf("WARNING: These resources will be REPLACED (destroyed and recreated) when you run `pulumi up`.\n\n")
