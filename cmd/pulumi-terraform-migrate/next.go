@@ -74,7 +74,7 @@ func next(migrationFile string) {
 	}
 
 	// Ensure import-stub.json files are resolved to import.json files
-	if !ensureImportStubsResolved(ctx, mf, migrationFile) {
+	if !ensureImportStubsResolved(mf, migrationFile) {
 		return
 	}
 
@@ -322,7 +322,7 @@ type resolveError struct {
 	err       error
 }
 
-func ensureImportStubsResolved(ctx context.Context, mf *tfmig.MigrationFile, migrationFile string) bool {
+func ensureImportStubsResolved(mf *tfmig.MigrationFile, migrationFile string) bool {
 	// Track if we need to save the migration file
 	needsSave := false
 	var resolveErrors []resolveError
