@@ -181,12 +181,12 @@ func InitMigration(opts InitMigrationOptions) error {
 
 // discoverTerraformWorkspaces discovers all Terraform workspaces in a directory
 func discoverTerraformWorkspaces(tfDir string) ([]string, error) {
-	// Run terraform workspace list
-	cmd := exec.Command("terraform", "workspace", "list")
+	// Run tofu workspace list
+	cmd := exec.Command("tofu", "workspace", "list")
 	cmd.Dir = tfDir
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list workspaces (make sure terraform is initialized): %w", err)
+		return nil, fmt.Errorf("failed to list workspaces (make sure tofu is initialized): %w", err)
 	}
 
 	// Parse output - each line is a workspace, current one has a * prefix
@@ -211,14 +211,14 @@ func extractTerraformState(tfDir, workspace string) (string, error) {
 	stateFile := filepath.Join(os.TempDir(), fmt.Sprintf("tfstate-%s-%s.json", filepath.Base(tfDir), workspace))
 
 	// Select the workspace
-	selectCmd := exec.Command("terraform", "workspace", "select", workspace)
+	selectCmd := exec.Command("tofu", "workspace", "select", workspace)
 	selectCmd.Dir = tfDir
 	if err := selectCmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to select workspace %s: %w", workspace, err)
 	}
 
-	// Extract state using terraform show -json
-	showCmd := exec.Command("terraform", "show", "-json")
+	// Extract state using tofu show -json
+	showCmd := exec.Command("tofu", "show", "-json")
 	showCmd.Dir = tfDir
 	output, err := showCmd.Output()
 	if err != nil {

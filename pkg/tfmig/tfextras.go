@@ -13,7 +13,7 @@ import (
 
 // LoadTerraformState loads a Terraform state file from either JSON format (.json)
 // or raw binary format (.tfstate). It returns the parsed state.
-// For binary format, it uses `terraform show -json` to convert to JSON first.
+// For binary format, it uses `tofu show -json` to convert to JSON first.
 func LoadTerraformState(path string) (*tfjson.State, error) {
 	// Check file extension to determine format
 	ext := strings.ToLower(filepath.Ext(path))
@@ -24,22 +24,22 @@ func LoadTerraformState(path string) (*tfjson.State, error) {
 		return ReadTerraformStateJSON(path)
 
 	case ".tfstate":
-		// File is in binary format, need to convert using terraform show
+		// File is in binary format, need to convert using tofu show
 		// Get the directory containing the state file
 		stateDir := filepath.Dir(path)
 
-		// Run terraform show -json on the state file
-		cmd := exec.Command("terraform", "show", "-json", path)
+		// Run tofu show -json on the state file
+		cmd := exec.Command("tofu", "show", "-json", path)
 		cmd.Dir = stateDir
 		output, err := cmd.Output()
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert binary state file using terraform show: %w", err)
+			return nil, fmt.Errorf("failed to convert binary state file using tofu show: %w", err)
 		}
 
 		// Parse the JSON output
 		var state tfjson.State
 		if err := json.Unmarshal(output, &state); err != nil {
-			return nil, fmt.Errorf("failed to parse state JSON from terraform show: %w", err)
+			return nil, fmt.Errorf("failed to parse state JSON from tofu show: %w", err)
 		}
 
 		return &state, nil
@@ -50,7 +50,7 @@ func LoadTerraformState(path string) (*tfjson.State, error) {
 }
 
 // ReadTerraformStateJSON reads a Terraform state file in JSON format
-// (produced by `terraform show -json`) and returns the parsed state.
+// (produced by `tofu show -json`) and returns the parsed state.
 // Deprecated: Use LoadTerraformState instead, which handles both JSON and binary formats.
 func ReadTerraformStateJSON(path string) (*tfjson.State, error) {
 	data, err := os.ReadFile(path)
