@@ -4,7 +4,8 @@ package tfmig
 // corresponding Pulumi bridged provider packages.
 var TerraformToPulumiProvider = map[string]string{
 	// AWS
-	"registry.terraform.io/hashicorp/aws": "aws",
+	"registry.terraform.io/hashicorp/aws":  "aws",
+	"registry.opentofu.org/hashicorp/aws": "aws",
 
 	// Azure
 	"registry.terraform.io/hashicorp/azurerm": "azure",
