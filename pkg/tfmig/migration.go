@@ -213,16 +213,27 @@ func extractTerraformState(tfDir, workspace string) (string, error) {
 	// Select the workspace
 	selectCmd := exec.Command("tofu", "workspace", "select", workspace)
 	selectCmd.Dir = tfDir
-	if err := selectCmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to select workspace %s: %w", workspace, err)
+	selectOutput, err := selectCmd.CombinedOutput()
+	if err != nil {
+		exitCode := -1
+		if exitError, ok := err.(*exec.ExitError); ok {
+			exitCode = exitError.ExitCode()
+		}
+		return "", fmt.Errorf("failed to select workspace %s (exit code: %d): %w\nOutput: %s",
+			workspace, exitCode, err, string(selectOutput))
 	}
 
 	// Extract state using tofu show -json
 	showCmd := exec.Command("tofu", "show", "-json")
 	showCmd.Dir = tfDir
-	output, err := showCmd.Output()
+	output, err := showCmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to extract state for workspace %s: %w", workspace, err)
+		exitCode := -1
+		if exitError, ok := err.(*exec.ExitError); ok {
+			exitCode = exitError.ExitCode()
+		}
+		return "", fmt.Errorf("failed to extract state for workspace %s (exit code: %d): %w\nOutput: %s",
+			workspace, exitCode, err, string(output))
 	}
 
 	// Write to file in temp directory
