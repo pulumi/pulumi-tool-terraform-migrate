@@ -519,25 +519,21 @@ func ensureSourceCodeMapped(ctx context.Context, mf *tfmig.MigrationFile, mfPath
 		fmt.Printf("  Pulumi:    %v\n", mf.Migration.PulumiSources)
 		fmt.Println()
 
-		// Pick the minimum one by address
-		minResource := missingResources[0]
-		for _, res := range missingResources {
-			if res.TFAddr < minResource.TFAddr {
-				minResource = res
-			}
+		// Sort missing resources by address
+		sort.Slice(missingResources, func(i, j int) bool {
+			return missingResources[i].TFAddr < missingResources[j].TFAddr
+		})
+
+		// Take up to 10 resources
+		displayCount := len(missingResources)
+		if displayCount > 10 {
+			displayCount = 10
 		}
+		resourcesToDisplay := missingResources[:displayCount]
 
 		fmt.Println("Otherwise the next step is to iterate on the missing resources until none are left.")
 		fmt.Println()
-		fmt.Printf("The first of the %d missing resources:\n", len(missingResources))
-		fmt.Println()
-		fmt.Printf("  Terraform address:                      %v\n", minResource.TFAddr)
-		if minResource.URN != "" {
-			fmt.Printf("  Expected Pulumi URN in migrations.json: %v\n", minResource.URN)
-		}
-		fmt.Println()
-		fmt.Printf("None of the %d resources in the Pulumi project seem to have this exact URN.\n",
-			len(importStubs.Resources))
+		fmt.Printf("The first %d of %d missing resources:\n", displayCount, len(missingResources))
 		fmt.Println()
 
 		projectName, err := tfmig.ReadPulumiProjectName(mf.Migration.PulumiSources)
@@ -546,15 +542,32 @@ func ensureSourceCodeMapped(ctx context.Context, mf *tfmig.MigrationFile, mfPath
 			os.Exit(1)
 		}
 
-		if partials := findPartialMatches(minResource, &importStubs); len(partials) != 0 {
-			fmt.Printf("Note there are %d similar Pulumi resources:\n", len(partials))
-			for _, p := range partials {
-				fmt.Printf("  - %v\n", tfmig.DeduceURN(projectName, selectedStackName, p))
+		// Display each resource with partial matches
+		for i, res := range resourcesToDisplay {
+			fmt.Printf("%d. Terraform address: %v\n", i+1, res.TFAddr)
+			if res.URN != "" {
+				fmt.Printf("   Expected Pulumi URN: %v\n", res.URN)
 			}
+
+			if partials := findPartialMatches(res, &importStubs); len(partials) != 0 {
+				fmt.Printf("   Similar Pulumi resources (%d):\n", len(partials))
+				maxPartials := len(partials)
+				if maxPartials > 3 {
+					maxPartials = 3
+				}
+				for j := 0; j < maxPartials; j++ {
+					fmt.Printf("     - %v\n", tfmig.DeduceURN(projectName, selectedStackName, partials[j]))
+				}
+				if len(partials) > 3 {
+					fmt.Printf("     ... and %d more\n", len(partials)-3)
+				}
+			}
+			fmt.Println()
 		}
 
+		fmt.Printf("None of the %d resources in the Pulumi project match these exact URNs.\n", len(importStubs.Resources))
 		fmt.Println()
-		fmt.Println("There are three options.")
+		fmt.Println("There are three options for each resource:")
 		fmt.Println()
 		fmt.Println("Option 1. If the resource has not been translated yet, translate it and add source code to the Pulumi project.")
 		fmt.Println()
@@ -562,11 +575,11 @@ func ensureSourceCodeMapped(ctx context.Context, mf *tfmig.MigrationFile, mfPath
 		fmt.Println("Translation may have used a different name for the resource leading to the actual URN mismatching the tracked URN.")
 		fmt.Println("To fix the association, set the correct URN of the Pulumi resource tracking the Terraform resource:")
 		fmt.Println()
-		fmt.Printf("  pulumi-terraform-migrate set-urn --migration %q --tf-addr %q --urn $urn\n", mfPath, minResource.TFAddr)
+		fmt.Printf("  pulumi-terraform-migrate set-urn --migration %q --tf-addr <terraform-address> --urn <pulumi-urn>\n", mfPath)
 		fmt.Println()
-		fmt.Println("Option 3. Explicitly skip this resource from being tracked by the migration process:")
+		fmt.Println("Option 3. Explicitly skip a resource from being tracked by the migration process:")
 		fmt.Println()
-		fmt.Printf("  pulumi-terraform-migrate skip --migration %q %q\n\n", mfPath, minResource.TFAddr)
+		fmt.Printf("  pulumi-terraform-migrate skip --migration %q <terraform-address>\n\n", mfPath)
 		return false
 	}
 
