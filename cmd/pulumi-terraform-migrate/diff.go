@@ -202,7 +202,7 @@ func runDiff(migrationFile string, details bool) error {
 					// Check if import-resolved-file exists in the stack config
 					if stackConfig.ImportResolvedFile != "" {
 						fmt.Printf("Options for resolving this:\n")
-						fmt.Printf("- Run: pulumi import --file %s --stack %s\n",
+						fmt.Printf("- Run: pulumi import --file %s --stack %s --yes\n",
 							stackConfig.ImportResolvedFile, stackConfig.PulumiStack)
 					} else {
 						fmt.Printf("Options for resolving this:\n")
