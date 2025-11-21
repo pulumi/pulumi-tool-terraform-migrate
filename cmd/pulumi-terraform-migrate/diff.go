@@ -288,8 +288,9 @@ func runDiff(migrationFile string, details bool) error {
 		// Success indicator
 		needsUpdate := summary.TranslatedResources[tfmig.TranslatedStatusNeedsUpdate]
 		needsReplace := summary.TranslatedResources[tfmig.TranslatedStatusNeedsReplace]
+		noState := summary.TranslatedResources[tfmig.TranslatedStatusNoState]
 
-		if needsReplace == 0 && needsUpdate == 0 && summary.NotTrackedResources == 0 && summary.NotTranslatedResources == 0 {
+		if needsReplace == 0 && needsUpdate == 0 && noState == 0 && summary.NotTrackedResources == 0 && summary.NotTranslatedResources == 0 {
 			fmt.Printf("✓ All resources migrated successfully!\n\n")
 		}
 	}
