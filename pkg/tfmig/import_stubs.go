@@ -168,6 +168,7 @@ func ResolveImportStubs(opts ResolveImportStubsOptions) (*ResolveImportStubsResu
 		// Preserve components as-is through this pass.
 		if stub.Component {
 			resolvedResources = append(resolvedResources, stub)
+			continue
 		}
 
 		// Try to infer the import ID
