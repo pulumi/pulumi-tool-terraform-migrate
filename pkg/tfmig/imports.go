@@ -94,6 +94,14 @@ func (inf *ImportIDInferrer) InferImportID(terraformState *tfjson.StateResource,
 
 // Try to make several informed guesses at what the import ID might me.
 func ImportIDCandidates(terraformState *tfjson.StateResource, pulumiType tokens.Type) ([]ImportID, error) {
+	if terraformState == nil {
+		return nil, fmt.Errorf("terraformState cannot be nil")
+	}
+
+	if terraformState.AttributeValues == nil {
+		return nil, fmt.Errorf("terraformState.AttributeValues cannot be nil")
+	}
+
 	var candidates []ImportID
 
 	// Try common identifier fields in order of preference
