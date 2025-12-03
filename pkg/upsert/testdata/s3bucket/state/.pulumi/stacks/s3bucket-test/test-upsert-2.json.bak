@@ -1,0 +1,68 @@
+{
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/s3bucket-test/test-upsert-2",
+        "latest": {
+            "manifest": {
+                "time": "2025-12-03T15:53:40.320357-05:00",
+                "magic": "72caf200b8cb26dd4af4f3ba893b9325df78e718846f87a4e0443bd140d097e0",
+                "version": "v3.205.0"
+            },
+            "secrets_providers": {
+                "type": "passphrase",
+                "state": {
+                    "salt": "v1:aQzXA9xvziE=:v1:najpT0v5PE4H98f8:lP0bhEL/FvNusx0gz6KqW87Jjpm9RA=="
+                }
+            },
+            "resources": [
+                {
+                    "urn": "urn:pulumi:test-upsert-2::s3bucket-test::pulumi:pulumi:Stack::s3bucket-test-test-upsert-2",
+                    "custom": false,
+                    "type": "pulumi:pulumi:Stack",
+                    "outputs": {
+                        "bucketArn": null,
+                        "bucketName": null
+                    },
+                    "created": "2025-12-03T20:53:39.675039Z",
+                    "modified": "2025-12-03T20:53:39.675039Z",
+                    "sourcePosition": "project:///../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#317",
+                    "stackTrace": [
+                        {
+                            "sourcePosition": "project:///../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#317"
+                        },
+                        {
+                            "sourcePosition": "project:///../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.200.0/proto/go/language_grpc.pb.go#551"
+                        },
+                        {
+                            "sourcePosition": "project:///../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.72.1/server.go#1405"
+                        },
+                        {
+                            "sourcePosition": "project:///../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.72.1/server.go#1815"
+                        },
+                        {
+                            "sourcePosition": "project:///../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.72.1/server.go#1035"
+                        },
+                        {
+                            "sourcePosition": "project:///../../../../../../../../opt/hostedtoolcache/go/1.24.7/x64/src/runtime/asm_arm64.s#1223"
+                        }
+                    ]
+                },
+                {
+                    "urn": "urn:pulumi:test-upsert-2::s3bucket-test::pulumi:providers:aws::default",
+                    "custom": true,
+                    "id": "37d265de-90d3-4c3e-9ab6-168c4ade78d9",
+                    "type": "pulumi:providers:aws",
+                    "inputs": {
+                        "region": "us-west-2"
+                    },
+                    "outputs": {
+                        "region": "us-west-2"
+                    },
+                    "created": "2025-12-03T20:53:40.31846Z",
+                    "modified": "2025-12-03T20:53:40.31846Z"
+                }
+            ],
+            "metadata": {}
+        }
+    }
+}

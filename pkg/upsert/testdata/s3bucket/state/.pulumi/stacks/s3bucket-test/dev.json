@@ -1,0 +1,20 @@
+{
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/s3bucket-test/dev",
+        "latest": {
+            "manifest": {
+                "time": "2025-12-03T15:39:24.665828-05:00",
+                "magic": "72caf200b8cb26dd4af4f3ba893b9325df78e718846f87a4e0443bd140d097e0",
+                "version": "v3.205.0"
+            },
+            "secrets_providers": {
+                "type": "passphrase",
+                "state": {
+                    "salt": "v1:tF0apUjIQ94=:v1:E0UeCeUnrZu0/JzI:DqIYJAjPMTVaRep07eXjfar9iYYuEw=="
+                }
+            },
+            "metadata": {}
+        }
+    }
+}

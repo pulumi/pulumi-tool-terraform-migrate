@@ -1,0 +1,15 @@
+name: s3bucket-test
+runtime: yaml
+description: Test program for S3 bucket upsert
+backend:
+  url: file://./state
+
+resources:
+  test-bucket:
+    type: aws:s3:Bucket
+    properties:
+      bucket: test-bucket-upsert-demo
+
+outputs:
+  bucketName: ${test-bucket.bucket}
+  bucketArn: ${test-bucket.arn}

@@ -1,0 +1,41 @@
+{
+    "kind": "update",
+    "startTime": 1764795521,
+    "message": "Keep state",
+    "environment": {
+        "exec.kind": "cli",
+        "git.author": "Anton Tayanovskyy",
+        "git.author.email": "anton@pulumi.com",
+        "git.committer": "Anton Tayanovskyy",
+        "git.committer.email": "anton@pulumi.com",
+        "git.dirty": "true",
+        "git.head": "b8e052a1726a20fb9a600d8407e3caab7c30473f",
+        "git.headName": "refs/heads/t0yv0/pulumi-state-upsert",
+        "pulumi.arch": "arm64",
+        "pulumi.env.PULUMI_ACCESS_TOKEN": "set",
+        "pulumi.env.PULUMI_CONFIG_PASSPHRASE": "set",
+        "pulumi.env.PULUMI_DEBUG_PROVIDERS": "set",
+        "pulumi.env.PULUMI_PROVIDER_BUILD_PARALLELISM": "set",
+        "pulumi.flag.skip-preview": "true",
+        "pulumi.flag.stack": "set",
+        "pulumi.flag.target": "set",
+        "pulumi.flag.yes": "true",
+        "pulumi.os": "darwin",
+        "pulumi.version": "v3.205.0",
+        "stack.environments": "[]",
+        "updatePlan": "false",
+        "vcs.kind": "github.com",
+        "vcs.owner": "pulumi",
+        "vcs.repo": "pulumi-terraform-migrate",
+        "vcs.root": "pkg/upsert/testdata/s3bucket"
+    },
+    "config": {
+        "aws:region": "us-west-2"
+    },
+    "version": 0,
+    "result": "succeeded",
+    "endTime": 1764795521,
+    "resourceChanges": {
+        "create": 2
+    }
+}
