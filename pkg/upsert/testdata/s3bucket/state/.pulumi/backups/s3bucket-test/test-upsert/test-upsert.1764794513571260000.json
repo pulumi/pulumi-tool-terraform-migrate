@@ -1,0 +1,50 @@
+{
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/s3bucket-test/test-upsert",
+        "latest": {
+            "manifest": {
+                "time": "2025-12-03T15:41:53.569313-05:00",
+                "magic": "72caf200b8cb26dd4af4f3ba893b9325df78e718846f87a4e0443bd140d097e0",
+                "version": "v3.205.0"
+            },
+            "secrets_providers": {
+                "type": "passphrase",
+                "state": {
+                    "salt": "v1:BdIrU3gj4Cs=:v1:pPWs34CDRpYTUTpi:17wbp7AiDiNvP0yDHwa3XJn4ditiHw=="
+                }
+            },
+            "resources": [
+                {
+                    "urn": "urn:pulumi:test-upsert::s3bucket-test::pulumi:pulumi:Stack::s3bucket-test-test-upsert",
+                    "custom": false,
+                    "type": "pulumi:pulumi:Stack",
+                    "created": "2025-12-03T20:41:53.568214Z",
+                    "modified": "2025-12-03T20:41:53.568214Z",
+                    "sourcePosition": "project:///../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#317",
+                    "stackTrace": [
+                        {
+                            "sourcePosition": "project:///../../../../../../../../home/runner/work/pulumi-yaml/pulumi-yaml/pkg/server/server.go#317"
+                        },
+                        {
+                            "sourcePosition": "project:///../../../../../../../../home/runner/go/pkg/mod/github.com/pulumi/pulumi/sdk/v3@v3.200.0/proto/go/language_grpc.pb.go#551"
+                        },
+                        {
+                            "sourcePosition": "project:///../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.72.1/server.go#1405"
+                        },
+                        {
+                            "sourcePosition": "project:///../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.72.1/server.go#1815"
+                        },
+                        {
+                            "sourcePosition": "project:///../../../../../../../../home/runner/go/pkg/mod/google.golang.org/grpc@v1.72.1/server.go#1035"
+                        },
+                        {
+                            "sourcePosition": "project:///../../../../../../../../opt/hostedtoolcache/go/1.24.7/x64/src/runtime/asm_arm64.s#1223"
+                        }
+                    ]
+                }
+            ],
+            "metadata": {}
+        }
+    }
+}

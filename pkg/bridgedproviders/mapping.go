@@ -44,6 +44,54 @@ type GetMappingResult struct {
 	Data []byte
 }
 
+// GetSchemaFromBinary loads a Pulumi provider from the given binary path and
+// retrieves its schema. This is useful for mock providers that need to respond
+// with real schema information.
+//
+// The function:
+// 1. Starts the provider binary as a plugin process
+// 2. Establishes a gRPC connection to it
+// 3. Calls GetSchema to retrieve the provider's schema
+// 4. Returns the schema as a JSON string
+//
+// The caller is responsible for ensuring the provider binary exists and is executable.
+func GetSchemaFromBinary(ctx context.Context, binaryPath string) (string, error) {
+	if binaryPath == "" {
+		return "", fmt.Errorf("binaryPath is required")
+	}
+
+	// Create a minimal host implementation for provider initialization
+	host := &minimalHost{}
+
+	// Create a plugin context for the provider
+	pctx, err := plugin.NewContext(ctx, nil, nil, nil, nil, "", nil, false, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create plugin context: %w", err)
+	}
+	defer func() {
+		contract.IgnoreError(pctx.Close())
+	}()
+
+	// Load the provider from the binary path
+	provider, err := plugin.NewProviderFromPath(host, pctx, binaryPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to load provider from %s: %w", binaryPath, err)
+	}
+	defer func() {
+		contract.IgnoreError(provider.Close())
+	}()
+
+	// Get the schema from the provider
+	schemaResp, err := provider.GetSchema(ctx, plugin.GetSchemaRequest{
+		Version: 0, // Request the latest schema version
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get schema from provider: %w", err)
+	}
+
+	return string(schemaResp.Schema), nil
+}
+
 // GetMappingFromBinary initializes a Pulumi provider binary at the given path
 // and calls GetMapping with the specified options. The provider must implement
 // the ResourceProvider gRPC service defined in provider.proto.
