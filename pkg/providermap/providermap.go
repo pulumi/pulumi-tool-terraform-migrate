@@ -14,6 +14,12 @@
 
 package providermap
 
+import (
+	"strings"
+
+	"github.com/blang/semver"
+)
+
 type TerraformProvider struct {
 	// Identifier such as "registry.opentofu.org/hashicorp/aws" or "registry.opentofu.org/hashicorp/aws"
 	Identifier string
@@ -1083,15 +1089,54 @@ var providerMapping = map[string]providerMappingDetail{
 
 func RecommendPulumiProvider(tf TerraformProvider) RecommendedPulumiProvider {
 	// Check if there's a bridged provider for this Terraform provider
-	if pulumiProvider, ok := providerMapping[tf.Identifier]; ok {
-		return RecommendedPulumiProvider{
-			BridgedPulumiProvider: &BridgedPulumiProvider{
-				Identifier: pulumiProvider.pulumiProviderName,
-				Version:    "", // Version can be looked up separately if needed
-			},
+	mapping, ok := providerMapping[tf.Identifier]
+	if !ok {
+		// Default to using terraform-provider package if no bridged provider exists
+		return RecommendedPulumiProvider{UseTerraformProviderPackage: true}
+	}
+
+	// Determine which Pulumi provider version to recommend
+	var recommendedVersion string
+
+	// Try to parse the Terraform version and find the matching Pulumi version
+	if tf.Version != "" {
+		// Normalize the version string by removing "v" prefix if present
+		versionStr := strings.TrimPrefix(tf.Version, "v")
+
+		// Try to parse the version
+		if v, err := semver.Parse(versionStr); err == nil {
+			// Successfully parsed - look up by major version
+			tfMajor := int(v.Major)
+			if pulumiVersion, exists := mapping.latestVersionByTerraformMajor[tfMajor]; exists {
+				recommendedVersion = pulumiVersion
+			}
 		}
 	}
 
-	// Default to using terraform-provider package if no bridged provider exists
-	return RecommendedPulumiProvider{UseTerraformProviderPackage: true}
+	// If we couldn't determine a version from the TF version, use the latest/maximum
+	if recommendedVersion == "" {
+		recommendedVersion = getLatestVersion(mapping.latestVersionByTerraformMajor)
+	}
+
+	return RecommendedPulumiProvider{
+		BridgedPulumiProvider: &BridgedPulumiProvider{
+			Identifier: mapping.pulumiProviderName,
+			Version:    recommendedVersion,
+		},
+	}
+}
+
+// getLatestVersion returns the latest (maximum) version from a map of versions by major version
+func getLatestVersion(versionsByMajor map[int]string) string {
+	var latestVersion string
+	var latestMajor int = -1
+
+	for major, version := range versionsByMajor {
+		if major > latestMajor {
+			latestMajor = major
+			latestVersion = version
+		}
+	}
+
+	return latestVersion
 }

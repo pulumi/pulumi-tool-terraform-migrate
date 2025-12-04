@@ -30,24 +30,97 @@ func TestRecommendPulumiProvider(t *testing.T) {
 		name                         string
 		input                        TerraformProvider
 		expectedBridgedProvider      string
+		expectedVersion              string
 		expectedUseTerraformProvider bool
 	}{
 		{
-			name: "AWS Terraform registry",
+			name: "AWS Terraform registry - major version 5 with v prefix",
 			input: TerraformProvider{
 				Identifier: "registry.terraform.io/hashicorp/aws",
 				Version:    "v5.0.0",
 			},
 			expectedBridgedProvider:      "aws",
+			expectedVersion:              "v6.83.2",
 			expectedUseTerraformProvider: false,
 		},
 		{
-			name: "Azure Terraform registry",
+			name: "AWS Terraform registry - major version 5 without v prefix",
+			input: TerraformProvider{
+				Identifier: "registry.terraform.io/hashicorp/aws",
+				Version:    "5.70.3",
+			},
+			expectedBridgedProvider:      "aws",
+			expectedVersion:              "v6.83.2",
+			expectedUseTerraformProvider: false,
+		},
+		{
+			name: "AWS Terraform registry - major version 6",
+			input: TerraformProvider{
+				Identifier: "registry.terraform.io/hashicorp/aws",
+				Version:    "v6.20.0",
+			},
+			expectedBridgedProvider:      "aws",
+			expectedVersion:              "v7.12.0",
+			expectedUseTerraformProvider: false,
+		},
+		{
+			name: "AWS - no version specified (should use latest)",
+			input: TerraformProvider{
+				Identifier: "registry.terraform.io/hashicorp/aws",
+				Version:    "",
+			},
+			expectedBridgedProvider:      "aws",
+			expectedVersion:              "v7.12.0", // Latest version for highest major (6)
+			expectedUseTerraformProvider: false,
+		},
+		{
+			name: "AWS - invalid version (should use latest)",
+			input: TerraformProvider{
+				Identifier: "registry.terraform.io/hashicorp/aws",
+				Version:    "invalid-version",
+			},
+			expectedBridgedProvider:      "aws",
+			expectedVersion:              "v7.12.0", // Latest version for highest major (6)
+			expectedUseTerraformProvider: false,
+		},
+		{
+			name: "Azure Terraform registry - major version 3",
 			input: TerraformProvider{
 				Identifier: "registry.terraform.io/hashicorp/azurerm",
 				Version:    "v3.0.0",
 			},
 			expectedBridgedProvider:      "azure",
+			expectedVersion:              "v5.89.0",
+			expectedUseTerraformProvider: false,
+		},
+		{
+			name: "Azure Terraform registry - major version 4",
+			input: TerraformProvider{
+				Identifier: "registry.terraform.io/hashicorp/azurerm",
+				Version:    "v4.15.0",
+			},
+			expectedBridgedProvider:      "azure",
+			expectedVersion:              "v6.30.0",
+			expectedUseTerraformProvider: false,
+		},
+		{
+			name: "GCP OpenTofu registry - major version 6",
+			input: TerraformProvider{
+				Identifier: "registry.opentofu.org/hashicorp/google",
+				Version:    "v6.5.0",
+			},
+			expectedBridgedProvider:      "gcp",
+			expectedVersion:              "v8.41.1",
+			expectedUseTerraformProvider: false,
+		},
+		{
+			name: "GCP OpenTofu registry - major version 7",
+			input: TerraformProvider{
+				Identifier: "registry.opentofu.org/hashicorp/google",
+				Version:    "7.0.0",
+			},
+			expectedBridgedProvider:      "gcp",
+			expectedVersion:              "v9.6.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -57,6 +130,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "v1.0.0",
 			},
 			expectedBridgedProvider:      "",
+			expectedVersion:              "",
 			expectedUseTerraformProvider: true,
 		},
 	}
@@ -78,9 +152,15 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				}
 				if result.BridgedPulumiProvider == nil {
 					t.Errorf("Expected BridgedPulumiProvider to be non-nil, got nil")
-				} else if result.BridgedPulumiProvider.Identifier != tt.expectedBridgedProvider {
-					t.Errorf("Expected BridgedPulumiProvider.Identifier to be %q, got %q",
-						tt.expectedBridgedProvider, result.BridgedPulumiProvider.Identifier)
+				} else {
+					if result.BridgedPulumiProvider.Identifier != tt.expectedBridgedProvider {
+						t.Errorf("Expected BridgedPulumiProvider.Identifier to be %q, got %q",
+							tt.expectedBridgedProvider, result.BridgedPulumiProvider.Identifier)
+					}
+					if result.BridgedPulumiProvider.Version != tt.expectedVersion {
+						t.Errorf("Expected BridgedPulumiProvider.Version to be %q, got %q",
+							tt.expectedVersion, result.BridgedPulumiProvider.Version)
+					}
 				}
 			}
 		})
