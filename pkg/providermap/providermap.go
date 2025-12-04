@@ -14,6 +14,18 @@
 
 package providermap
 
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+)
+
 type TerraformProvider struct {
 	// Identifier such as "registry.opentofu.org/hashicorp/aws" or "registry.opentofu.org/hashicorp/aws"
 	Identifier string
@@ -40,148 +52,1052 @@ type RecommendedPulumiProvider struct {
 	BridgedPulumiProvider *BridgedPulumiProvider
 }
 
+type providerMappingDetail struct {
+	pulumiProviderName            string
+	terraformProviderName         string // Name of the upstream Terraform provider (e.g., "aws" for terraform-provider-aws)
+	latestVersionByTerraformMajor map[int]string
+}
+
 // providerMapping maps Terraform/OpenTOFU provider identifiers to Pulumi provider names.
 // This is based on the provider list from https://github.com/pulumi/ci-mgmt/blob/master/provider-ci/providers.json
-var providerMapping = map[string]string{
+var providerMapping = map[string]providerMappingDetail{
 	// HashiCorp providers
-	"registry.terraform.io/hashicorp/aws":       "aws",
-	"registry.opentofu.org/hashicorp/aws":       "aws",
-	"registry.terraform.io/hashicorp/azurerm":   "azure",
-	"registry.opentofu.org/hashicorp/azurerm":   "azure",
-	"registry.terraform.io/hashicorp/azuread":   "azuread",
-	"registry.opentofu.org/hashicorp/azuread":   "azuread",
-	"registry.terraform.io/hashicorp/google":    "gcp",
-	"registry.opentofu.org/hashicorp/google":    "gcp",
-	"registry.terraform.io/hashicorp/consul":    "consul",
-	"registry.opentofu.org/hashicorp/consul":    "consul",
-	"registry.terraform.io/hashicorp/vault":     "vault",
-	"registry.opentofu.org/hashicorp/vault":     "vault",
-	"registry.terraform.io/hashicorp/nomad":     "nomad",
-	"registry.opentofu.org/hashicorp/nomad":     "nomad",
-	"registry.terraform.io/hashicorp/vsphere":   "vsphere",
-	"registry.opentofu.org/hashicorp/vsphere":   "vsphere",
-	"registry.terraform.io/hashicorp/random":    "random",
-	"registry.opentofu.org/hashicorp/random":    "random",
-	"registry.terraform.io/hashicorp/archive":   "archive",
-	"registry.opentofu.org/hashicorp/archive":   "archive",
-	"registry.terraform.io/hashicorp/tls":       "tls",
-	"registry.opentofu.org/hashicorp/tls":       "tls",
-	"registry.terraform.io/hashicorp/external":  "external",
-	"registry.opentofu.org/hashicorp/external":  "external",
-	"registry.terraform.io/hashicorp/http":      "http",
-	"registry.opentofu.org/hashicorp/http":      "http",
-	"registry.terraform.io/hashicorp/null":      "null",
-	"registry.opentofu.org/hashicorp/null":      "null",
-	"registry.terraform.io/hashicorp/cloudinit": "cloudinit",
-	"registry.opentofu.org/hashicorp/cloudinit": "cloudinit",
+	"registry.terraform.io/hashicorp/aws": {
+		pulumiProviderName:    "aws",
+		terraformProviderName: "aws",
+		latestVersionByTerraformMajor: map[int]string{
+			5: "v6.83.2",
+			6: "v7.12.0",
+		},
+	},
+	"registry.opentofu.org/hashicorp/aws": {
+		pulumiProviderName:    "aws",
+		terraformProviderName: "aws",
+		latestVersionByTerraformMajor: map[int]string{
+			5: "v6.83.2",
+			6: "v7.12.0",
+		},
+	},
+	"registry.terraform.io/hashicorp/azurerm": {
+		pulumiProviderName:    "azure",
+		terraformProviderName: "azurerm",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v5.89.0",
+			4: "v6.30.0",
+		},
+	},
+	"registry.opentofu.org/hashicorp/azurerm": {
+		pulumiProviderName:    "azure",
+		terraformProviderName: "azurerm",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v5.89.0",
+			4: "v6.30.0",
+		},
+	},
+	"registry.terraform.io/hashicorp/azuread": {
+		pulumiProviderName:    "azuread",
+		terraformProviderName: "azuread",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v5.53.1",
+			3: "v6.7.0",
+		},
+	},
+	"registry.opentofu.org/hashicorp/azuread": {
+		pulumiProviderName:    "azuread",
+		terraformProviderName: "azuread",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v5.53.1",
+			3: "v6.7.0",
+		},
+	},
+	"registry.terraform.io/hashicorp/google": {
+		pulumiProviderName:    "gcp",
+		terraformProviderName: "google",
+		latestVersionByTerraformMajor: map[int]string{
+			6: "v8.41.1",
+			7: "v9.6.0",
+		},
+	},
+	"registry.opentofu.org/hashicorp/google": {
+		pulumiProviderName:    "gcp",
+		terraformProviderName: "google",
+		latestVersionByTerraformMajor: map[int]string{
+			6: "v8.41.1",
+			7: "v9.6.0",
+		},
+	},
+	"registry.terraform.io/hashicorp/consul": {
+		pulumiProviderName:    "consul",
+		terraformProviderName: "consul",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v3.13.3",
+		},
+	},
+	"registry.opentofu.org/hashicorp/consul": {
+		pulumiProviderName:    "consul",
+		terraformProviderName: "consul",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v3.13.3",
+		},
+	},
+	"registry.terraform.io/hashicorp/vault": {
+		pulumiProviderName:    "vault",
+		terraformProviderName: "vault",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v5.20.0",
+			4: "v6.7.0",
+			5: "v7.5.0",
+		},
+	},
+	"registry.opentofu.org/hashicorp/vault": {
+		pulumiProviderName:    "vault",
+		terraformProviderName: "vault",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v5.20.0",
+			4: "v6.7.0",
+			5: "v7.5.0",
+		},
+	},
+	"registry.terraform.io/hashicorp/nomad": {
+		pulumiProviderName:    "nomad",
+		terraformProviderName: "nomad",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v0.4.1",
+			2: "v2.5.3",
+		},
+	},
+	"registry.opentofu.org/hashicorp/nomad": {
+		pulumiProviderName:    "nomad",
+		terraformProviderName: "nomad",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v0.4.1",
+			2: "v2.5.3",
+		},
+	},
+	"registry.terraform.io/hashicorp/vsphere": {
+		pulumiProviderName:    "vsphere",
+		terraformProviderName: "vsphere",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v4.16.0",
+		},
+	},
+	"registry.opentofu.org/hashicorp/vsphere": {
+		pulumiProviderName:    "vsphere",
+		terraformProviderName: "vsphere",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v4.16.0",
+		},
+	},
+	"registry.terraform.io/hashicorp/random": {
+		pulumiProviderName:    "random",
+		terraformProviderName: "random",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v4.18.1",
+		},
+	},
+	"registry.opentofu.org/hashicorp/random": {
+		pulumiProviderName:    "random",
+		terraformProviderName: "random",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v4.18.1",
+		},
+	},
+	"registry.terraform.io/hashicorp/archive": {
+		pulumiProviderName:    "archive",
+		terraformProviderName: "archive",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v0.3.3",
+		},
+	},
+	"registry.opentofu.org/hashicorp/archive": {
+		pulumiProviderName:    "archive",
+		terraformProviderName: "archive",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v0.3.3",
+		},
+	},
+	"registry.terraform.io/hashicorp/tls": {
+		pulumiProviderName:    "tls",
+		terraformProviderName: "tls",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v4.5.0",
+			4: "v5.2.0",
+		},
+	},
+	"registry.opentofu.org/hashicorp/tls": {
+		pulumiProviderName:    "tls",
+		terraformProviderName: "tls",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v4.5.0",
+			4: "v5.2.0",
+		},
+	},
+	"registry.terraform.io/hashicorp/external": {
+		pulumiProviderName:    "external",
+		terraformProviderName: "external",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v0.0.14",
+		},
+	},
+	"registry.opentofu.org/hashicorp/external": {
+		pulumiProviderName:    "external",
+		terraformProviderName: "external",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v0.0.14",
+		},
+	},
+	"registry.terraform.io/hashicorp/http": {
+		pulumiProviderName:    "http",
+		terraformProviderName: "http",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v0.1.0",
+		},
+	},
+	"registry.opentofu.org/hashicorp/http": {
+		pulumiProviderName:    "http",
+		terraformProviderName: "http",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v0.1.0",
+		},
+	},
+	"registry.terraform.io/hashicorp/null": {
+		pulumiProviderName:    "null",
+		terraformProviderName: "null",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v0.0.11",
+		},
+	},
+	"registry.opentofu.org/hashicorp/null": {
+		pulumiProviderName:    "null",
+		terraformProviderName: "null",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v0.0.11",
+		},
+	},
+	"registry.terraform.io/hashicorp/cloudinit": {
+		pulumiProviderName:    "cloudinit",
+		terraformProviderName: "cloudinit",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v1.4.12",
+		},
+	},
+	"registry.opentofu.org/hashicorp/cloudinit": {
+		pulumiProviderName:    "cloudinit",
+		terraformProviderName: "cloudinit",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v1.4.12",
+		},
+	},
 
 	// Third-party providers
-	"registry.terraform.io/aiven/aiven":                            "aiven",
-	"registry.opentofu.org/aiven/aiven":                            "aiven",
-	"registry.terraform.io/akamai/akamai":                          "akamai",
-	"registry.opentofu.org/akamai/akamai":                          "akamai",
-	"registry.terraform.io/aliyun/alicloud":                        "alicloud",
-	"registry.opentofu.org/aliyun/alicloud":                        "alicloud",
-	"registry.terraform.io/jfrog/artifactory":                      "artifactory",
-	"registry.opentofu.org/jfrog/artifactory":                      "artifactory",
-	"registry.terraform.io/auth0/auth0":                            "auth0",
-	"registry.opentofu.org/auth0/auth0":                            "auth0",
-	"registry.terraform.io/microsoft/azuredevops":                  "azuredevops",
-	"registry.opentofu.org/microsoft/azuredevops":                  "azuredevops",
-	"registry.terraform.io/cloudamqp/cloudamqp":                    "cloudamqp",
-	"registry.opentofu.org/cloudamqp/cloudamqp":                    "cloudamqp",
-	"registry.terraform.io/cloudflare/cloudflare":                  "cloudflare",
-	"registry.opentofu.org/cloudflare/cloudflare":                  "cloudflare",
-	"registry.terraform.io/paloaltonetworks/cloudngfwaws":          "cloudngfwaws",
-	"registry.opentofu.org/paloaltonetworks/cloudngfwaws":          "cloudngfwaws",
-	"registry.terraform.io/confluentinc/confluent":                 "confluentcloud",
-	"registry.opentofu.org/confluentinc/confluent":                 "confluentcloud",
-	"registry.terraform.io/databricks/databricks":                  "databricks",
-	"registry.opentofu.org/databricks/databricks":                  "databricks",
-	"registry.terraform.io/datadog/datadog":                        "datadog",
-	"registry.opentofu.org/datadog/datadog":                        "datadog",
-	"registry.terraform.io/dbt-labs/dbtcloud":                      "dbtcloud",
-	"registry.opentofu.org/dbt-labs/dbtcloud":                      "dbtcloud",
-	"registry.terraform.io/digitalocean/digitalocean":              "digitalocean",
-	"registry.opentofu.org/digitalocean/digitalocean":              "digitalocean",
-	"registry.terraform.io/dnsimple/dnsimple":                      "dnsimple",
-	"registry.opentofu.org/dnsimple/dnsimple":                      "dnsimple",
-	"registry.terraform.io/kreuzwerker/docker":                     "docker",
-	"registry.opentofu.org/kreuzwerker/docker":                     "docker",
-	"registry.terraform.io/elastic/ec":                             "ec",
-	"registry.opentofu.org/elastic/ec":                             "ec",
-	"registry.terraform.io/f5networks/bigip":                       "f5bigip",
-	"registry.opentofu.org/f5networks/bigip":                       "f5bigip",
-	"registry.terraform.io/fastly/fastly":                          "fastly",
-	"registry.opentofu.org/fastly/fastly":                          "fastly",
-	"registry.terraform.io/integrations/github":                    "github",
-	"registry.opentofu.org/integrations/github":                    "github",
-	"registry.terraform.io/gitlabhq/gitlab":                        "gitlab",
-	"registry.opentofu.org/gitlabhq/gitlab":                        "gitlab",
-	"registry.terraform.io/harness/harness":                        "harness",
-	"registry.opentofu.org/harness/harness":                        "harness",
-	"registry.terraform.io/hetznercloud/hcloud":                    "hcloud",
-	"registry.opentofu.org/hetznercloud/hcloud":                    "hcloud",
-	"registry.terraform.io/ciscodevnet/ise":                        "ise",
-	"registry.opentofu.org/ciscodevnet/ise":                        "ise",
-	"registry.terraform.io/Juniper/mist":                           "junipermist",
-	"registry.opentofu.org/Juniper/mist":                           "junipermist",
-	"registry.terraform.io/mongey/kafka":                           "kafka",
-	"registry.opentofu.org/mongey/kafka":                           "kafka",
-	"registry.terraform.io/mrparkers/keycloak":                     "keycloak",
-	"registry.opentofu.org/mrparkers/keycloak":                     "keycloak",
-	"registry.terraform.io/kevholditch/kong":                       "kong",
-	"registry.opentofu.org/kevholditch/kong":                       "kong",
-	"registry.terraform.io/hashicorp/kubernetes":                   "kubernetes",
-	"registry.opentofu.org/hashicorp/kubernetes":                   "kubernetes",
-	"registry.terraform.io/linode/linode":                          "linode",
-	"registry.opentofu.org/linode/linode":                          "linode",
-	"registry.terraform.io/wgebis/mailgun":                         "mailgun",
-	"registry.opentofu.org/wgebis/mailgun":                         "mailgun",
-	"registry.terraform.io/cisco-open/meraki":                      "meraki",
-	"registry.opentofu.org/cisco-open/meraki":                      "meraki",
-	"registry.terraform.io/aminueza/minio":                         "minio",
-	"registry.opentofu.org/aminueza/minio":                         "minio",
-	"registry.terraform.io/mongodb/mongodbatlas":                   "mongodbatlas",
-	"registry.opentofu.org/mongodb/mongodbatlas":                   "mongodbatlas",
-	"registry.terraform.io/newrelic/newrelic":                      "newrelic",
-	"registry.opentofu.org/newrelic/newrelic":                      "newrelic",
-	"registry.terraform.io/ns1-terraform/ns1":                      "ns1",
-	"registry.opentofu.org/ns1-terraform/ns1":                      "ns1",
-	"registry.terraform.io/oracle/oci":                             "oci",
-	"registry.opentofu.org/oracle/oci":                             "oci",
-	"registry.terraform.io/okta/okta":                              "okta",
-	"registry.opentofu.org/okta/okta":                              "okta",
-	"registry.terraform.io/terraform-provider-openstack/openstack": "openstack",
-	"registry.opentofu.org/terraform-provider-openstack/openstack": "openstack",
-	"registry.terraform.io/opsgenie/opsgenie":                      "opsgenie",
-	"registry.opentofu.org/opsgenie/opsgenie":                      "opsgenie",
-	"registry.terraform.io/pagerduty/pagerduty":                    "pagerduty",
-	"registry.opentofu.org/pagerduty/pagerduty":                    "pagerduty",
-	"registry.terraform.io/cyrilgdn/postgresql":                    "postgresql",
-	"registry.opentofu.org/cyrilgdn/postgresql":                    "postgresql",
-	"registry.terraform.io/cyrilgdn/rabbitmq":                      "rabbitmq",
-	"registry.opentofu.org/cyrilgdn/rabbitmq":                      "rabbitmq",
-	"registry.terraform.io/rancher/rancher2":                       "rancher2",
-	"registry.opentofu.org/rancher/rancher2":                       "rancher2",
-	"registry.terraform.io/ciscodevnet/sdwan":                      "sdwan",
-	"registry.opentofu.org/ciscodevnet/sdwan":                      "sdwan",
-	"registry.terraform.io/splunk-terraform/signalfx":              "signalfx",
-	"registry.opentofu.org/splunk-terraform/signalfx":              "signalfx",
-	"registry.terraform.io/jmatsu/slack":                           "slack",
-	"registry.opentofu.org/jmatsu/slack":                           "slack",
-	"registry.terraform.io/snowflake-labs/snowflake":               "snowflake",
-	"registry.opentofu.org/snowflake-labs/snowflake":               "snowflake",
-	"registry.terraform.io/splunk/splunk":                          "splunk",
-	"registry.opentofu.org/splunk/splunk":                          "splunk",
-	"registry.terraform.io/spotinst/spotinst":                      "spotinst",
-	"registry.opentofu.org/spotinst/spotinst":                      "spotinst",
-	"registry.terraform.io/tailscale/tailscale":                    "tailscale",
-	"registry.opentofu.org/tailscale/tailscale":                    "tailscale",
-	"registry.terraform.io/venafi/venafi":                          "venafi",
-	"registry.opentofu.org/venafi/venafi":                          "venafi",
-	"registry.terraform.io/vmware/wavefront":                       "wavefront",
-	"registry.opentofu.org/vmware/wavefront":                       "wavefront",
+	"registry.terraform.io/aiven/aiven": {
+		pulumiProviderName:    "aiven",
+		terraformProviderName: "aiven",
+		latestVersionByTerraformMajor: map[int]string{
+			4: "v6.45.0",
+		},
+	},
+	"registry.opentofu.org/aiven/aiven": {
+		pulumiProviderName:    "aiven",
+		terraformProviderName: "aiven",
+		latestVersionByTerraformMajor: map[int]string{
+			4: "v6.45.0",
+		},
+	},
+	"registry.terraform.io/akamai/akamai": {
+		pulumiProviderName:    "akamai",
+		terraformProviderName: "akamai",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v2.9.0",
+			3: "v4.5.0",
+			4: "v5.0.0",
+			5: "v6.4.0",
+			6: "v7.6.1",
+			7: "v8.1.0",
+			8: "v9.1.0",
+			9: "v10.2.0",
+		},
+	},
+	"registry.opentofu.org/akamai/akamai": {
+		pulumiProviderName:    "akamai",
+		terraformProviderName: "akamai",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v2.9.0",
+			3: "v4.5.0",
+			4: "v5.0.0",
+			5: "v6.4.0",
+			6: "v7.6.1",
+			7: "v8.1.0",
+			8: "v9.1.0",
+			9: "v10.2.0",
+		},
+	},
+	"registry.terraform.io/aliyun/alicloud": {
+		pulumiProviderName:    "alicloud",
+		terraformProviderName: "alicloud",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.90.0",
+		},
+	},
+	"registry.opentofu.org/aliyun/alicloud": {
+		pulumiProviderName:    "alicloud",
+		terraformProviderName: "alicloud",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.90.0",
+		},
+	},
+	"registry.terraform.io/jfrog/artifactory": {
+		pulumiProviderName:    "artifactory",
+		terraformProviderName: "artifactory",
+		latestVersionByTerraformMajor: map[int]string{
+			10: "v6.8.3",
+			11: "v7.9.1",
+			12: "v8.10.0",
+		},
+	},
+	"registry.opentofu.org/jfrog/artifactory": {
+		pulumiProviderName:    "artifactory",
+		terraformProviderName: "artifactory",
+		latestVersionByTerraformMajor: map[int]string{
+			10: "v6.8.3",
+			11: "v7.9.1",
+			12: "v8.10.0",
+		},
+	},
+	"registry.terraform.io/auth0/auth0": {
+		pulumiProviderName:    "auth0",
+		terraformProviderName: "auth0",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.34.0",
+		},
+	},
+	"registry.opentofu.org/auth0/auth0": {
+		pulumiProviderName:    "auth0",
+		terraformProviderName: "auth0",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.34.0",
+		},
+	},
+	"registry.terraform.io/microsoft/azuredevops": {
+		pulumiProviderName:    "azuredevops",
+		terraformProviderName: "azuredevops",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v2.15.0",
+			1: "v3.10.0",
+		},
+	},
+	"registry.opentofu.org/microsoft/azuredevops": {
+		pulumiProviderName:    "azuredevops",
+		terraformProviderName: "azuredevops",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v2.15.0",
+			1: "v3.10.0",
+		},
+	},
+	"registry.terraform.io/cloudamqp/cloudamqp": {
+		pulumiProviderName:    "cloudamqp",
+		terraformProviderName: "cloudamqp",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.24.3",
+		},
+	},
+	"registry.opentofu.org/cloudamqp/cloudamqp": {
+		pulumiProviderName:    "cloudamqp",
+		terraformProviderName: "cloudamqp",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.24.3",
+		},
+	},
+	"registry.terraform.io/cloudflare/cloudflare": {
+		pulumiProviderName:    "cloudflare",
+		terraformProviderName: "cloudflare",
+		latestVersionByTerraformMajor: map[int]string{
+			4: "v5.49.0",
+			5: "v6.11.0",
+		},
+	},
+	"registry.opentofu.org/cloudflare/cloudflare": {
+		pulumiProviderName:    "cloudflare",
+		terraformProviderName: "cloudflare",
+		latestVersionByTerraformMajor: map[int]string{
+			4: "v5.49.0",
+			5: "v6.11.0",
+		},
+	},
+	"registry.terraform.io/confluentinc/confluent": {
+		pulumiProviderName:    "confluentcloud",
+		terraformProviderName: "confluent",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v2.52.0",
+		},
+	},
+	"registry.opentofu.org/confluentinc/confluent": {
+		pulumiProviderName:    "confluentcloud",
+		terraformProviderName: "confluent",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v2.52.0",
+		},
+	},
+	"registry.terraform.io/databricks/databricks": {
+		pulumiProviderName:    "databricks",
+		terraformProviderName: "databricks",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v1.78.0",
+		},
+	},
+	"registry.opentofu.org/databricks/databricks": {
+		pulumiProviderName:    "databricks",
+		terraformProviderName: "databricks",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v1.78.0",
+		},
+	},
+	"registry.terraform.io/datadog/datadog": {
+		pulumiProviderName:    "datadog",
+		terraformProviderName: "datadog",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v4.60.0",
+		},
+	},
+	"registry.opentofu.org/datadog/datadog": {
+		pulumiProviderName:    "datadog",
+		terraformProviderName: "datadog",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v4.60.0",
+		},
+	},
+	"registry.terraform.io/dbt-labs/dbtcloud": {
+		pulumiProviderName:    "dbtcloud",
+		terraformProviderName: "dbtcloud",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.1.30",
+			1: "v1.3.1",
+		},
+	},
+	"registry.opentofu.org/dbt-labs/dbtcloud": {
+		pulumiProviderName:    "dbtcloud",
+		terraformProviderName: "dbtcloud",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.1.30",
+			1: "v1.3.1",
+		},
+	},
+	"registry.terraform.io/digitalocean/digitalocean": {
+		pulumiProviderName:    "digitalocean",
+		terraformProviderName: "digitalocean",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v4.55.0",
+		},
+	},
+	"registry.opentofu.org/digitalocean/digitalocean": {
+		pulumiProviderName:    "digitalocean",
+		terraformProviderName: "digitalocean",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v4.55.0",
+		},
+	},
+	"registry.terraform.io/dnsimple/dnsimple": {
+		pulumiProviderName:    "dnsimple",
+		terraformProviderName: "dnsimple",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v3.5.0",
+			1: "v4.4.0",
+		},
+	},
+	"registry.opentofu.org/dnsimple/dnsimple": {
+		pulumiProviderName:    "dnsimple",
+		terraformProviderName: "dnsimple",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v3.5.0",
+			1: "v4.4.0",
+		},
+	},
+	"registry.terraform.io/kreuzwerker/docker": {
+		pulumiProviderName:    "docker",
+		terraformProviderName: "docker",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v3.2.0",
+			3: "v4.10.0",
+		},
+	},
+	"registry.opentofu.org/kreuzwerker/docker": {
+		pulumiProviderName:    "docker",
+		terraformProviderName: "docker",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v3.2.0",
+			3: "v4.10.0",
+		},
+	},
+	"registry.terraform.io/elastic/ec": {
+		pulumiProviderName:    "ec",
+		terraformProviderName: "ec",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.10.4",
+		},
+	},
+	"registry.opentofu.org/elastic/ec": {
+		pulumiProviderName:    "ec",
+		terraformProviderName: "ec",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.10.4",
+		},
+	},
+	"registry.terraform.io/f5networks/bigip": {
+		pulumiProviderName:    "f5bigip",
+		terraformProviderName: "bigip",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.19.2",
+		},
+	},
+	"registry.opentofu.org/f5networks/bigip": {
+		pulumiProviderName:    "f5bigip",
+		terraformProviderName: "bigip",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.19.2",
+		},
+	},
+	"registry.terraform.io/fastly/fastly": {
+		pulumiProviderName:    "fastly",
+		terraformProviderName: "fastly",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v5.1.0",
+			3: "v6.0.0",
+			4: "v7.3.2",
+			5: "v8.14.0",
+			6: "v9.1.0",
+			7: "v10.1.0",
+			8: "v11.2.0",
+		},
+	},
+	"registry.opentofu.org/fastly/fastly": {
+		pulumiProviderName:    "fastly",
+		terraformProviderName: "fastly",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v5.1.0",
+			3: "v6.0.0",
+			4: "v7.3.2",
+			5: "v8.14.0",
+			6: "v9.1.0",
+			7: "v10.1.0",
+			8: "v11.2.0",
+		},
+	},
+	"registry.terraform.io/integrations/github": {
+		pulumiProviderName:    "github",
+		terraformProviderName: "github",
+		latestVersionByTerraformMajor: map[int]string{
+			5: "v5.26.0",
+			6: "v6.9.1",
+		},
+	},
+	"registry.opentofu.org/integrations/github": {
+		pulumiProviderName:    "github",
+		terraformProviderName: "github",
+		latestVersionByTerraformMajor: map[int]string{
+			5: "v5.26.0",
+			6: "v6.9.1",
+		},
+	},
+	"registry.terraform.io/gitlabhq/gitlab": {
+		pulumiProviderName:    "gitlab",
+		terraformProviderName: "gitlab",
+		latestVersionByTerraformMajor: map[int]string{
+			3:  "v4.10.0",
+			16: "v6.11.0",
+			17: "v8.11.0",
+			18: "v9.5.0",
+		},
+	},
+	"registry.opentofu.org/gitlabhq/gitlab": {
+		pulumiProviderName:    "gitlab",
+		terraformProviderName: "gitlab",
+		latestVersionByTerraformMajor: map[int]string{
+			3:  "v4.10.0",
+			16: "v6.11.0",
+			17: "v8.11.0",
+			18: "v9.5.0",
+		},
+	},
+	"registry.terraform.io/harness/harness": {
+		pulumiProviderName:    "harness",
+		terraformProviderName: "harness",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.9.3",
+		},
+	},
+	"registry.opentofu.org/harness/harness": {
+		pulumiProviderName:    "harness",
+		terraformProviderName: "harness",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.9.3",
+		},
+	},
+	"registry.terraform.io/hetznercloud/hcloud": {
+		pulumiProviderName:    "hcloud",
+		terraformProviderName: "hcloud",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v1.29.0",
+		},
+	},
+	"registry.opentofu.org/hetznercloud/hcloud": {
+		pulumiProviderName:    "hcloud",
+		terraformProviderName: "hcloud",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v1.29.0",
+		},
+	},
+	"registry.terraform.io/ciscodevnet/ise": {
+		pulumiProviderName:    "ise",
+		terraformProviderName: "ise",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.2.7",
+		},
+	},
+	"registry.opentofu.org/ciscodevnet/ise": {
+		pulumiProviderName:    "ise",
+		terraformProviderName: "ise",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.2.7",
+		},
+	},
+	"registry.terraform.io/Juniper/mist": {
+		pulumiProviderName:    "junipermist",
+		terraformProviderName: "mist",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.7.1",
+		},
+	},
+	"registry.opentofu.org/Juniper/mist": {
+		pulumiProviderName:    "junipermist",
+		terraformProviderName: "mist",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.7.1",
+		},
+	},
+	"registry.terraform.io/mongey/kafka": {
+		pulumiProviderName:    "kafka",
+		terraformProviderName: "kafka",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v3.12.1",
+		},
+	},
+	"registry.opentofu.org/mongey/kafka": {
+		pulumiProviderName:    "kafka",
+		terraformProviderName: "kafka",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v3.12.1",
+		},
+	},
+	"registry.terraform.io/mrparkers/keycloak": {
+		pulumiProviderName:    "keycloak",
+		terraformProviderName: "keycloak",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v4.8.0",
+			4: "v5.4.0",
+			5: "v6.8.0",
+		},
+	},
+	"registry.opentofu.org/mrparkers/keycloak": {
+		pulumiProviderName:    "keycloak",
+		terraformProviderName: "keycloak",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v4.8.0",
+			4: "v5.4.0",
+			5: "v6.8.0",
+		},
+	},
+	"registry.terraform.io/kevholditch/kong": {
+		pulumiProviderName:    "kong",
+		terraformProviderName: "kong",
+		latestVersionByTerraformMajor: map[int]string{
+			6: "v4.5.3",
+		},
+	},
+	"registry.opentofu.org/kevholditch/kong": {
+		pulumiProviderName:    "kong",
+		terraformProviderName: "kong",
+		latestVersionByTerraformMajor: map[int]string{
+			6: "v4.5.3",
+		},
+	},
+	"registry.terraform.io/linode/linode": {
+		pulumiProviderName:    "linode",
+		terraformProviderName: "linode",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v4.39.0",
+			3: "v5.5.0",
+		},
+	},
+	"registry.opentofu.org/linode/linode": {
+		pulumiProviderName:    "linode",
+		terraformProviderName: "linode",
+		latestVersionByTerraformMajor: map[int]string{
+			2: "v4.39.0",
+			3: "v5.5.0",
+		},
+	},
+	"registry.terraform.io/wgebis/mailgun": {
+		pulumiProviderName:    "mailgun",
+		terraformProviderName: "mailgun",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v3.6.1",
+		},
+	},
+	"registry.opentofu.org/wgebis/mailgun": {
+		pulumiProviderName:    "mailgun",
+		terraformProviderName: "mailgun",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v3.6.1",
+		},
+	},
+	"registry.terraform.io/cisco-open/meraki": {
+		pulumiProviderName:    "meraki",
+		terraformProviderName: "meraki",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.3.0",
+		},
+	},
+	"registry.opentofu.org/cisco-open/meraki": {
+		pulumiProviderName:    "meraki",
+		terraformProviderName: "meraki",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.3.0",
+		},
+	},
+	"registry.terraform.io/aminueza/minio": {
+		pulumiProviderName:    "minio",
+		terraformProviderName: "minio",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v0.15.1",
+		},
+	},
+	"registry.opentofu.org/aminueza/minio": {
+		pulumiProviderName:    "minio",
+		terraformProviderName: "minio",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v0.15.1",
+		},
+	},
+	"registry.terraform.io/mongodb/mongodbatlas": {
+		pulumiProviderName:    "mongodbatlas",
+		terraformProviderName: "mongodbatlas",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.37.0",
+		},
+	},
+	"registry.opentofu.org/mongodb/mongodbatlas": {
+		pulumiProviderName:    "mongodbatlas",
+		terraformProviderName: "mongodbatlas",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.37.0",
+		},
+	},
+	"registry.terraform.io/newrelic/newrelic": {
+		pulumiProviderName:    "newrelic",
+		terraformProviderName: "newrelic",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v5.57.3",
+		},
+	},
+	"registry.opentofu.org/newrelic/newrelic": {
+		pulumiProviderName:    "newrelic",
+		terraformProviderName: "newrelic",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v5.57.3",
+		},
+	},
+	"registry.terraform.io/ns1-terraform/ns1": {
+		pulumiProviderName:    "ns1",
+		terraformProviderName: "ns1",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v2.3.3",
+			2: "v3.7.3",
+		},
+	},
+	"registry.opentofu.org/ns1-terraform/ns1": {
+		pulumiProviderName:    "ns1",
+		terraformProviderName: "ns1",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v2.3.3",
+			2: "v3.7.3",
+		},
+	},
+	"registry.terraform.io/oracle/oci": {
+		pulumiProviderName:    "oci",
+		terraformProviderName: "oci",
+		latestVersionByTerraformMajor: map[int]string{
+			5: "v1.41.0",
+			6: "v2.33.0",
+			7: "v3.12.0",
+		},
+	},
+	"registry.opentofu.org/oracle/oci": {
+		pulumiProviderName:    "oci",
+		terraformProviderName: "oci",
+		latestVersionByTerraformMajor: map[int]string{
+			5: "v1.41.0",
+			6: "v2.33.0",
+			7: "v3.12.0",
+		},
+	},
+	"registry.terraform.io/okta/okta": {
+		pulumiProviderName:    "okta",
+		terraformProviderName: "okta",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v3.23.0",
+			4: "v4.19.0",
+			5: "v5.2.0",
+			6: "v6.1.0",
+		},
+	},
+	"registry.opentofu.org/okta/okta": {
+		pulumiProviderName:    "okta",
+		terraformProviderName: "okta",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v3.23.0",
+			4: "v4.19.0",
+			5: "v5.2.0",
+			6: "v6.1.0",
+		},
+	},
+	"registry.terraform.io/terraform-provider-openstack/openstack": {
+		pulumiProviderName:    "openstack",
+		terraformProviderName: "openstack",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.15.1",
+			2: "v4.1.0",
+			3: "v5.4.0",
+		},
+	},
+	"registry.opentofu.org/terraform-provider-openstack/openstack": {
+		pulumiProviderName:    "openstack",
+		terraformProviderName: "openstack",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.15.1",
+			2: "v4.1.0",
+			3: "v5.4.0",
+		},
+	},
+	"registry.terraform.io/opsgenie/opsgenie": {
+		pulumiProviderName:    "opsgenie",
+		terraformProviderName: "opsgenie",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v1.3.18",
+		},
+	},
+	"registry.opentofu.org/opsgenie/opsgenie": {
+		pulumiProviderName:    "opsgenie",
+		terraformProviderName: "opsgenie",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v1.3.18",
+		},
+	},
+	"registry.terraform.io/pagerduty/pagerduty": {
+		pulumiProviderName:    "pagerduty",
+		terraformProviderName: "pagerduty",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v4.29.7",
+		},
+	},
+	"registry.opentofu.org/pagerduty/pagerduty": {
+		pulumiProviderName:    "pagerduty",
+		terraformProviderName: "pagerduty",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v4.29.7",
+		},
+	},
+	"registry.terraform.io/cyrilgdn/postgresql": {
+		pulumiProviderName:    "postgresql",
+		terraformProviderName: "postgresql",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.16.0",
+		},
+	},
+	"registry.opentofu.org/cyrilgdn/postgresql": {
+		pulumiProviderName:    "postgresql",
+		terraformProviderName: "postgresql",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.16.0",
+		},
+	},
+	"registry.terraform.io/cyrilgdn/rabbitmq": {
+		pulumiProviderName:    "rabbitmq",
+		terraformProviderName: "rabbitmq",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.4.0",
+		},
+	},
+	"registry.opentofu.org/cyrilgdn/rabbitmq": {
+		pulumiProviderName:    "rabbitmq",
+		terraformProviderName: "rabbitmq",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.4.0",
+		},
+	},
+	"registry.terraform.io/rancher/rancher2": {
+		pulumiProviderName:    "rancher2",
+		terraformProviderName: "rancher2",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.9.0",
+			2: "v4.0.0",
+			3: "v5.2.0",
+			4: "v6.2.0",
+			5: "v7.1.0",
+			6: "v8.1.5",
+			7: "v9.2.0",
+			8: "v10.3.0",
+		},
+	},
+	"registry.opentofu.org/rancher/rancher2": {
+		pulumiProviderName:    "rancher2",
+		terraformProviderName: "rancher2",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.9.0",
+			2: "v4.0.0",
+			3: "v5.2.0",
+			4: "v6.2.0",
+			5: "v7.1.0",
+			6: "v8.1.5",
+			7: "v9.2.0",
+			8: "v10.3.0",
+		},
+	},
+	"registry.terraform.io/ciscodevnet/sdwan": {
+		pulumiProviderName:    "sdwan",
+		terraformProviderName: "sdwan",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.5.1",
+		},
+	},
+	"registry.opentofu.org/ciscodevnet/sdwan": {
+		pulumiProviderName:    "sdwan",
+		terraformProviderName: "sdwan",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.5.1",
+		},
+	},
+	"registry.terraform.io/splunk-terraform/signalfx": {
+		pulumiProviderName:    "signalfx",
+		terraformProviderName: "signalfx",
+		latestVersionByTerraformMajor: map[int]string{
+			6: "v5.10.0",
+			8: "v6.1.0",
+			9: "v7.19.3",
+		},
+	},
+	"registry.opentofu.org/splunk-terraform/signalfx": {
+		pulumiProviderName:    "signalfx",
+		terraformProviderName: "signalfx",
+		latestVersionByTerraformMajor: map[int]string{
+			6: "v5.10.0",
+			8: "v6.1.0",
+			9: "v7.19.3",
+		},
+	},
+	"registry.terraform.io/jmatsu/slack": {
+		pulumiProviderName:    "slack",
+		terraformProviderName: "slack",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v0.4.2",
+		},
+	},
+	"registry.opentofu.org/jmatsu/slack": {
+		pulumiProviderName:    "slack",
+		terraformProviderName: "slack",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v0.4.2",
+		},
+	},
+	"registry.terraform.io/snowflake-labs/snowflake": {
+		pulumiProviderName:    "snowflake",
+		terraformProviderName: "snowflake",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.62.0",
+			1: "v1.3.0",
+			2: "v2.10.0",
+		},
+	},
+	"registry.opentofu.org/snowflake-labs/snowflake": {
+		pulumiProviderName:    "snowflake",
+		terraformProviderName: "snowflake",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.62.0",
+			1: "v1.3.0",
+			2: "v2.10.0",
+		},
+	},
+	"registry.terraform.io/splunk/splunk": {
+		pulumiProviderName:    "splunk",
+		terraformProviderName: "splunk",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v1.2.21",
+		},
+	},
+	"registry.opentofu.org/splunk/splunk": {
+		pulumiProviderName:    "splunk",
+		terraformProviderName: "splunk",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v1.2.21",
+		},
+	},
+	"registry.terraform.io/spotinst/spotinst": {
+		pulumiProviderName:    "spotinst",
+		terraformProviderName: "spotinst",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.127.0",
+		},
+	},
+	"registry.opentofu.org/spotinst/spotinst": {
+		pulumiProviderName:    "spotinst",
+		terraformProviderName: "spotinst",
+		latestVersionByTerraformMajor: map[int]string{
+			1: "v3.127.0",
+		},
+	},
+	"registry.terraform.io/tailscale/tailscale": {
+		pulumiProviderName:    "tailscale",
+		terraformProviderName: "tailscale",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.23.0",
+		},
+	},
+	"registry.opentofu.org/tailscale/tailscale": {
+		pulumiProviderName:    "tailscale",
+		terraformProviderName: "tailscale",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v0.23.0",
+		},
+	},
+	"registry.terraform.io/venafi/venafi": {
+		pulumiProviderName:    "venafi",
+		terraformProviderName: "venafi",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v1.12.1",
+		},
+	},
+	"registry.opentofu.org/venafi/venafi": {
+		pulumiProviderName:    "venafi",
+		terraformProviderName: "venafi",
+		latestVersionByTerraformMajor: map[int]string{
+			0: "v1.12.1",
+		},
+	},
+	"registry.terraform.io/vmware/wavefront": {
+		pulumiProviderName:    "wavefront",
+		terraformProviderName: "wavefront",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v1.4.0",
+			5: "v3.1.0",
+		},
+	},
+	"registry.opentofu.org/vmware/wavefront": {
+		pulumiProviderName:    "wavefront",
+		terraformProviderName: "wavefront",
+		latestVersionByTerraformMajor: map[int]string{
+			3: "v1.4.0",
+			5: "v3.1.0",
+		},
+	},
 }
 
 func RecommendPulumiProvider(tf TerraformProvider) RecommendedPulumiProvider {
@@ -189,7 +1105,7 @@ func RecommendPulumiProvider(tf TerraformProvider) RecommendedPulumiProvider {
 	if pulumiProvider, ok := providerMapping[tf.Identifier]; ok {
 		return RecommendedPulumiProvider{
 			BridgedPulumiProvider: &BridgedPulumiProvider{
-				Identifier: pulumiProvider,
+				Identifier: pulumiProvider.pulumiProviderName,
 				Version:    "", // Version can be looked up separately if needed
 			},
 		}
