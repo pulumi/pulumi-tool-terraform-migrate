@@ -6,6 +6,8 @@ toolchain go1.24.10
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/hashicorp/terraform-exec v0.23.1
+	github.com/hashicorp/terraform-json v0.27.1
 	github.com/pulumi/pulumi-terraform-bridge/v3 v3.118.0
 	github.com/pulumi/pulumi/sdk/v3 v3.209.0
 	github.com/stretchr/testify v1.10.0
