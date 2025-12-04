@@ -14,18 +14,6 @@
 
 package providermap
 
-import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
-)
-
 type TerraformProvider struct {
 	// Identifier such as "registry.opentofu.org/hashicorp/aws" or "registry.opentofu.org/hashicorp/aws"
 	Identifier string
@@ -661,13 +649,6 @@ var providerMapping = map[string]providerMappingDetail{
 		},
 	},
 	"registry.terraform.io/Juniper/mist": {
-		pulumiProviderName:    "junipermist",
-		terraformProviderName: "mist",
-		latestVersionByTerraformMajor: map[int]string{
-			0: "v0.7.1",
-		},
-	},
-	"registry.opentofu.org/Juniper/mist": {
 		pulumiProviderName:    "junipermist",
 		terraformProviderName: "mist",
 		latestVersionByTerraformMajor: map[int]string{
