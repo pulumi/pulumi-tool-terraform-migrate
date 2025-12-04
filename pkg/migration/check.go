@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	tfjson "github.com/hashicorp/terraform-json"
+	"github.com/pulumi/pulumi-terraform-migrate/pkg/tofu"
 )
 
 // CheckError represents a validation error found during migration check
@@ -109,15 +110,24 @@ func checkUniqueMapping(mf *MigrationFile, result *CheckResult) {
 		// Track URN -> tf-addr mapping
 		urnToTFAddr := make(map[string][]string)
 
-		for _, res := range stack.Resources {
-			// Skip resources that should be skipped or have no URN
-			if res.Migrate != MigrateModeEmpty && res.Migrate != "" {
-				continue
-			}
-			if res.URN == "" {
-				continue
-			}
+		for j, res := range stack.Resources {
+			// Validate that resources have both tf-addr and URN
 			if res.TFAddr == "" {
+				result.AddErrorWithSuggestion("invalid-resource",
+					fmt.Sprintf("%s: resource[%d] has empty tf-addr", stackPrefix, j),
+					"Remove this invalid resource entry from migration.json")
+				continue
+			}
+
+			if res.URN == "" && res.Migrate != MigrateModeSkip {
+				result.AddErrorWithSuggestion("invalid-resource",
+					fmt.Sprintf("%s: resource '%s' has empty URN", stackPrefix, res.TFAddr),
+					"Add a URN mapping or set migrate: \"skip\" for this resource")
+				continue
+			}
+
+			// Skip all resources except those migrating normally.
+			if res.Migrate != MigrateModeEmpty {
 				continue
 			}
 
@@ -140,14 +150,10 @@ func checkUniqueMapping(mf *MigrationFile, result *CheckResult) {
 		// Check for duplicate URN mappings
 		for urn, tfAddrs := range urnToTFAddr {
 			if len(tfAddrs) > 1 {
-				suggestions := make([]string, 0, len(tfAddrs)-1)
-				for j := 1; j < len(tfAddrs); j++ {
-					suggestions = append(suggestions, fmt.Sprintf("pulumi-terraform-migrate set-urn --addr '%s' --urn '<different-urn>' --stack '%s'", tfAddrs[j], stack.PulumiStack))
-				}
 				result.AddErrorWithSuggestion("unique-mapping",
 					fmt.Sprintf("%s: URN '%s' maps to multiple tf-addrs: %s",
 						stackPrefix, urn, strings.Join(tfAddrs, ", ")),
-					strings.Join(suggestions, " OR "))
+					"Edit migration.json to ensure the URN mapping is unique")
 			}
 		}
 	}
@@ -164,21 +170,17 @@ func checkStateConsistency(mf *MigrationFile, result *CheckResult) error {
 		}
 
 		// Load the Terraform state
-		state, err := LoadTerraformState(stack.TFState)
+		state, err := tofu.LoadTerraformState(stack.TFState)
 		if err != nil {
 			return fmt.Errorf("failed to load state for %s: %w", stackPrefix, err)
 		}
 
 		// Collect all resource addresses from the state
 		stateAddrs := make(map[string]bool)
-		err = VisitResources(state, func(res *tfjson.StateResource) error {
-			// Only track managed resources, not data sources
-			if res.Mode == tfjson.DataResourceMode {
-				return nil
-			}
+		err = tofu.VisitResources(state, func(res *tfjson.StateResource) error {
 			stateAddrs[res.Address] = true
 			return nil
-		})
+		}, nil) // Use default options (skips data sources)
 		if err != nil {
 			return fmt.Errorf("failed to visit resources in state for %s: %w", stackPrefix, err)
 		}
@@ -197,7 +199,7 @@ func checkStateConsistency(mf *MigrationFile, result *CheckResult) error {
 				result.AddErrorWithSuggestion("state-consistency",
 					fmt.Sprintf("%s: resource '%s' exists in Terraform state but not in migration.json",
 						stackPrefix, addr),
-					fmt.Sprintf("pulumi-terraform-migrate skip --addr '%s' --stack '%s'", addr, stack.PulumiStack))
+					"Add an entry for this resource to migration.json mapping it to a Pulumi resource or skipping it")
 			}
 		}
 
@@ -207,7 +209,7 @@ func checkStateConsistency(mf *MigrationFile, result *CheckResult) error {
 				result.AddErrorWithSuggestion("state-consistency",
 					fmt.Sprintf("%s: resource '%s' exists in migration.json but not in Terraform state",
 						stackPrefix, addr),
-					fmt.Sprintf("pulumi-terraform-migrate untrack '%s'", addr))
+					"Remove this resource grom migration.json")
 			}
 		}
 	}
