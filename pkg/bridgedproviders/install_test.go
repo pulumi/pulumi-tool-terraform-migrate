@@ -27,13 +27,11 @@ import (
 // It's skipped by default but can be enabled for manual testing.
 func TestInstallProvider_Integration(t *testing.T) {
 	ctx := context.Background()
-	tmpDir := t.TempDir()
 
-	// Install a small provider like random
+	// Install a small provider like random to the standard Pulumi home
 	result, err := InstallProvider(ctx, InstallProviderOptions{
-		Name:      "random",
-		Version:   "v4.16.7",
-		PluginDir: tmpDir,
+		Name:    "random",
+		Version: "v4.16.7",
 	})
 	if err != nil {
 		t.Fatalf("InstallProvider failed: %v", err)
@@ -131,7 +129,7 @@ func TestGetProviderBinaryPath(t *testing.T) {
 func TestGetInstalledProviderPath_RequiresName(t *testing.T) {
 	ctx := context.Background()
 
-	_, err := GetInstalledProviderPath(ctx, "", "v4.16.7", "")
+	_, err := GetInstalledProviderPath(ctx, "", "v4.16.7")
 	if err == nil {
 		t.Fatal("Expected error when name is empty")
 	}
@@ -140,7 +138,7 @@ func TestGetInstalledProviderPath_RequiresName(t *testing.T) {
 func TestGetInstalledProviderPath_RequiresVersion(t *testing.T) {
 	ctx := context.Background()
 
-	_, err := GetInstalledProviderPath(ctx, "random", "", "")
+	_, err := GetInstalledProviderPath(ctx, "random", "")
 	if err == nil {
 		t.Fatal("Expected error when version is empty")
 	}

@@ -17,14 +17,11 @@ package pulumix
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/blang/semver"
-	pkgWorkspace "github.com/pulumi/pulumi/pkg/v3/workspace"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/workspace"
 )
 
@@ -34,35 +31,8 @@ type InstallProviderOptions struct {
 	Name string
 	// Version is the semver version string (e.g., "v4.18.4")
 	Version string
-	// PluginDir is the optional cache directory to install the provider to.
-	PluginDir string
 	// PluginDownloadURL is an optional custom server URL to download the provider from.
 	PluginDownloadURL string
-}
-
-func defaultPluginDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("Unexpected error from os.UserHomeDir(): %v", err)
-	}
-	p := filepath.Join(home, ".pulumi-terraform-migrate", "plugins")
-	return p, nil
-}
-
-// PluginDir is the optional cache directory to install the provider to.
-func (opts InstallProviderOptions) EnsurePluginDir() (string, error) {
-	if opts.PluginDir == "" {
-		p, err := defaultPluginDir()
-		if err != nil {
-			return "", err
-		}
-		err = os.MkdirAll(p, 0700)
-		if err != nil {
-			return "", fmt.Errorf("Failed to ensure the plugin dir exists: %v", err)
-		}
-		return p, nil
-	}
-	return opts.PluginDir, nil
 }
 
 // InstallProviderResult contains the result of installing a provider.
@@ -71,17 +41,15 @@ type InstallProviderResult struct {
 	BinaryPath string
 	// Version is the semver version that was installed
 	Version semver.Version
-	// PluginDir is the directory where the provider was installed
-	PluginDir string
 }
 
 // InstallProvider automatically downloads and installs a Pulumi provider by name and version.
 // It returns the path to the provider binary once installed.
 //
 // This function:
-// 1. Creates a PluginSpec for the provider
+// 1. Creates a LocalWorkspace for plugin management
 // 2. Downloads the provider from the Pulumi plugin server (or custom URL)
-// 3. Installs the provider to the plugin cache directory
+// 3. Installs the provider to the standard Pulumi plugin cache
 // 4. Returns the path to the installed binary
 //
 // Example:
@@ -108,46 +76,34 @@ func InstallProvider(ctx context.Context, opts InstallProviderOptions) (*Install
 		return nil, fmt.Errorf("failed to parse version %q: %w", opts.Version, err)
 	}
 
-	// Create a PluginSpec for the provider
-	spec, err := workspace.NewPluginSpec(
-		ctx,
-		opts.Name,
-		apitype.ResourcePlugin,
-		&ver,
-		opts.PluginDownloadURL,
-		nil, // checksums
-	)
+	// Create a LocalWorkspace for plugin installation
+	w, err := auto.NewLocalWorkspace(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create plugin spec: %w", err)
+		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	// Override the plugin directory if specified
-	pluginDir, err := opts.EnsurePluginDir()
-	if err != nil {
-		return nil, err
+	// Install the plugin using the automation API
+	if opts.PluginDownloadURL != "" {
+		err = w.InstallPluginFromServer(ctx, opts.Name, opts.Version, opts.PluginDownloadURL)
+	} else {
+		err = w.InstallPlugin(ctx, opts.Name, opts.Version)
 	}
-	spec.PluginDir = pluginDir
-
-	// Install the plugin
-	log := func(sev diag.Severity, msg string) {
-		// Simple logging to stderr
-		if sev == diag.Error || sev == diag.Warning {
-			fmt.Fprintf(os.Stderr, "[%s] %s\n", sev, msg)
-		}
-	}
-
-	installedVersion, err := pkgWorkspace.InstallPlugin(ctx, spec, log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to install provider %s: %w", opts.Name, err)
 	}
 
+	// Get the plugin directory
+	pluginDir, err := workspace.GetPluginDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get plugin directory: %w", err)
+	}
+
 	// Construct the path to the installed binary
-	binaryPath := getProviderBinaryPath(pluginDir, opts.Name, *installedVersion)
+	binaryPath := getProviderBinaryPath(pluginDir, opts.Name, ver)
 
 	return &InstallProviderResult{
 		BinaryPath: binaryPath,
-		Version:    *installedVersion,
-		PluginDir:  pluginDir,
+		Version:    ver,
 	}, nil
 }
 
@@ -172,19 +128,12 @@ func getProviderBinaryPath(pluginDir, name string, version semver.Version) strin
 //
 // This is useful if you want to check if a provider is already installed before
 // attempting to install it.
-func GetInstalledProviderPath(ctx context.Context, name string, version string, pluginDir string) (string, error) {
+func GetInstalledProviderPath(ctx context.Context, name string, version string) (string, error) {
 	if name == "" {
 		return "", fmt.Errorf("name is required")
 	}
 	if version == "" {
 		return "", fmt.Errorf("version is required")
-	}
-	if pluginDir == "" {
-		d, err := defaultPluginDir()
-		if err != nil {
-			return "", err
-		}
-		pluginDir = d
 	}
 
 	// Parse the version
@@ -193,19 +142,28 @@ func GetInstalledProviderPath(ctx context.Context, name string, version string, 
 		return "", fmt.Errorf("failed to parse version %q: %w", version, err)
 	}
 
-	// Create a PluginSpec
-	spec := workspace.PluginSpec{
-		Name:      name,
-		Kind:      apitype.ResourcePlugin,
-		Version:   &ver,
-		PluginDir: pluginDir,
-	}
-
-	// Use GetPluginPath to find the binary
-	path, err := workspace.GetPluginPath(ctx, nil, spec, nil)
+	// Create a LocalWorkspace to access plugin information
+	w, err := auto.NewLocalWorkspace(ctx)
 	if err != nil {
-		return "", fmt.Errorf("provider %s v%s not found: %w", name, version, err)
+		return "", fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	return path, nil
+	// List all installed plugins
+	plugins, err := w.ListPlugins(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to list plugins: %w", err)
+	}
+
+	// Find the matching provider plugin
+	for _, plugin := range plugins {
+		if plugin.Name == name && plugin.Version != nil && plugin.Version.EQ(ver) {
+			pluginDir, err := workspace.GetPluginDir()
+			if err != nil {
+				return "", fmt.Errorf("failed to get plugin directory: %w", err)
+			}
+			return getProviderBinaryPath(pluginDir, name, ver), nil
+		}
+	}
+
+	return "", fmt.Errorf("provider %s v%s not found", name, version)
 }
