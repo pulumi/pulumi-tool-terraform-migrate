@@ -17,6 +17,7 @@ package pulumix
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -142,28 +143,22 @@ func GetInstalledProviderPath(ctx context.Context, name string, version string) 
 		return "", fmt.Errorf("failed to parse version %q: %w", version, err)
 	}
 
-	// Create a LocalWorkspace to access plugin information
-	w, err := auto.NewLocalWorkspace(ctx)
+	// Get the plugin directory
+	pluginDir, err := workspace.GetPluginDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to create workspace: %w", err)
+		return "", fmt.Errorf("failed to get plugin directory: %w", err)
 	}
 
-	// List all installed plugins
-	plugins, err := w.ListPlugins(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to list plugins: %w", err)
-	}
+	// Construct the expected binary path
+	binaryPath := getProviderBinaryPath(pluginDir, name, ver)
 
-	// Find the matching provider plugin
-	for _, plugin := range plugins {
-		if plugin.Name == name && plugin.Version != nil && plugin.Version.EQ(ver) {
-			pluginDir, err := workspace.GetPluginDir()
-			if err != nil {
-				return "", fmt.Errorf("failed to get plugin directory: %w", err)
-			}
-			return getProviderBinaryPath(pluginDir, name, ver), nil
+	// Check if the binary exists
+	if _, err := os.Stat(binaryPath); err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("provider %s v%s not found", name, version)
 		}
+		return "", fmt.Errorf("failed to check provider binary: %w", err)
 	}
 
-	return "", fmt.Errorf("provider %s v%s not found", name, version)
+	return binaryPath, nil
 }
