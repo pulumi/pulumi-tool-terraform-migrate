@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pulumix
+package bridgedproviders
 
 import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/blang/semver"
+	"github.com/stretchr/testify/assert"
 )
 
 // This is an integration test that actually downloads and installs a provider.
@@ -44,6 +46,13 @@ func TestInstallProvider_Integration(t *testing.T) {
 
 	t.Logf("Installed provider at: %s", result.BinaryPath)
 	t.Logf("Version: %s", result.Version.String())
+
+	t.Run("GetInstalledProvider", func(t *testing.T) {
+		p, err := GetInstalledProviderPath(ctx, "random", "v4.16.7")
+		assert.NoError(t, err)
+
+		assert.Equal(t, result.BinaryPath, p)
+	})
 }
 
 func TestInstallProvider_RequiresName(t *testing.T) {
@@ -119,7 +128,7 @@ func TestGetProviderBinaryPath(t *testing.T) {
 			}
 
 			// Check that it starts with the plugin dir
-			if !filepath.HasPrefix(result, tt.pluginDir) {
+			if !strings.HasPrefix(result, tt.pluginDir) {
 				t.Errorf("getProviderBinaryPath() = %v, want path starting with %v", result, tt.pluginDir)
 			}
 		})
@@ -144,62 +153,12 @@ func TestGetInstalledProviderPath_RequiresVersion(t *testing.T) {
 	}
 }
 
-func TestGetInstalledProviderPath_HappyPath(t *testing.T) {
-	// Create a temporary plugin directory
-	tmpDir := t.TempDir()
-
-	// Create the expected directory structure for a provider
-	providerName := "random"
-	version := "4.16.7"
-	ver := mustParseVersion(t, version)
-
-	versionedDir := filepath.Join(tmpDir, "resource-random-v4.16.7")
-	if err := os.MkdirAll(versionedDir, 0755); err != nil {
-		t.Fatalf("failed to create versioned directory: %v", err)
-	}
-
-	// Create the binary file
-	binaryName := "pulumi-resource-random"
-	binaryPath := filepath.Join(versionedDir, binaryName)
-	if err := os.WriteFile(binaryPath, []byte("fake binary"), 0755); err != nil {
-		t.Fatalf("failed to create binary: %v", err)
-	}
-
-	// Test with the actual function by temporarily overriding the plugin directory
-	// Since we can't easily override workspace.GetPluginDir, we'll test getProviderBinaryPath
-	// and verify the file existence logic separately
-
-	// Verify getProviderBinaryPath constructs the correct path
-	constructedPath := getProviderBinaryPath(tmpDir, providerName, ver)
-	if constructedPath != binaryPath {
-		t.Errorf("Expected path %s, got %s", binaryPath, constructedPath)
-	}
-
-	// Verify file exists
-	if _, err := os.Stat(constructedPath); err != nil {
-		t.Errorf("Expected file to exist at %s: %v", constructedPath, err)
-	}
-}
-
 func TestGetInstalledProviderPath_NotFound(t *testing.T) {
-	// Create a temporary plugin directory
-	tmpDir := t.TempDir()
-
-	// Set an environment variable to override the plugin directory
-	// (This would require modifying the implementation to support testing)
-	// For now, we'll just test the components directly
-
+	ctx := context.Background()
 	providerName := "nonexistent"
 	version := "1.0.0"
-	ver := mustParseVersion(t, version)
-
-	// Verify that getProviderBinaryPath constructs a path
-	constructedPath := getProviderBinaryPath(tmpDir, providerName, ver)
-
-	// Verify file does not exist
-	if _, err := os.Stat(constructedPath); !os.IsNotExist(err) {
-		t.Errorf("Expected file not to exist at %s", constructedPath)
-	}
+	_, err := GetInstalledProviderPath(ctx, providerName, version)
+	assert.Error(t, err)
 }
 
 func mustParseVersion(t *testing.T, v string) semver.Version {
