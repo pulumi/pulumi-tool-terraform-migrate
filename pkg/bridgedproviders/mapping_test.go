@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pulumix
+package bridgedproviders
 
 import (
 	"context"
@@ -24,13 +24,10 @@ import (
 func TestGetMappingFromBinary_Example(t *testing.T) {
 	ctx := context.Background()
 
-	tmpDir := t.TempDir()
-
 	// Install a small provider like random
 	installRandomResult, err := InstallProvider(ctx, InstallProviderOptions{
-		Name:      "random",
-		Version:   "v4.16.7",
-		PluginDir: tmpDir,
+		Name:    "random",
+		Version: "v4.16.7",
 	})
 	if err != nil {
 		t.Fatalf("InstallProvider failed: %v", err)
