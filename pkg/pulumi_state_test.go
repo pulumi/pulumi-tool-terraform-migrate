@@ -1,0 +1,73 @@
+package pkg
+
+import (
+	"os"
+	"testing"
+
+	"github.com/hexops/autogold/v2"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+)
+
+func TestMakeDeployment(t *testing.T) {
+	if os.Getenv("CI") == "true" {
+		t.Skip("Skipping test in CI: TODO: set up pulumi credentials in CI")
+	}
+	data, err := MakeDeployment(&PulumiState{
+		Providers: []PulumiResource{
+			{
+				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+				Type: "pulumi:providers:aws",
+				Name: "default_7.12.0",
+				Inputs: resource.PropertyMap{
+					"region":                    resource.NewProperty("us-east-1"),
+					"skipCredentialsValidation": resource.NewProperty(false),
+					"skipRegionValidation":      resource.NewProperty(true),
+					"version":                   resource.NewProperty("7.12.0"),
+				},
+				Outputs: resource.PropertyMap{
+					"region":                    resource.NewProperty("us-east-1"),
+					"skipCredentialsValidation": resource.NewProperty(false),
+					"skipRegionValidation":      resource.NewProperty(true),
+					"version":                   resource.NewProperty("7.12.0"),
+				},
+			},
+		},
+		Resources: []PulumiResource{
+			{
+				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+				Type: "aws_s3_bucket",
+				Name: "example",
+				Inputs: resource.PropertyMap{
+					"bucket":  resource.NewProperty("example"),
+					"key":     resource.NewProperty("example"),
+					"content": resource.NewProperty("example"),
+				},
+				Outputs: resource.PropertyMap{
+					"bucket":  resource.NewProperty("example"),
+					"key":     resource.NewProperty("example"),
+					"content": resource.NewProperty("example"),
+				},
+			},
+			{
+				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+				Type: "aws_s3_bucket_object",
+				Name: "example",
+				Inputs: resource.PropertyMap{
+					"bucket":  resource.NewProperty("example"),
+					"key":     resource.NewProperty("example"),
+					"content": resource.NewProperty("example"),
+				},
+				Outputs: resource.PropertyMap{
+					"bucket":  resource.NewProperty("example"),
+					"key":     resource.NewProperty("example"),
+					"content": resource.NewProperty("example"),
+				},
+			},
+		},
+	}, "")
+	if err != nil {
+		t.Fatalf("failed to make deployment: %v", err)
+	}
+
+	autogold.ExpectFile(t, data)
+}

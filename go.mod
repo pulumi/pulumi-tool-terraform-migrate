@@ -15,6 +15,7 @@ require (
 	github.com/pulumi/pulumi/sdk/v3 v3.210.0
 	github.com/stretchr/testify v1.10.0
 	github.com/zclconf/go-cty v1.17.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -130,7 +131,6 @@ require (
 	google.golang.org/protobuf v1.36.9 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/frand v1.4.2 // indirect
 	mvdan.cc/gofumpt v0.7.0 // indirect
 )
