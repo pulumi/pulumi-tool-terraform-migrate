@@ -13,6 +13,7 @@ require (
 	github.com/hexops/autogold/v2 v2.3.0
 	github.com/pulumi/pulumi-terraform-bridge/v3 v3.118.1-0.20251208120720-83979db2fd49
 	github.com/pulumi/pulumi/sdk/v3 v3.210.0
+	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.10.0
 	github.com/zclconf/go-cty v1.17.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -106,7 +107,6 @@ require (
 	github.com/segmentio/encoding v0.3.5 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
-	github.com/spf13/cobra v1.10.1 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/texttheater/golang-levenshtein v1.0.1 // indirect
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
