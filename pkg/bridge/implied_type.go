@@ -1,4 +1,4 @@
-package pkg
+package bridge
 
 import (
 	shim "github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfshim"
