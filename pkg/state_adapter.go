@@ -21,8 +21,8 @@ type StackExport struct {
 }
 
 
-func TranslateState(tofuProgramDir string, pulumiProgramDir string) (*StackExport, error) {
-	tfState, err := tofu.LoadTerraformState(tofuProgramDir)
+func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*StackExport, error) {
+	tfState, err := tofu.LoadTerraformState(tofuStateFilePath)
 	if err != nil {
 		return nil, err
 	}
