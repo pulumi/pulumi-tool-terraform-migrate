@@ -1,13 +1,13 @@
 package pkg
 
 import (
-	"reflect"
 	"testing"
 
+	"github.com/hexops/autogold/v2"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
 	shim "github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfshim"
 	schemashim "github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfshim/schema"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/valueshim"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -19,7 +19,6 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 		val            cty.Value
 		res            shim.Resource
 		pulumiResource *info.Resource
-		want           resource.PropertyMap
 	}{
 		{
 			name: "string",
@@ -30,9 +29,9 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 						Type: shim.TypeString,
 					}).Shim(),
 				},
+				SchemaType: valueshim.FromCtyType(cty.Object(map[string]cty.Type{"prop": cty.String})),
 			}).Shim(),
 			pulumiResource: &info.Resource{},
-			want:           resource.NewPropertyMapFromMap(map[string]interface{}{"prop": "y"}),
 		},
 		{
 			name: "list",
@@ -43,9 +42,9 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 						Type: shim.TypeList,
 					}).Shim(),
 				},
+				SchemaType: valueshim.FromCtyType(cty.Object(map[string]cty.Type{"prop": cty.List(cty.String)})),
 			}).Shim(),
 			pulumiResource: &info.Resource{},
-			want:           resource.NewPropertyMapFromMap(map[string]interface{}{"props": []interface{}{"y"}}),
 		},
 		{
 			name: "set",
@@ -56,9 +55,9 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 						Type: shim.TypeSet,
 					}).Shim(),
 				},
+				SchemaType: valueshim.FromCtyType(cty.Object(map[string]cty.Type{"prop": cty.Set(cty.String)})),
 			}).Shim(),
 			pulumiResource: &info.Resource{},
-			want:           resource.NewPropertyMapFromMap(map[string]interface{}{"props": []interface{}{"y"}}),
 		},
 		{
 			name: "map",
@@ -69,9 +68,9 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 						Type: shim.TypeMap,
 					}).Shim(),
 				},
+				SchemaType: valueshim.FromCtyType(cty.Object(map[string]cty.Type{"prop": cty.Map(cty.String)})),
 			}).Shim(),
 			pulumiResource: &info.Resource{},
-			want:           resource.NewPropertyMapFromMap(map[string]interface{}{"prop": map[string]interface{}{"y": "z"}}),
 		},
 	}
 
@@ -82,9 +81,7 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to convert cty.Value to map[string]interface{}: %v", err)
 			}
-			if !reflect.DeepEqual(props, test.want) {
-				t.Errorf("expected %v, got %v", test.want, props)
-			}
+			autogold.ExpectFile(t, props)
 		})
 	}
 }

@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-json v0.27.1
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1
 	github.com/hexops/autogold/v2 v2.3.0
-	github.com/pulumi/pulumi-terraform-bridge/v3 v3.118.1-0.20251208120720-83979db2fd49
+	github.com/pulumi/pulumi-terraform-bridge/v3 v3.118.1-0.20251211112009-759c5f0f0359
 	github.com/pulumi/pulumi/sdk/v3 v3.210.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.10.0
