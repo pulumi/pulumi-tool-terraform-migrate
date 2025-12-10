@@ -1,0 +1,8 @@
+resource.PropertyMap{
+	resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{
+		V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+			V: resource.PropertyMap{},
+		}},
+	},
+	resource.PropertyKey("prop"): resource.PropertyValue{V: "y"},
+}

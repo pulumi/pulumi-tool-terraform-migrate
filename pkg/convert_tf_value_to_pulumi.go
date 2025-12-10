@@ -22,6 +22,7 @@ import (
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
 	shim "github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfshim"
+	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/valueshim"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/bridge"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
@@ -33,7 +34,14 @@ type terraformState struct {
 	meta       map[string]interface{}
 }
 
-var _ tfbridge.TerraformState = terraformState{}
+var (
+	_ tfbridge.TerraformState               = terraformState{}
+	_ tfbridge.TerraformStateWithTypedValue = terraformState{}
+)
+
+func (t terraformState) Value() valueshim.Value {
+	return valueshim.FromCtyValue(t.stateValue)
+}
 
 func (t terraformState) Meta() map[string]interface{} {
 	return t.meta
@@ -79,11 +87,9 @@ func convertTFValueToPulumiValue(
 		return nil, fmt.Errorf("failed to ensure secrets: %w", err)
 	}
 
-	// TODO: fix raw state deltas
-	// schemaType := bridge.ImpliedType(res.Schema(), false)
-	// if err := tfbridge.RawStateInjectDelta(context.TODO(), res.Schema(), pulumiResource.Fields, props, valueshim.FromCtyType(schemaType), instanceState); err != nil {
-	// 	return nil, err
-	// }
+	if err := tfbridge.RawStateInjectDelta(context.TODO(), res.Schema(), pulumiResource.Fields, props, res.SchemaType(), instanceState); err != nil {
+		return nil, err
+	}
 
 	return secretedProps, nil
 }
