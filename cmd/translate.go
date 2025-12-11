@@ -1,5 +1,5 @@
 /*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
+Copyright © 2025 Pulumi Corporation
 */
 package cmd
 
@@ -24,7 +24,7 @@ var translateCmd = &cobra.Command{
 	Long: `This tool helps translate infrastructure state from Terraform to Pulumi. It requires a Terraform state file and the path to a folder containing an initialized Pulumi program.
 
 Example:
-  pulumi-terraform-state-translate --input-path terraform.tfstate --output-file pulumi.json --stack-folder stack`,
+  pulumi-terraform-migrate translate --input-path terraform.tfstate --output-file pulumi.json --stack-folder path/to/pulumi/stack`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Converting Terraform state from: %s\n", inputPath)
 		fmt.Printf("Output will be written to: %s\n", outputFile)

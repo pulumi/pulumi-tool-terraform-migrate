@@ -9,13 +9,12 @@ import (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "pulumi-terraform-migrate",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "A tool for migrating Terraform to Pulumi",
+	Long: `pulumi-terraform-migrate is a tool for migrating Terraform state to Pulumi.
+It reads a terraform state file and, given an initialized Pulumi program, it produces a Pulumi state file for importing into the program.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+The state can be imported via "pulumi stack import --file <pulumi-state-file>".
+`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
