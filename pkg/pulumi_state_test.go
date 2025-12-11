@@ -64,14 +64,21 @@ func TestInsertResourcesIntoDeployment(t *testing.T) {
 	}, "dev", "example", apitype.DeploymentV3{
 		Resources: []apitype.ResourceV3{
 			{
-				URN:    "urn:pulumi:dev::example::pulumi:pulumi:Stack::example-dev",
-				Type:   "pulumi:pulumi:Stack",
-				ID:     "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+				URN:  "urn:pulumi:dev::example::pulumi:pulumi:Stack::example-dev",
+				Type: "pulumi:pulumi:Stack",
+				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
 			},
 		},
 	})
 	if err != nil {
 		t.Fatalf("failed to make deployment: %v", err)
+	}
+
+	// Sanitize the timestamps to make the test deterministic
+	for _, resource := range data.Resources {
+		resource.Created = nil
+		resource.Modified = nil
+
 	}
 
 	autogold.ExpectFile(t, data)
