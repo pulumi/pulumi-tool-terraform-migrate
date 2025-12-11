@@ -19,5 +19,8 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@v1
+
       - name: Run tests
         run: go test -v ./...
