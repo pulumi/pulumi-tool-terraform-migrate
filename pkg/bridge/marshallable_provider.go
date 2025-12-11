@@ -1,4 +1,4 @@
-package pkg
+package bridge
 
 import (
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"

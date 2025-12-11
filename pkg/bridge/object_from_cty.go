@@ -1,4 +1,4 @@
-package pkg
+package bridge
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
-func objectFromCty(val cty.Value) (map[string]interface{}, error) {
+func ObjectFromCty(val cty.Value) (map[string]interface{}, error) {
 	bytes, err := ctyjson.Marshal(val, val.Type())
 	if err != nil {
 		return nil, err

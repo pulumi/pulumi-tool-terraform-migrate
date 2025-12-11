@@ -1,4 +1,4 @@
-package pkg
+package bridge
 
 import (
 	"encoding/json"

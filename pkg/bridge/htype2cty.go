@@ -1,4 +1,4 @@
-package pkg
+package bridge
 
 import (
 	hcty "github.com/hashicorp/go-cty/cty"

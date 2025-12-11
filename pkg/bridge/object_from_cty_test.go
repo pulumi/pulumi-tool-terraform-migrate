@@ -1,4 +1,4 @@
-package pkg
+package bridge
 
 import (
 	"reflect"
@@ -50,7 +50,7 @@ func TestObjectFromCty(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := objectFromCty(test.val)
+			got, err := ObjectFromCty(test.val)
 			if err != nil {
 				t.Fatalf("failed to convert cty.Value to map[string]interface{}: %v", err)
 			}
