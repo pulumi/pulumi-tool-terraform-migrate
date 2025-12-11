@@ -6,11 +6,14 @@ toolchain go1.24.10
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/hashicorp/terraform-exec v0.23.1
+	github.com/hashicorp/go-cty v1.5.0
+	github.com/hashicorp/terraform-exec v0.24.0
 	github.com/hashicorp/terraform-json v0.27.1
-	github.com/pulumi/pulumi-terraform-bridge/v3 v3.118.0
-	github.com/pulumi/pulumi/sdk/v3 v3.209.0
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1
+	github.com/pulumi/pulumi-terraform-bridge/v3 v3.118.1-0.20251208120720-83979db2fd49
+	github.com/pulumi/pulumi/sdk/v3 v3.210.0
 	github.com/stretchr/testify v1.10.0
+	github.com/zclconf/go-cty v1.17.0
 )
 
 require (
@@ -47,7 +50,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-cty v1.5.0 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
@@ -56,7 +58,6 @@ require (
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/terraform-plugin-go v0.29.0 // indirect
 	github.com/hashicorp/terraform-plugin-log v0.9.0 // indirect
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/iwdgo/sigintwindows v0.2.2 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
@@ -91,6 +92,7 @@ require (
 	github.com/pulumi/esc v0.20.0 // indirect
 	github.com/pulumi/inflector v0.2.1 // indirect
 	github.com/pulumi/pulumi/pkg/v3 v3.209.0 // indirect
+	github.com/pulumi/terraform-diff-reader v0.0.2 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
@@ -108,7 +110,6 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	github.com/zclconf/go-cty v1.17.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792 // indirect
@@ -128,3 +129,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/frand v1.4.2 // indirect
 )
+
+replace github.com/hashicorp/terraform-plugin-sdk/v2 => github.com/pulumi/terraform-plugin-sdk/v2 v2.0.0-20250923233607-7f1981c8674a
