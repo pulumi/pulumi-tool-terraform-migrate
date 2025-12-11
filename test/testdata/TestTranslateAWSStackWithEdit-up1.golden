@@ -1,0 +1,85 @@
+`Previewing update (dev)
+
+View Live: https://app.pulumi.com/pulumi/pulumi-stack-3943345609/dev/previews/8c615b5c-e6d7-4ac4-b99c-068f393ea0d2
+
+Loading policy packs...
+
+@ Previewing update....
+
+@ Previewing update.........
+ +  pulumi:providers:aws aws create
+@ Previewing update....
+ ~  aws:s3:BucketLifecycleConfiguration this update [diff: ~rules]
+ ~  aws:lambda:Function data_processor update [diff: ~code,lastModified,sourceCodeHash]
+ ~  aws:iam:RolePolicy lambda_s3_access update [diff: ~policy]
+    pulumi:pulumi:Stack pulumi-stack-3943345609-dev
+Policies:
+    ⚠️ pulumi-internal-policies@v0.0.6
+        - [advisory]  s3-bucket-replication-enabled  (aws:s3/bucket:Bucket: lambda_artifacts)
+          Encourages use of cross-region replication for S3 buckets.
+          S3 buckets should have cross-region replication.
+        - [advisory]  s3-bucket-replication-enabled  (aws:s3/bucket:Bucket: this)
+          Encourages use of cross-region replication for S3 buckets.
+          S3 buckets should have cross-region replication.
+
+Outputs:
+  + dataLakeBucketArn        : "arn:aws:s3:::data-pipeline3-data-lake-894850187425"
+  + dataLakeBucketName       : "data-pipeline3-data-lake-894850187425"
+  + dynamodbTableName        : "data-pipeline3-file-metadata"
+  + lambdaArtifactsBucketName: "data-pipeline3-lambda-artifacts-894850187425"
+  + lambdaFunctionArn        : "arn:aws:lambda:us-east-1:894850187425:function:data-pipeline3-data-processor"
+  + sqsQueueUrl              : "https://sqs.us-east-1.amazonaws.com/894850187425/data-pipeline3-data-processing"
+
+Resources:
+    + 1 to create
+    ~ 3 to update
+    4 changes. 20 unchanged
+
+Updating (dev)
+
+View Live: https://app.pulumi.com/pulumi/pulumi-stack-3943345609/dev/updates/4
+
+Loading policy packs...
+
+@ Updating....
+
+@ Updating......
+ +  pulumi:providers:aws aws creating (0s)
+ +  pulumi:providers:aws aws created (0.23s)
+@ Updating..........
+ ~  aws:lambda:Function data_processor updating (0s) [diff: ~code,lastModified,sourceCodeHash]
+ ~  aws:iam:RolePolicy lambda_s3_access updating (0s) [diff: ~policy]
+ ~  aws:s3:BucketLifecycleConfiguration this updating (0s) [diff: ~rules]
+@ Updating.......
+ ~  aws:iam:RolePolicy lambda_s3_access updated (3s) [diff: ~policy]
+@ Updating........
+ ~  aws:lambda:Function data_processor updated (8s) [diff: ~code,lastModified,sourceCodeHash]
+@ Updating.......................................................
+ ~  aws:s3:BucketLifecycleConfiguration this updated (60s) [diff: ~rules]
+@ Updating.....
+    pulumi:pulumi:Stack pulumi-stack-3943345609-dev
+Policies:
+    ⚠️ pulumi-internal-policies@v0.0.6
+        - [advisory]  s3-bucket-replication-enabled  (aws:s3/bucket:Bucket: lambda_artifacts)
+          Encourages use of cross-region replication for S3 buckets.
+          S3 buckets should have cross-region replication.
+        - [advisory]  s3-bucket-replication-enabled  (aws:s3/bucket:Bucket: this)
+          Encourages use of cross-region replication for S3 buckets.
+          S3 buckets should have cross-region replication.
+
+Outputs:
+  + dataLakeBucketArn        : "arn:aws:s3:::data-pipeline3-data-lake-894850187425"
+  + dataLakeBucketName       : "data-pipeline3-data-lake-894850187425"
+  + dynamodbTableName        : "data-pipeline3-file-metadata"
+  + lambdaArtifactsBucketName: "data-pipeline3-lambda-artifacts-894850187425"
+  + lambdaFunctionArn        : "arn:aws:lambda:us-east-1:894850187425:function:data-pipeline3-data-processor"
+  + sqsQueueUrl              : "https://sqs.us-east-1.amazonaws.com/894850187425/data-pipeline3-data-processing"
+
+Resources:
+    + 1 created
+    ~ 3 updated
+    4 changes. 20 unchanged
+
+Duration: 1m14s
+
+`

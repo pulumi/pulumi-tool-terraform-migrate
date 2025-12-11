@@ -1,0 +1,63 @@
+`Previewing update (dev)
+
+View Live: https://app.pulumi.com/pulumi/pulumi-stack-3943345609/dev/previews/a6fa9299-e478-45bb-b5cb-9f5831de9f79
+
+Loading policy packs...
+
+@ Previewing update....
+
+@ Previewing update.........
+ ~  aws:sns:Topic s3_notifications update [diff: ~tags,tagsAll]
+@ Previewing update........
+    pulumi:pulumi:Stack pulumi-stack-3943345609-dev
+Policies:
+    ⚠️ pulumi-internal-policies@v0.0.6
+        - [advisory]  s3-bucket-replication-enabled  (aws:s3/bucket:Bucket: lambda_artifacts)
+          Encourages use of cross-region replication for S3 buckets.
+          S3 buckets should have cross-region replication.
+        - [advisory]  s3-bucket-replication-enabled  (aws:s3/bucket:Bucket: this)
+          Encourages use of cross-region replication for S3 buckets.
+          S3 buckets should have cross-region replication.
+
+Resources:
+    ~ 1 to update
+    23 unchanged
+
+Updating (dev)
+
+View Live: https://app.pulumi.com/pulumi/pulumi-stack-3943345609/dev/updates/5
+
+Loading policy packs...
+
+@ Updating....
+
+@ Updating...........
+ ~  aws:sns:Topic s3_notifications updating (0s) [diff: ~tags,tagsAll]
+@ Updating....
+ ~  aws:sns:Topic s3_notifications updated (1s) [diff: ~tags,tagsAll]
+@ Updating....
+    pulumi:pulumi:Stack pulumi-stack-3943345609-dev
+Policies:
+    ⚠️ pulumi-internal-policies@v0.0.6
+        - [advisory]  s3-bucket-replication-enabled  (aws:s3/bucket:Bucket: lambda_artifacts)
+          Encourages use of cross-region replication for S3 buckets.
+          S3 buckets should have cross-region replication.
+        - [advisory]  s3-bucket-replication-enabled  (aws:s3/bucket:Bucket: this)
+          Encourages use of cross-region replication for S3 buckets.
+          S3 buckets should have cross-region replication.
+
+Outputs:
+    dataLakeBucketArn        : "arn:aws:s3:::data-pipeline3-data-lake-894850187425"
+    dataLakeBucketName       : "data-pipeline3-data-lake-894850187425"
+    dynamodbTableName        : "data-pipeline3-file-metadata"
+    lambdaArtifactsBucketName: "data-pipeline3-lambda-artifacts-894850187425"
+    lambdaFunctionArn        : "arn:aws:lambda:us-east-1:894850187425:function:data-pipeline3-data-processor"
+    sqsQueueUrl              : "https://sqs.us-east-1.amazonaws.com/894850187425/data-pipeline3-data-processing"
+
+Resources:
+    ~ 1 updated
+    23 unchanged
+
+Duration: 10s
+
+`
