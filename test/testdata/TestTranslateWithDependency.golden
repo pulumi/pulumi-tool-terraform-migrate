@@ -1,0 +1,34 @@
+`Previewing update (dev)
+
+View Live: https://app.pulumi.com/pulumi/pulumi-stack-2323388101/dev/previews/aa2e10ee-4d5e-469d-9625-4fbce4556ee9
+
+Loading policy packs...
+
+@ Previewing update....
+
+@ Previewing update....
+    pulumi:pulumi:Stack pulumi-stack-2323388101-dev
+Policies:
+    ✅ pulumi-internal-policies@v0.0.6
+
+Resources:
+    5 unchanged
+
+Updating (dev)
+
+View Live: https://app.pulumi.com/pulumi/pulumi-stack-2323388101/dev/updates/4
+
+Loading policy packs...
+
+
+@ Updating......
+    pulumi:pulumi:Stack pulumi-stack-2323388101-dev
+Policies:
+    ✅ pulumi-internal-policies@v0.0.6
+
+Resources:
+    5 unchanged
+
+Duration: 3s
+
+`

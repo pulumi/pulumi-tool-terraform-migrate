@@ -1,18 +1,17 @@
 `Previewing update (dev)
 
-View Live: https://app.pulumi.com/pulumi/pulumi-stack-3633370916/dev/previews/73e462c9-6434-45de-8c49-dec43eb607f0
+View Live: https://app.pulumi.com/pulumi/pulumi-stack-4211595039/dev/previews/ba8781f5-a86a-4169-a2ad-ecb0ef9c3cb2
 
 Loading policy packs...
 
 @ Previewing update....
 
- -  random:index:RandomString random delete
-    pulumi:pulumi:Stack pulumi-stack-3633370916-dev
+@ Previewing update....
+    pulumi:pulumi:Stack pulumi-stack-4211595039-dev
 Policies:
     ✅ pulumi-internal-policies@v0.0.6
 
 Resources:
-    - 1 to delete
-    1 unchanged
+    2 unchanged
 
 `
