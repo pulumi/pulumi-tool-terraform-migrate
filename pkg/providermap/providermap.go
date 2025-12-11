@@ -20,9 +20,11 @@ import (
 	"github.com/blang/semver"
 )
 
+type TerraformProviderName string
+
 type TerraformProvider struct {
 	// Identifier such as "registry.opentofu.org/hashicorp/aws" or "registry.opentofu.org/hashicorp/aws"
-	Identifier string
+	Identifier TerraformProviderName
 
 	// Version such as v3.18.0
 	Version string
@@ -54,7 +56,7 @@ type providerMappingDetail struct {
 
 // providerMapping maps Terraform/OpenTOFU provider identifiers to Pulumi provider names.
 // This is based on the provider list from https://github.com/pulumi/ci-mgmt/blob/master/provider-ci/providers.json
-var providerMapping = map[string]providerMappingDetail{
+var providerMapping = map[TerraformProviderName]providerMappingDetail{
 	// HashiCorp providers
 	"registry.terraform.io/hashicorp/aws": {
 		pulumiProviderName:    "aws",

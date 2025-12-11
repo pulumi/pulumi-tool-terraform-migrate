@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/blang/semver"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
@@ -104,6 +105,29 @@ func InstallProvider(ctx context.Context, opts InstallProviderOptions) (*Install
 
 	return &InstallProviderResult{
 		BinaryPath: binaryPath,
+		Version:    ver,
+	}, nil
+}
+
+func EnsureProviderInstalled(ctx context.Context, opts InstallProviderOptions) (*InstallProviderResult, error) {
+	result, err := GetInstalledProviderPath(ctx, opts.Name, opts.Version)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			result, err := InstallProvider(ctx, opts)
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
+		}
+		return nil, err
+	}
+
+	ver, err := semver.ParseTolerant(opts.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse version %q: %w", opts.Version, err)
+	}
+	return &InstallProviderResult{
+		BinaryPath: result,
 		Version:    ver,
 	}, nil
 }
