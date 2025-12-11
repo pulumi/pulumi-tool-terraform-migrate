@@ -1,0 +1,53 @@
+{
+    "format_version": "1.0",
+    "terraform_version": "1.12.1",
+    "values": {
+        "outputs": {},
+        "root_module": {
+            "resources": [
+                {
+                    "address": "aws_apigatewayv2_api.lambda",
+                    "mode": "managed",
+                    "type": "aws_apigatewayv2_api",
+                    "name": "lambda",
+                    "provider_name": "registry.terraform.io/hashicorp/aws",
+                    "schema_version": 0,
+                    "values": {
+                        "api_endpoint": "https://lpthp592a2.execute-api.us-east-1.amazonaws.com",
+                        "api_key_selection_expression": "$request.header.x-api-key",
+                        "arn": "arn:aws:apigateway:us-east-1::/apis/lpthp592a2",
+                        "body": null,
+                        "cors_configuration": [],
+                        "credentials_arn": null,
+                        "description": "",
+                        "disable_execute_api_endpoint": false,
+                        "execution_arn": "arn:aws:execute-api:us-east-1:894850187425:lpthp592a2",
+                        "fail_on_warnings": null,
+                        "id": "lpthp592a2",
+                        "ip_address_type": "ipv4",
+                        "name": "serverless_lambda_gw-2syvikbb",
+                        "protocol_type": "HTTP",
+                        "region": "us-east-1",
+                        "route_key": null,
+                        "route_selection_expression": "$request.method $request.path",
+                        "tags": {},
+                        "tags_all": {
+                            "environment": "test",
+                            "project": "aws_lambda_api"
+                        },
+                        "target": null,
+                        "version": ""
+                    },
+                    "sensitive_values": {
+                        "cors_configuration": [],
+                        "tags": {},
+                        "tags_all": {}
+                    },
+                    "depends_on": [
+                        "random_string.api_gw_name"
+                    ]
+                }
+            ]
+        }
+    }
+}
