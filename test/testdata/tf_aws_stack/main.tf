@@ -40,7 +40,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Name of the project"
   type        = string
-  default     = "data-pipeline3"
+  default     = "data-pipeline4"
 }
 
 variable "environment" {

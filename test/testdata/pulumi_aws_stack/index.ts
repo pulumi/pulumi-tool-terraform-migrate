@@ -11,7 +11,7 @@ import * as archive from "@pulumi/archive";
 // -----------------------------------------------------------------------------
 const config = new pulumi.Config();
 const awsRegion = config.get("aws_region") || "us-east-1";
-const projectName = config.get("project_name") || "data-pipeline3";
+const projectName = config.get("project_name") || "data-pipeline4";
 const environment = config.get("environment") || "dev";
 
 // -----------------------------------------------------------------------------
@@ -296,32 +296,33 @@ const lambdaS3AccessPolicy = new aws.iam.RolePolicy("lambda_s3_access", {
 // -----------------------------------------------------------------------------
 // Lambda Function for Data Processing
 // -----------------------------------------------------------------------------
-const lambdaCode = `import json
-import boto3
+const lambdaCode = `
+      import json
+      import boto3
 
-def handler(event, context):
-    print(f"Received event: {json.dumps(event)}")
-
-    s3_client = boto3.client('s3')
-
-    for record in event.get('Records', []):
-        body = json.loads(record['body'])
-        message = json.loads(body.get('Message', '{}'))
-
-        for s3_record in message.get('Records', []):
-            bucket = s3_record['s3']['bucket']['name']
-            key = s3_record['s3']['object']['key']
-            print(f"Processing: s3://{bucket}/{key}")
-
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Processing complete')
-    }
-`;
+      def handler(event, context):
+          print(f"Received event: {json.dumps(event)}")
+          
+          s3_client = boto3.client('s3')
+          
+          for record in event.get('Records', []):
+              body = json.loads(record['body'])
+              message = json.loads(body.get('Message', '{}'))
+              
+              for s3_record in message.get('Records', []):
+                  bucket = s3_record['s3']['bucket']['name']
+                  key = s3_record['s3']['object']['key']
+                  print(f"Processing: s3://{bucket}/{key}")
+          
+          return {
+              'statusCode': 200,
+              'body': json.dumps('Processing complete')
+          }
+    `;
 
 const lambdaArchive = archive.getFile({
     type: "zip",
-    outputPath: "lambda_function.zip",
+    outputPath: "./lambda_function.zip",
     sources: [{
         content: lambdaCode,
         filename: "lambda_function.py",
@@ -335,7 +336,7 @@ const dataProcessorLambda = new aws.lambda.Function("data_processor", {
     runtime: "python3.11",
     timeout: 60,
     memorySize: 256,
-    code: new pulumi.asset.FileArchive("lambda_function.zip"),
+    code: lambdaArchive.then(a => a.outputPath),
     sourceCodeHash: lambdaArchive.then(a => a.outputBase64sha256),
     environment: {
         variables: {
