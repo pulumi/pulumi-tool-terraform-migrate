@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
@@ -19,7 +20,6 @@ type StackExport struct {
 	Deployment apitype.DeploymentV3 `json:"deployment"`
 	Version    int                  `json:"version"`
 }
-
 
 func TranslateState(tofuProgramDir string, pulumiProgramDir string) (*StackExport, error) {
 	tfState, err := tofu.LoadTerraformState(tofuProgramDir)
@@ -56,8 +56,9 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 		if err != nil {
 			return nil, fmt.Errorf("failed to get provider inputs: %w", err)
 		}
+		uuid := uuid.NewString()
 		pulumiState.Providers = append(pulumiState.Providers, PulumiResource{
-			ID:      "a339fe8e-e15d-4203-8719-c0ca5d3f414e", // TODO: This is wrong, how is it generated?
+			ID:      uuid,
 			Type:    "pulumi:providers:" + provider.Name,
 			Name:    "default_" + strings.ReplaceAll(provider.Version, ".", "_"),
 			Inputs:  inputs,
@@ -68,7 +69,7 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 	err := tofu.VisitResources(tfState, func(resource *tfjson.StateResource) error {
 		pulumiResource, err := convertResourceState(resource, pulumiProviders)
 		if err != nil {
-			return fmt.Errorf("failed to convert resource state: %w", err)
+			return fmt.Errorf("failed to convert resource state for %s with ID %s: %w", resource.Type, resource.Address, err)
 		}
 		pulumiState.Resources = append(pulumiState.Resources, pulumiResource)
 		return nil
