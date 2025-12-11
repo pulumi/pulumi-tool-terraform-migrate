@@ -169,10 +169,10 @@ func TestRecommendPulumiProvider(t *testing.T) {
 
 func TestProviderMappingUsesProvidersThatExist(t *testing.T) {
 	for k := range providerMapping {
-		parts := strings.Split(k, "/")
+		parts := strings.Split(string(k), "/")
 		ok, err := checkProviderExists(context.Background(), parts[0], parts[1], parts[2])
 		assert.NoError(t, err)
-		assert.Truef(t, ok, k)
+		assert.Truef(t, ok, string(k))
 	}
 }
 

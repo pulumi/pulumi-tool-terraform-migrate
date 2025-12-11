@@ -14,11 +14,11 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 )
 
-func getTerraformProvidersForTerraformState(tfState *tfjson.State) ([]string, error) {
-	tfProviders := map[string]struct{}{}
+func getTerraformProvidersForTerraformState(tfState *tfjson.State) ([]providermap.TerraformProviderName, error) {
+	tfProviders := map[providermap.TerraformProviderName]struct{}{}
 
 	err := tofu.VisitResources(tfState, func(resource *tfjson.StateResource) error {
-		tfProviders[resource.ProviderName] = struct{}{}
+		tfProviders[providermap.TerraformProviderName(resource.ProviderName)] = struct{}{}
 		return nil
 	}, &tofu.VisitOptions{})
 	if err != nil {
@@ -30,18 +30,18 @@ func getTerraformProvidersForTerraformState(tfState *tfjson.State) ([]string, er
 	return providers, nil
 }
 
-func pulumiProvidersForTerraformProviders(terraformProviders []string) (map[string]*info.Provider, error) {
-	pulumiProviders := make(map[string]*info.Provider)
+func pulumiProvidersForTerraformProviders(terraformProviders []providermap.TerraformProviderName) (map[providermap.TerraformProviderName]*info.Provider, error) {
+	pulumiProviders := make(map[providermap.TerraformProviderName]*info.Provider)
 
 	for _, providerName := range terraformProviders {
 		pulumiProvider := providermap.RecommendPulumiProvider(providermap.TerraformProvider{
-			Identifier: providerName,
+			Identifier: providermap.TerraformProviderName(providerName),
 		})
 
-		// TODO: make this work for Any TF
+		// TODO[pulumi/pulumi-service#35437]: make this work for Any TF
 		contract.Assertf(pulumiProvider.BridgedPulumiProvider != nil, "no bridged pulumi provider found for %s", providerName)
 
-		result, err := bridgedproviders.InstallProvider(context.Background(), bridgedproviders.InstallProviderOptions{
+		result, err := bridgedproviders.EnsureProviderInstalled(context.Background(), bridgedproviders.InstallProviderOptions{
 			Name:    pulumiProvider.BridgedPulumiProvider.Identifier,
 			Version: pulumiProvider.BridgedPulumiProvider.Version,
 		})
@@ -68,7 +68,7 @@ func pulumiProvidersForTerraformProviders(terraformProviders []string) (map[stri
 }
 
 
-func GetPulumiProvidersForTerraformState(tfState *tfjson.State) (map[string]*info.Provider, error) {
+func GetPulumiProvidersForTerraformState(tfState *tfjson.State) (map[providermap.TerraformProviderName]*info.Provider, error) {
 	terraformProviders, err := getTerraformProvidersForTerraformState(tfState)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get terraform providers: %w", err)
