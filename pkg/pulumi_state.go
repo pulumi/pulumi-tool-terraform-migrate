@@ -4,10 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
-	"os"
-	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
@@ -15,67 +11,10 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
-	"gopkg.in/yaml.v3"
 )
 
 func makeUrn(stackName, projectName, typeName, resourceName string) resource.URN {
 	return resource.URN(fmt.Sprintf("urn:pulumi:%s::%s::%s::%s", stackName, projectName, typeName, resourceName))
-}
-
-// TODO: this is a hack, delete is as soon as we get a proper end-to-end test working.
-func createProgram(outputFolder string) error {
-	// random name
-	projectName := "pulumi-state-adapter-" + strconv.Itoa(rand.Intn(1000000))
-
-	// write a Pulumi.yaml file
-	pulumiYaml := map[string]any{
-		"name":    projectName,
-		"runtime": "nodejs",
-	}
-	bytes, err := yaml.Marshal(pulumiYaml)
-	if err != nil {
-		return fmt.Errorf("failed to marshal Pulumi.yaml: %w", err)
-	}
-
-	err = os.WriteFile(filepath.Join(outputFolder, "Pulumi.yaml"), bytes, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to write Pulumi.yaml: %w", err)
-	}
-
-	packageJson := map[string]any{
-		"name": "pulumi_aws_tf_conv2",
-		"main": "index.ts",
-		"devDependencies": map[string]any{
-			"@types/node": "^18",
-			"typescript":  "^5.0.0",
-		},
-		"dependencies": map[string]any{
-			"@pulumi/aws":    "7.11.1",
-			"@pulumi/pulumi": "^3.113.0",
-		},
-	}
-
-	bytes, err = json.Marshal(packageJson)
-	if err != nil {
-		return fmt.Errorf("failed to marshal package.json: %w", err)
-	}
-
-	err = os.WriteFile(filepath.Join(outputFolder, "package.json"), bytes, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to write package.json: %w", err)
-	}
-
-	// create an index.ts file
-	indexTs := `
-			import * as pulumi from "@pulumi/pulumi";
-			import * as aws from "@pulumi/aws";
-			`
-	err = os.WriteFile(filepath.Join(outputFolder, "index.ts"), []byte(indexTs), 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to write index.ts: %w", err)
-	}
-
-	return nil
 }
 
 type PulumiResource struct {
@@ -91,61 +30,33 @@ type PulumiState struct {
 	Resources []PulumiResource
 }
 
-func MakeDeployment(state *PulumiState, outputFolder string) (apitype.DeploymentV3, error) {
+func GetDeployment(outputFolder string) (apitype.DeploymentV3, error) {
 	ctx := context.Background()
-	if outputFolder == "" {
-		var err error
-		outputFolder, err = os.MkdirTemp("", "pulumi-state-adapter-")
-		if err != nil {
-			return apitype.DeploymentV3{}, fmt.Errorf("failed to create temporary output folder: %w", err)
-		}
-
-		// TODO: delete this hack.
-		err = createProgram(outputFolder)
-		if err != nil {
-			return apitype.DeploymentV3{}, fmt.Errorf("failed to create program: %w", err)
-		}
-	}
-
-	stackName := "dev"
-
 	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(outputFolder))
 	if err != nil {
 		return apitype.DeploymentV3{}, fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	projectSettings, err := workspace.ProjectSettings(ctx)
+	currentStack, err := workspace.Stack(context.TODO())
 	if err != nil {
-		return apitype.DeploymentV3{}, fmt.Errorf("failed to get project settings: %w", err)
+		return apitype.DeploymentV3{}, fmt.Errorf("failed to get current stack: %w", err)
 	}
 
-	projectName := string(projectSettings.Name)
-
-	// check if the stack already exists
-	err = workspace.SelectStack(ctx, stackName)
-	if err != nil {
-		workspace.Install(ctx, &auto.InstallOptions{})
-		s, err := auto.UpsertStackLocalSource(ctx, stackName, outputFolder)
-		if err != nil {
-			return apitype.DeploymentV3{}, fmt.Errorf("failed to create stack: %w", err)
-		}
-		_, err = s.Up(ctx)
-		if err != nil {
-			return apitype.DeploymentV3{}, fmt.Errorf("failed to run up: %w", err)
-		}
-	}
-
-	stack, err := workspace.ExportStack(ctx, stackName)
+	untypedDeployment, err := workspace.ExportStack(ctx, currentStack.Name)
 	if err != nil {
 		return apitype.DeploymentV3{}, fmt.Errorf("failed to export stack: %w", err)
 	}
 
 	deployment := apitype.DeploymentV3{}
-	err = json.Unmarshal(stack.Deployment, &deployment)
+	err = json.Unmarshal(untypedDeployment.Deployment, &deployment)
 	if err != nil {
 		return apitype.DeploymentV3{}, fmt.Errorf("failed to unmarshal stack deployment: %w", err)
 	}
 
+	return deployment, nil
+}
+
+func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName string, deployment apitype.DeploymentV3) (apitype.DeploymentV3, error) {
 	contract.Assertf(len(deployment.Resources) == 1, "expected stack resource in state, got %d", len(deployment.Resources))
 	stackResource := deployment.Resources[0]
 
@@ -177,11 +88,6 @@ func MakeDeployment(state *PulumiState, outputFolder string) (apitype.Deployment
 			Created:  &now,
 			Modified: &now,
 		})
-	}
-
-	err = workspace.ImportStack(ctx, stackName, stack)
-	if err != nil {
-		return apitype.DeploymentV3{}, fmt.Errorf("failed to import stack: %w", err)
 	}
 
 	return deployment, nil
