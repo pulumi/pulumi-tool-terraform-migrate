@@ -55,7 +55,8 @@ func convertTFValueToPulumiValue(
 	props, err := tfbridge.MakeTerraformResult(context.TODO(), setChecker{}, instanceState, res.Schema(), pulumiResource.Fields, nil, true)
 
 	// TODO: fix raw state deltas
-	// if err := tfbridge.RawStateInjectDelta(context.TODO(), res.Schema(), pulumiResource.Fields, props, res.SchemaType(), instanceState); err != nil {
+	// schemaType := bridge.ImpliedType(res.Schema(), false)
+	// if err := tfbridge.RawStateInjectDelta(context.TODO(), res.Schema(), pulumiResource.Fields, props, valueshim.FromCtyType(schemaType), instanceState); err != nil {
 	// 	return nil, err
 	// }
 	return props, err

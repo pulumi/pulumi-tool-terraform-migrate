@@ -10,7 +10,6 @@ import (
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
-	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/valueshim"
 	"github.com/pulumi/pulumi-terraform-migrate/pkg/bridge"
 	"github.com/pulumi/pulumi-terraform-migrate/pkg/providermap"
 	"github.com/pulumi/pulumi-terraform-migrate/pkg/tofu"
@@ -109,12 +108,8 @@ func convertResourceState(res *tfjson.StateResource, pulumiProviders map[provide
 		return PulumiResource{}, fmt.Errorf("no resource type found for Terraform resource: %s", res.Type)
 	}
 
-	ctyResourceType, err := valueshim.ToCtyType(shimResource.SchemaType())
-	if err != nil {
-		return PulumiResource{}, fmt.Errorf("failed to convert resource type to CTY type: %w", err)
-	}
-
-	ctyValue, err := tofu.StateToCtyValue(res, ctyResourceType)
+	ctyType := bridge.ImpliedType(shimResource.Schema(), true)
+	ctyValue, err := tofu.StateToCtyValue(res, ctyType)
 	if err != nil {
 		return PulumiResource{}, fmt.Errorf("failed to convert resource to CTY value: %w", err)
 	}
