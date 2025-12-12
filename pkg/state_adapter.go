@@ -1,3 +1,19 @@
+/*
+Copyright © 2025 Pulumi Corporation
+
+TranslateState translates a Terraform state file into a Pulumi state file.
+
+1. Parse Terraform state files into the [tfjson.State] format with [tofu.LoadTerraformState]
+
+2. Convert the [tfjson.State] format into the tf internal type system [cty.Value] via [tofu.StateToCtyValue] for each resource in the state.
+  - To do this we need the [cty.Type] corresponding to each resource in the state. We infer these from the Pulumi schema of the corresponding TF provider via [bridge.ImpliedType].
+
+3. Produce a go `map[string]any` from the [cty.Value] via [bridge.ObjectFromCty]
+
+4. Convert the `map[string]any` into the Pulumi internal type system [resource.PropertyMap] in [convertTFValueToPulumiValue]
+
+5. Produce a pulumi state file from the [resource.PropertyMap] via [MakeDeployment]
+*/
 package pkg
 
 import (
@@ -22,15 +38,6 @@ type StackExport struct {
 	Version    int                  `json:"version"`
 }
 
-// TranslateState translates a Terraform state file into a Pulumi state file.
-//
-// 1. Parse Terraform state files into the [tfjson.State] format with [tofu.LoadTerraformState]
-// 2. Convert the [tfjson.State] format into the tf internal type system [cty.Value] via [tofu.StateToCtyValue] for each resource in the state.
-//   - To do this we need the [cty.Type] corresponding to each resource in the state. We infer these from the Pulumi schema of the corresponding TF provider via [bridge.ImpliedType].
-//
-// 3. Produce a go `map[string]any` from the [cty.Value] via [bridge.ObjectFromCty]
-// 4. Convert the `map[string]any` into the Pulumi internal type system [resource.PropertyMap] in [convertTFValueToPulumiValue]
-// 5. Produce a pulumi state file from the [resource.PropertyMap] via [MakeDeployment]
 func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*StackExport, error) {
 	tfState, err := tofu.LoadTerraformState(tofuStateFilePath)
 	if err != nil {
