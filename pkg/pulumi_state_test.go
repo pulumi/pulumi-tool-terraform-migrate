@@ -75,9 +75,9 @@ func TestInsertResourcesIntoDeployment(t *testing.T) {
 	}
 
 	// Sanitize the timestamps to make the test deterministic
-	for _, resource := range data.Resources {
-		resource.Created = nil
-		resource.Modified = nil
+	for i := range data.Resources {
+		data.Resources[i].Created = nil
+		data.Resources[i].Modified = nil
 
 	}
 
