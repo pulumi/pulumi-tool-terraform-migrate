@@ -92,6 +92,10 @@ func GetProviderInputs(providerName string) (resource.PropertyMap, error) {
 		return resource.PropertyMap{
 			"version": resource.NewProperty("0.3.5"),
 		}, nil
+	case "random":
+		return resource.PropertyMap{
+			"version": resource.NewProperty("4.18.1"),
+		}, nil
 	}
 	return nil, fmt.Errorf("unsupported provider: %s", providerName)
 }
