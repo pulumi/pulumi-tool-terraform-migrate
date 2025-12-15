@@ -1,0 +1,46 @@
+`Previewing update (dev)
+
+View Live: https://app.pulumi.com/pulumi/pulumi-stack-3310972622/dev/previews/c5f74b7f-fe60-4d0c-8f78-8f0231a1be15
+
+Loading policy packs...
+
+
+@ Previewing update....
+ ++ random:index:RandomString random create replacement [diff: ~length]
+ +- random:index:RandomString random replace [diff: ~length]
+ -- random:index:RandomString random delete original [diff: ~length]
+    pulumi:pulumi:Stack pulumi-stack-3310972622-dev
+Policies:
+    ✅ pulumi-internal-policies@v0.0.6
+
+Resources:
+    +-1 to replace
+    1 unchanged
+
+Updating (dev)
+
+View Live: https://app.pulumi.com/pulumi/pulumi-stack-3310972622/dev/updates/4
+
+Loading policy packs...
+
+
+@ Updating....
+ ++ random:index:RandomString random creating replacement (0s) [diff: ~length]
+@ Updating....
+ ++ random:index:RandomString random created replacement (0.25s) [diff: ~length]
+ +- random:index:RandomString random replacing (0s) [diff: ~length]
+ +- random:index:RandomString random replaced (0.00s) [diff: ~length]
+ -- random:index:RandomString random deleting original (0s) [diff: ~length]
+@ Updating....
+ -- random:index:RandomString random deleted original (0.56s) [diff: ~length]
+    pulumi:pulumi:Stack pulumi-stack-3310972622-dev
+Policies:
+    ✅ pulumi-internal-policies@v0.0.6
+
+Resources:
+    +-1 replaced
+    1 unchanged
+
+Duration: 3s
+
+`
