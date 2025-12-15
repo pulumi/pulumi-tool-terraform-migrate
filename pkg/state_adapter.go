@@ -1,7 +1,9 @@
 package pkg
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/google/uuid"
@@ -21,6 +23,21 @@ type StackExport struct {
 	Version    int                  `json:"version"`
 }
 
+func TranslateAndWriteState(tofuStateFilePath string, pulumiProgramDir string, outputFilePath string) error {
+	stackExport, err := TranslateState(tofuStateFilePath, pulumiProgramDir)
+	if err != nil {
+		return err
+	}
+	bytes, err := json.Marshal(stackExport)
+	if err != nil {
+		return fmt.Errorf("failed to marshal stack export: %w", err)
+	}
+	err = os.WriteFile(outputFilePath, bytes, 0o600)
+	if err != nil {
+		return fmt.Errorf("failed to write stack export: %w", err)
+	}
+	return nil
+}
 
 func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*StackExport, error) {
 	tfState, err := tofu.LoadTerraformState(tofuStateFilePath)
@@ -123,7 +140,5 @@ func convertResourceState(res *tfjson.StateResource, pulumiProviders map[provide
 		Inputs:  inputs,
 		Outputs: props,
 		Name:    res.Name,
-		// Parent:   stackUrn,
-		// Provider: providerUrn,
 	}, nil
 }
