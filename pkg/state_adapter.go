@@ -54,13 +54,17 @@ func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*StackEx
 		return nil, err
 	}
 
-	deployment, err := MakeDeployment(pulumiState, pulumiProgramDir)
+	deployment, err := GetDeployment(pulumiProgramDir)
+	if err != nil {
+		return nil, err
+	}
+	editedDeployment, err := InsertResourcesIntoDeployment(pulumiState, "dev", "example", deployment)
 	if err != nil {
 		return nil, err
 	}
 
 	return &StackExport{
-		Deployment: deployment,
+		Deployment: editedDeployment,
 		Version:    3,
 	}, nil
 }

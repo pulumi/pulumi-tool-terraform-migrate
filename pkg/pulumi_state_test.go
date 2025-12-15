@@ -1,18 +1,15 @@
 package pkg
 
 import (
-	"os"
 	"testing"
 
 	"github.com/hexops/autogold/v2"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )
 
-func TestMakeDeployment(t *testing.T) {
-	if os.Getenv("CI") == "true" {
-		t.Skip("Skipping test in CI: TODO: set up pulumi credentials in CI")
-	}
-	data, err := MakeDeployment(&PulumiState{
+func TestInsertResourcesIntoDeployment(t *testing.T) {
+	data, err := InsertResourcesIntoDeployment(&PulumiState{
 		Providers: []PulumiResource{
 			{
 				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
@@ -64,9 +61,24 @@ func TestMakeDeployment(t *testing.T) {
 				},
 			},
 		},
-	}, "")
+	}, "dev", "example", apitype.DeploymentV3{
+		Resources: []apitype.ResourceV3{
+			{
+				URN:  "urn:pulumi:dev::example::pulumi:pulumi:Stack::example-dev",
+				Type: "pulumi:pulumi:Stack",
+				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+			},
+		},
+	})
 	if err != nil {
 		t.Fatalf("failed to make deployment: %v", err)
+	}
+
+	// Sanitize the timestamps to make the test deterministic
+	for i := range data.Resources {
+		data.Resources[i].Created = nil
+		data.Resources[i].Modified = nil
+
 	}
 
 	autogold.ExpectFile(t, data)
