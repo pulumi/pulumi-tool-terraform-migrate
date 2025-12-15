@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge"
-	"github.com/pulumi/pulumi-terraform-migrate/pkg/bridge"
+	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/plugin"
@@ -119,7 +119,7 @@ func UnmarshalMappingData(result *GetMappingResult) (*tfbridge.ProviderInfo, err
 		return nil, fmt.Errorf("mapping data is empty")
 	}
 
-	var marshallable bridge.MarshallableProvider
+	var marshallable info.MarshallableProvider
 	if err := json.Unmarshal(result.Data, &marshallable); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal mapping data: %w", err)
 	}
