@@ -4,9 +4,10 @@ on:
   pull_request:
 
 env:
+  AWS_REGION: us-west-2
+  OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
   PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
   PULUMI_API: https://api.pulumi-staging.io
-  AWS_REGION: us-west-2
 
 jobs:
   test:
