@@ -131,7 +131,7 @@ func TestConvertInvolved(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::pulumi:providers:aws::default_7_12_0"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::pulumi:providers:aws::default_7_12_0"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"region": "us-east-1", "skipCredentialsValidation": false,
 				"skipRegionValidation": true,
@@ -144,7 +144,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:cloudwatch/logGroup:LogGroup::lambda_logs"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:cloudwatch/logGroup:LogGroup::lambda_logs"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "logGroupClass": "STANDARD", "name": "/aws/lambda/data-pipeline-data-processor",
 				"region":          "us-east-1",
@@ -181,7 +181,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:dynamodb/table:Table::file_metadata"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:dynamodb/table:Table::file_metadata"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "attributes": []interface{}{
 					map[string]interface{}{"__defaults": []interface{}{}, "name": "file_id", "type": "S"},
@@ -295,7 +295,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:iam/role:Role::lambda_role"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:iam/role:Role::lambda_role"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "assumeRolePolicy": `{"Statement":[{"Action":"sts:AssumeRole","Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"}}],"Version":"2012-10-17"}`,
 				"inlinePolicies": []interface{}{map[string]interface{}{
@@ -346,7 +346,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:iam/rolePolicy:RolePolicy::lambda_s3_access"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:iam/rolePolicy:RolePolicy::lambda_s3_access"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "name": "data-pipeline-lambda-s3-access", "policy": `{"Version":"2012-10-17","Statement":[{"Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],"Effect":"Allow","Resource":["arn:aws:s3:::data-pipeline-data-lake-894850187425","arn:aws:s3:::data-pipeline-data-lake-894850187425/*"]},{"Action":["sqs:ReceiveMessage","sqs:DeleteMessage","sqs:GetQueueAttributes"],"Effect":"Allow","Resource":"arn:aws:sqs:us-east-1:894850187425:data-pipeline-data-processing"},{"Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Effect":"Allow","Resource":"arn:aws:logs:us-east-1:894850187425:*"}]}`,
 				"role": "data-pipeline-lambda-role",
@@ -360,7 +360,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:lambda/eventSourceMapping:EventSourceMapping::sqs_trigger"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:lambda/eventSourceMapping:EventSourceMapping::sqs_trigger"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "batchSize": 10, "enabled": true, "eventSourceArn": "arn:aws:sqs:us-east-1:894850187425:data-pipeline-data-processing",
 				"functionName": "arn:aws:lambda:us-east-1:894850187425:function:data-pipeline-data-processor",
@@ -416,7 +416,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:lambda/function:Function::data_processor"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:lambda/function:Function::data_processor"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "architectures": []interface{}{"x86_64"}, "code": "./lambda_function.zip", "environment": map[string]interface{}{
 					"__defaults": []interface{}{},
@@ -524,7 +524,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:s3/bucket:Bucket::lambda_artifacts"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:s3/bucket:Bucket::lambda_artifacts"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "bucket": "data-pipeline-lambda-artifacts-894850187425",
 				"grants": []interface{}{map[string]interface{}{
@@ -610,7 +610,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:s3/bucketPublicAccessBlock:BucketPublicAccessBlock::lambda_artifacts"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:s3/bucketPublicAccessBlock:BucketPublicAccessBlock::lambda_artifacts"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "blockPublicAcls": true, "blockPublicPolicy": true,
 				"bucket":                "data-pipeline-lambda-artifacts-894850187425",
@@ -629,7 +629,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:s3/bucketServerSideEncryptionConfiguration:BucketServerSideEncryptionConfiguration::lambda_artifacts"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:s3/bucketServerSideEncryptionConfiguration:BucketServerSideEncryptionConfiguration::lambda_artifacts"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "bucket": "data-pipeline-lambda-artifacts-894850187425",
 				"region": "us-east-1",
@@ -656,7 +656,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:s3/bucketVersioning:BucketVersioning::lambda_artifacts"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:s3/bucketVersioning:BucketVersioning::lambda_artifacts"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "bucket": "data-pipeline-lambda-artifacts-894850187425",
 				"region": "us-east-1",
@@ -678,7 +678,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:sns/topic:Topic::s3_notifications"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:sns/topic:Topic::s3_notifications"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "name": "data-pipeline-s3-notifications", "policy": `{"Statement":[{"Action":"sns:Publish","Condition":{"ArnLike":{"aws:SourceArn":"arn:aws:s3:::data-pipeline-data-lake-894850187425"}},"Effect":"Allow","Principal":{"Service":"s3.amazonaws.com"},"Resource":"arn:aws:sns:us-east-1:894850187425:data-pipeline-s3-notifications","Sid":"AllowS3Publish"}],"Version":"2012-10-17"}`,
 				"region": "us-east-1",
@@ -736,7 +736,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:sns/topicPolicy:TopicPolicy::s3_notifications"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:sns/topicPolicy:TopicPolicy::s3_notifications"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "arn": "arn:aws:sns:us-east-1:894850187425:data-pipeline-s3-notifications",
 				"policy": `{"Statement":[{"Action":"sns:Publish","Condition":{"ArnLike":{"aws:SourceArn":"arn:aws:s3:::data-pipeline-data-lake-894850187425"}},"Effect":"Allow","Principal":{"Service":"s3.amazonaws.com"},"Resource":"arn:aws:sns:us-east-1:894850187425:data-pipeline-s3-notifications","Sid":"AllowS3Publish"}],"Version":"2012-10-17"}`,
@@ -751,7 +751,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:sns/topicSubscription:TopicSubscription::sqs_subscription"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:sns/topicSubscription:TopicSubscription::sqs_subscription"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "confirmationTimeoutInMinutes": 1, "endpoint": "arn:aws:sqs:us-east-1:894850187425:data-pipeline-data-processing",
 				"protocol": "sqs",
@@ -780,7 +780,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:sqs/queue:Queue::data_processing"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:sqs/queue:Queue::data_processing"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "kmsDataKeyReusePeriodSeconds": 300, "maxMessageSize": 262144,
 				"messageRetentionSeconds": 86400,
@@ -835,7 +835,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:sqs/queue:Queue::data_processing_dlq"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:sqs/queue:Queue::data_processing_dlq"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "kmsDataKeyReusePeriodSeconds": 300, "maxMessageSize": 262144,
 				"messageRetentionSeconds": 1.2096e+06,
@@ -887,7 +887,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:sqs/queuePolicy:QueuePolicy::data_processing"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:sqs/queuePolicy:QueuePolicy::data_processing"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "policy": `{"Statement":[{"Action":"sqs:SendMessage","Condition":{"ArnEquals":{"aws:SourceArn":"arn:aws:sns:us-east-1:894850187425:data-pipeline-s3-notifications"}},"Effect":"Allow","Principal":{"Service":"sns.amazonaws.com"},"Resource":"arn:aws:sqs:us-east-1:894850187425:data-pipeline-data-processing","Sid":"AllowSNSMessages"}],"Version":"2012-10-17"}`,
 				"queueUrl": "https://sqs.us-east-1.amazonaws.com/894850187425/data-pipeline-data-processing",
@@ -901,7 +901,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:s3/bucket:Bucket::this"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:s3/bucket:Bucket::this"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "bucket": "data-pipeline-data-lake-894850187425",
 				"grants": []interface{}{map[string]interface{}{
@@ -1030,7 +1030,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:s3/bucketLifecycleConfiguration:BucketLifecycleConfiguration::this"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:s3/bucketLifecycleConfiguration:BucketLifecycleConfiguration::this"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "bucket": "data-pipeline-data-lake-894850187425",
 				"region": "us-east-1",
@@ -1096,7 +1096,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:s3/bucketOwnershipControls:BucketOwnershipControls::this"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:s3/bucketOwnershipControls:BucketOwnershipControls::this"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "bucket": "data-pipeline-data-lake-894850187425",
 				"region": "us-east-1",
@@ -1112,7 +1112,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:s3/bucketPublicAccessBlock:BucketPublicAccessBlock::this"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:s3/bucketPublicAccessBlock:BucketPublicAccessBlock::this"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "blockPublicAcls": true, "blockPublicPolicy": true,
 				"bucket":                "data-pipeline-data-lake-894850187425",
@@ -1131,7 +1131,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:s3/bucketServerSideEncryptionConfiguration:BucketServerSideEncryptionConfiguration::this"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:s3/bucketServerSideEncryptionConfiguration:BucketServerSideEncryptionConfiguration::this"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "bucket": "data-pipeline-data-lake-894850187425",
 				"region": "us-east-1",
@@ -1158,7 +1158,7 @@ func TestConvertInvolved(t *testing.T) {
 			}),
 		},
 		{
-			resourceURN: urn.URN("urn:pulumi:dev::example::aws:s3/bucketVersioning:BucketVersioning::this"),
+			resourceURN: urn.URN("urn:pulumi:dev::test-project::aws:s3/bucketVersioning:BucketVersioning::this"),
 			expectInputs: autogold.Expect(map[string]interface{}{
 				"__defaults": []interface{}{}, "bucket": "data-pipeline-data-lake-894850187425",
 				"region": "us-east-1",
