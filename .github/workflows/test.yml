@@ -9,6 +9,10 @@ env:
   PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
   PULUMI_API: https://api.pulumi-staging.io
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   test:
     name: Run Go Tests
