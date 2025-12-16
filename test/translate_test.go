@@ -33,7 +33,9 @@ func runCommand(t *testing.T, dir string, command string, args ...string) string
 	return string(output)
 }
 
-func setupTFStack(t *testing.T, terraformSourcesPath string) string {
+func setupTFStack(t *testing.T, terraformSourcesPath string, cacheFolder string) string {
+	t.Helper()
+
 	dir, err := os.MkdirTemp("", "tf-stack-")
 	require.NoError(t, err)
 	t.Logf("Terraform stack directory: %s", dir)
@@ -41,7 +43,36 @@ func setupTFStack(t *testing.T, terraformSourcesPath string) string {
 	os.CopyFS(dir, sourceDir)
 
 	_ = runCommand(t, dir, "tofu", "init")
+
+	// Check for cached state
+	if cacheFolder != "" {
+		cacheDir := filepath.Join("testdata", cacheFolder)
+		cachedStatePath := filepath.Join(cacheDir, "terraform.tfstate")
+		if _, err := os.Stat(cachedStatePath); err == nil {
+			t.Logf("Using cached terraform.tfstate from %s", cachedStatePath)
+			// Copy cached state to temp directory
+			stateContent, err := os.ReadFile(cachedStatePath)
+			require.NoError(t, err)
+			err = os.WriteFile(filepath.Join(dir, "terraform.tfstate"), stateContent, 0644)
+			require.NoError(t, err)
+			return filepath.Join(dir, "terraform.tfstate")
+		}
+	}
+
 	_ = runCommand(t, dir, "tofu", "apply", "-auto-approve")
+
+	// Cache the state file if cacheFolder is specified
+	if cacheFolder != "" {
+		cacheDir := filepath.Join("testdata", cacheFolder)
+		err = os.MkdirAll(cacheDir, 0755)
+		require.NoError(t, err)
+		cachedStatePath := filepath.Join(cacheDir, "terraform.tfstate")
+		stateContent, err := os.ReadFile(filepath.Join(dir, "terraform.tfstate"))
+		require.NoError(t, err)
+		err = os.WriteFile(cachedStatePath, stateContent, 0644)
+		require.NoError(t, err)
+		t.Logf("Cached terraform.tfstate to %s", cachedStatePath)
+	}
 
 	t.Cleanup(func() {
 		_ = runCommand(t, dir, "tofu", "destroy", "-auto-approve")
@@ -135,7 +166,7 @@ func TestTranslateBasic(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	statePath := setupTFStack(t, "testdata/tf_random_stack")
+	statePath := setupTFStack(t, "testdata/tf_random_stack", "tf_random_stack_cache")
 	workspace := createPulumiStack(t)
 	stackFolder := workspace.WorkDir()
 	stackSummary, err := workspace.Stack(ctx)
@@ -166,7 +197,7 @@ func TestTranslateBasicWithEdit(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	statePath := setupTFStack(t, "testdata/tf_random_stack")
+	statePath := setupTFStack(t, "testdata/tf_random_stack", "tf_random_stack_cache")
 	workspace := createPulumiStack(t)
 	stackFolder := workspace.WorkDir()
 	stackSummary, err := workspace.Stack(ctx)
@@ -205,7 +236,7 @@ func TestTranslateWithDependency(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	statePath := setupTFStack(t, "testdata/tf_dependency_stack")
+	statePath := setupTFStack(t, "testdata/tf_dependency_stack", "tf_dependency_stack_cache")
 	workspace := createPulumiStack(t)
 	stackFolder := workspace.WorkDir()
 	stackSummary, err := workspace.Stack(ctx)
@@ -236,7 +267,7 @@ func TestTranslateAWSStack(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	statePath := setupTFStack(t, "testdata/tf_aws_stack")
+	statePath := setupTFStack(t, "testdata/tf_aws_stack", "tf_aws_stack_cache")
 	workspace := createPulumiStack(t)
 	stackFolder := workspace.WorkDir()
 	stackSummary, err := workspace.Stack(ctx)
@@ -275,7 +306,7 @@ func TestTranslateAWSStackWithEdit(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	statePath := setupTFStack(t, "testdata/tf_aws_stack")
+	statePath := setupTFStack(t, "testdata/tf_aws_stack", "tf_aws_stack_cache")
 	workspace := createPulumiStack(t)
 	stackFolder := workspace.WorkDir()
 	stackSummary, err := workspace.Stack(ctx)
