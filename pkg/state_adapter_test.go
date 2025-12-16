@@ -17,7 +17,7 @@ import (
 )
 
 func TestConvertSimple(t *testing.T) {
-	data, err := TranslateState("testdata/bucket_state.json", setupMinimalPulumiTestProject(t))
+	data, err := TranslateStateWithWorkspace("testdata/bucket_state.json", setupMinimalPulumiTestProject(t))
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestConvertSimple(t *testing.T) {
 }
 
 func TestConvertInvolved(t *testing.T) {
-	data, err := TranslateState("testdata/tofu_state.json", setupMinimalPulumiTestProject(t))
+	data, err := TranslateStateWithWorkspace("testdata/tofu_state.json", setupMinimalPulumiTestProject(t))
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -1197,7 +1197,9 @@ func randomSuffix() string {
 	return string(b)
 }
 
-func setupMinimalPulumiTestProject(t *testing.T) string {
+func setupMinimalPulumiTestProject(t *testing.T) auto.Workspace {
+	t.Helper()
+
 	// Create a temporary directory for the test project
 	tempDir := t.TempDir()
 
@@ -1211,8 +1213,19 @@ runtime: yaml
 	// Use automation API to create a stack and perform initial setup
 	ctx := context.Background()
 
-	// Create a new workspace
-	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(tempDir))
+	// Create a new workspace with filestate backend
+	stateDir := filepath.Join(tempDir, ".pulumi")
+	err = os.MkdirAll(stateDir, 0755)
+	require.NoError(t, err)
+
+	// Set up environment to use local filestate backend
+	workspace, err := auto.NewLocalWorkspace(ctx,
+		auto.WorkDir(tempDir),
+		auto.EnvVars(map[string]string{
+			"PULUMI_BACKEND_URL":       "file://" + stateDir,
+			"PULUMI_CONFIG_PASSPHRASE": "test",
+		}),
+	)
 	require.NoError(t, err)
 
 	// Create a new stack with a random suffix to avoid conflicts
@@ -1225,5 +1238,5 @@ runtime: yaml
 	_, err = stack.Up(ctx)
 	require.NoError(t, err)
 
-	return tempDir
+	return workspace
 }

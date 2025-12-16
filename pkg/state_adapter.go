@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/pulumi/pulumi-terraform-migrate/pkg/bridge"
 	"github.com/pulumi/pulumi-terraform-migrate/pkg/providermap"
 	"github.com/pulumi/pulumi-terraform-migrate/pkg/tofu"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )
@@ -39,6 +41,15 @@ func TranslateAndWriteState(tofuStateFilePath string, pulumiProgramDir string, o
 }
 
 func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*StackExport, error) {
+	ctx := context.Background()
+	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(pulumiProgramDir))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create workspace: %w", err)
+	}
+	return TranslateStateWithWorkspace(tofuStateFilePath, workspace)
+}
+
+func TranslateStateWithWorkspace(tofuStateFilePath string, workspace auto.Workspace) (*StackExport, error) {
 	tfState, err := tofu.LoadTerraformState(tofuStateFilePath)
 	if err != nil {
 		return nil, err
@@ -54,7 +65,8 @@ func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*StackEx
 		return nil, err
 	}
 
-	deployment, err := GetDeployment(pulumiProgramDir)
+	ctx := context.Background()
+	deployment, err := GetDeploymentFromWorkspace(ctx, workspace)
 	if err != nil {
 		return nil, err
 	}

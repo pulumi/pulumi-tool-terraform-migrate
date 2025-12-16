@@ -30,14 +30,8 @@ type PulumiState struct {
 	Resources []PulumiResource
 }
 
-func GetDeployment(outputFolder string) (apitype.DeploymentV3, error) {
-	ctx := context.Background()
-	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(outputFolder))
-	if err != nil {
-		return apitype.DeploymentV3{}, fmt.Errorf("failed to create workspace: %w", err)
-	}
-
-	currentStack, err := workspace.Stack(context.TODO())
+func GetDeploymentFromWorkspace(ctx context.Context, workspace auto.Workspace) (apitype.DeploymentV3, error) {
+	currentStack, err := workspace.Stack(ctx)
 	if err != nil {
 		return apitype.DeploymentV3{}, fmt.Errorf("failed to get current stack: %w", err)
 	}
@@ -54,6 +48,16 @@ func GetDeployment(outputFolder string) (apitype.DeploymentV3, error) {
 	}
 
 	return deployment, nil
+}
+
+func GetDeployment(outputFolder string) (apitype.DeploymentV3, error) {
+	ctx := context.Background()
+	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(outputFolder))
+	if err != nil {
+		return apitype.DeploymentV3{}, fmt.Errorf("failed to create workspace: %w", err)
+	}
+
+	return GetDeploymentFromWorkspace(ctx, workspace)
 }
 
 func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName string, deployment apitype.DeploymentV3) (apitype.DeploymentV3, error) {
