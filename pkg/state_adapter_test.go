@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"os"
 	"testing"
 
 	"github.com/hexops/autogold/v2"
