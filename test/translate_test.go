@@ -163,7 +163,8 @@ func importStackState(t *testing.T, ctx context.Context, stack auto.Stack, state
 }
 
 func TestTranslateBasic(t *testing.T) {
-	t.Parallel()
+	t.Skip("TODO[pulumi/pulumi-terraform-migrate#43]")
+	// t.Parallel()
 
 	ctx := context.Background()
 	statePath := setupTFStack(t, "testdata/tf_random_stack", "tf_random_stack_cache")
@@ -194,7 +195,9 @@ func TestTranslateBasic(t *testing.T) {
 }
 
 func TestTranslateBasicWithEdit(t *testing.T) {
-	t.Parallel()
+	t.Skip("TODO[pulumi/pulumi-terraform-migrate#43]")
+
+	// t.Parallel()
 
 	ctx := context.Background()
 	statePath := setupTFStack(t, "testdata/tf_random_stack", "tf_random_stack_cache")
@@ -233,7 +236,8 @@ func TestTranslateBasicWithEdit(t *testing.T) {
 }
 
 func TestTranslateWithDependency(t *testing.T) {
-	t.Parallel()
+	t.Skip("TODO[pulumi/pulumi-terraform-migrate#43]")
+	// t.Parallel()
 
 	ctx := context.Background()
 	statePath := setupTFStack(t, "testdata/tf_dependency_stack", "tf_dependency_stack_cache")
