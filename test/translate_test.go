@@ -12,13 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func skipIfCI(t *testing.T) {
-	t.Helper()
-	if os.Getenv("CI") == "true" {
-		t.Skip("Skipping test in CI: TODO: set up pulumi credentials in CI")
-	}
-}
-
 func runCommand(t *testing.T, dir string, command string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command(command, args...)
@@ -82,7 +75,6 @@ func replaceIndexTs(t *testing.T, stackFolder string, indexTsPath string) {
 }
 
 func TestTranslateBasic(t *testing.T) {
-	skipIfCI(t)
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
@@ -100,7 +92,6 @@ func TestTranslateBasic(t *testing.T) {
 }
 
 func TestTranslateBasicWithEdit(t *testing.T) {
-	skipIfCI(t)
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
@@ -123,7 +114,6 @@ func TestTranslateBasicWithEdit(t *testing.T) {
 }
 
 func TestTranslateWithDependency(t *testing.T) {
-	skipIfCI(t)
 	statePath := setupTFStack(t, "testdata/tf_dependency_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
@@ -141,7 +131,6 @@ func TestTranslateWithDependency(t *testing.T) {
 }
 
 func TestTranslateAWSStack(t *testing.T) {
-	skipIfCI(t)
 	statePath := setupTFStack(t, "testdata/tf_aws_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
@@ -160,8 +149,6 @@ func TestTranslateAWSStack(t *testing.T) {
 }
 
 func TestTranslateAWSStackWithEdit(t *testing.T) {
-	skipIfCI(t)
-
 	statePath := setupTFStack(t, "testdata/tf_aws_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
