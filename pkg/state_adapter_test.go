@@ -19,15 +19,19 @@ import (
 func TestConvertSimple(t *testing.T) {
 	t.Parallel()
 
-	data, err := TranslateStateWithWorkspace("testdata/bucket_state.json", setupMinimalPulumiTestProject(t))
+	proj := setupMinimalPulumiTestProject(t)
+
+	data, err := TranslateStateWithWorkspace("testdata/bucket_state.json", proj)
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
 
 	autogold.Expect(int(3)).Equal(t, len(data.Deployment.Resources))
 
-	awsProv := findByURN("urn:pulumi:dev::example::pulumi:providers:aws::default_7_12_0",
+	awsProv := findByURN("urn:pulumi:dev::test-project::pulumi:providers:aws::default_7_12_0",
 		data.Deployment.Resources)
+
+	require.NotNilf(t, awsProv, "Failed to find AWS provider resource")
 
 	autogold.Expect(map[string]interface{}{
 		"region": "us-east-1", "skipCredentialsValidation": false,
@@ -41,8 +45,10 @@ func TestConvertSimple(t *testing.T) {
 		"version":              "7.12.0",
 	}).Equal(t, awsProv.Outputs)
 
-	bucket := findByURN("urn:pulumi:dev::example::aws:s3/bucket:Bucket::example",
+	bucket := findByURN("urn:pulumi:dev::test-project::aws:s3/bucket:Bucket::example",
 		data.Deployment.Resources)
+
+	require.NotNilf(t, bucket, "Failed to find Bucket resource")
 
 	autogold.Expect(map[string]interface{}{
 		"__defaults": []interface{}{}, "bucket": "my-example-bucket-20251119163156", "grants": []interface{}{map[string]interface{}{
@@ -1232,8 +1238,7 @@ runtime: yaml
 	)
 	require.NoError(t, err)
 
-	// Create a new stack with a random suffix to avoid conflicts
-	stackName := "test-" + randomSuffix()
+	stackName := "dev"
 	stack, err := auto.NewStack(ctx, stackName, workspace)
 	require.NoError(t, err)
 
