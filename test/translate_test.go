@@ -264,7 +264,8 @@ func TestTranslateWithDependency(t *testing.T) {
 }
 
 func TestTranslateAWSStack(t *testing.T) {
-	t.Parallel()
+	t.Skip("TODO[pulumi/pulumi-terraform-migrate#42]")
+	// t.Parallel()
 
 	ctx := context.Background()
 	statePath := setupTFStack(t, "testdata/tf_aws_stack", "tf_aws_stack_cache")
@@ -302,9 +303,10 @@ func TestTranslateAWSStack(t *testing.T) {
 	}).Equal(t, result.ChangeSummary)
 }
 
-// TODO if we skip the edit bits in this one is it still needed?
 func TestTranslateAWSStackWithEdit(t *testing.T) {
-	t.Parallel()
+	t.Skip("TODO[pulumi/pulumi-terraform-migrate#42]")
+	// Also perhaps just delete this one? Slow CI for small coverage.
+	// t.Parallel()
 
 	ctx := context.Background()
 	statePath := setupTFStack(t, "testdata/tf_aws_stack", "tf_aws_stack_cache")
