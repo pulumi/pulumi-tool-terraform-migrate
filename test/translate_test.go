@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,9 +11,14 @@ import (
 
 	"github.com/hexops/autogold/v2"
 	"github.com/pulumi/pulumi-terraform-migrate/pkg"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/optpreview"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/stretchr/testify/require"
 )
 
+// runCommand is a helper function to run commands like tofu/terraform.
+// NOTE: For Pulumi commands, use the Automation API instead.
 func runCommand(t *testing.T, dir string, command string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command(command, args...)
@@ -42,16 +49,53 @@ func setupTFStack(t *testing.T, terraformSourcesPath string) string {
 	return filepath.Join(dir, "terraform.tfstate")
 }
 
-func createPulumiStack(t *testing.T) (string, string) {
+func createPulumiStack(t *testing.T) auto.Workspace {
+	t.Helper()
+
+	// Create a temporary directory for the test project
 	dir, err := os.MkdirTemp("", "pulumi-stack-")
 	require.NoError(t, err)
 	t.Logf("Pulumi stack directory: %s", dir)
 
-	_ = runCommand(t, dir, "pulumi", "new", "typescript", "--dir", dir, "--yes")
-	_ = runCommand(t, dir, "pulumi", "up", "--yes")
+	// Set up state backend directory
+	stateDir := filepath.Join(dir, ".pulumi")
+	err = os.MkdirAll(stateDir, 0755)
+	require.NoError(t, err)
 
 	stackName := filepath.Base(dir)
-	return dir, stackName
+
+	// Create the TypeScript project using pulumi new with filestate backend
+	cmd := exec.Command("pulumi", "new", "typescript", "--dir", dir, "--yes", "--force", "-s", stackName)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(),
+		"PULUMI_BACKEND_URL=file://"+stateDir,
+		"PULUMI_CONFIG_PASSPHRASE=test",
+	)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to run pulumi new: %v, output: %s", err, string(output))
+	}
+
+	// Create workspace using Automation API with same backend configuration
+	ctx := context.Background()
+	workspace, err := auto.NewLocalWorkspace(ctx,
+		auto.WorkDir(dir),
+		auto.EnvVars(map[string]string{
+			"PULUMI_BACKEND_URL":       "file://" + stateDir,
+			"PULUMI_CONFIG_PASSPHRASE": "test",
+		}),
+	)
+	require.NoError(t, err)
+
+	// Get the stack that was created by pulumi new
+	stack, err := auto.SelectStack(ctx, stackName, workspace)
+	require.NoError(t, err)
+
+	// Run initial up
+	_, err = stack.Up(ctx)
+	require.NoError(t, err)
+
+	return workspace
 }
 
 func replacePackageJson(t *testing.T, stackFolder string, stackName string, packageJsonPath string) {
@@ -74,102 +118,214 @@ func replaceIndexTs(t *testing.T, stackFolder string, indexTsPath string) {
 	require.NoError(t, err)
 }
 
-func TestTranslateBasic(t *testing.T) {
-	statePath := setupTFStack(t, "testdata/tf_random_stack")
-	stackFolder, stackName := createPulumiStack(t)
-
-	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"))
+func importStackState(t *testing.T, ctx context.Context, stack auto.Stack, statePath string) {
+	t.Helper()
+	stateBytes, err := os.ReadFile(statePath)
 	require.NoError(t, err)
 
-	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
+	var deployment apitype.UntypedDeployment
+	err = json.Unmarshal(stateBytes, &deployment)
+	require.NoError(t, err)
+
+	err = stack.Import(ctx, deployment)
+	require.NoError(t, err)
+}
+
+func TestTranslateBasic(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	statePath := setupTFStack(t, "testdata/tf_random_stack")
+	workspace := createPulumiStack(t)
+	stackFolder := workspace.WorkDir()
+	stackSummary, err := workspace.Stack(ctx)
+	require.NoError(t, err)
+	stackName := stackSummary.Name
+
+	err = pkg.TranslateAndWriteStateWithWorkspace(statePath, workspace, filepath.Join(stackFolder, "state.json"))
+	require.NoError(t, err)
+
+	stack, err := auto.SelectStack(ctx, stackName, workspace)
+	require.NoError(t, err)
+
+	importStackState(t, ctx, stack, filepath.Join(stackFolder, "state.json"))
 
 	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_random_stack", "index.ts"))
 	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_random_stack", "package.json"))
-	_ = runCommand(t, stackFolder, "pulumi", "install")
-	output := runCommand(t, stackFolder, "pulumi", "preview", "--diff")
 
-	autogold.ExpectFile(t, output)
+	err = workspace.Install(ctx, nil)
+	require.NoError(t, err)
+
+	result, err := stack.Preview(ctx, optpreview.Diff())
+	require.NoError(t, err)
+
+	autogold.Expect(map[apitype.OpType]int{apitype.OpType("same"): 2}).Equal(t, result.ChangeSummary)
 }
 
 func TestTranslateBasicWithEdit(t *testing.T) {
-	statePath := setupTFStack(t, "testdata/tf_random_stack")
-	stackFolder, stackName := createPulumiStack(t)
+	t.Parallel()
 
-	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"))
+	ctx := context.Background()
+	statePath := setupTFStack(t, "testdata/tf_random_stack")
+	workspace := createPulumiStack(t)
+	stackFolder := workspace.WorkDir()
+	stackSummary, err := workspace.Stack(ctx)
+	require.NoError(t, err)
+	stackName := stackSummary.Name
+
+	err = pkg.TranslateAndWriteStateWithWorkspace(statePath, workspace, filepath.Join(stackFolder, "state.json"))
 	require.NoError(t, err)
 
-	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
+	stack, err := auto.SelectStack(ctx, stackName, workspace)
+	require.NoError(t, err)
+
+	importStackState(t, ctx, stack, filepath.Join(stackFolder, "state.json"))
 
 	// This changes the length of the random string from 16 to 17 in order to test that edits to resources still work.
 	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_random_stack2", "index.ts"))
 	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_random_stack2", "package.json"))
-	_ = runCommand(t, stackFolder, "pulumi", "install")
 
-	output := runCommand(t, stackFolder, "pulumi", "preview", "--diff")
-	autogold.ExpectFile(t, output, autogold.Name("TestTranslateBasicWithEdit-preview"))
+	err = workspace.Install(ctx, nil)
+	require.NoError(t, err)
 
-	output = runCommand(t, stackFolder, "pulumi", "up", "--yes")
+	previewResult, err := stack.Preview(ctx, optpreview.Diff())
+	require.NoError(t, err)
+	autogold.Expect(map[apitype.OpType]int{
+		apitype.OpType("replace"): 1,
+		apitype.OpType("same"):    1,
+	}).Equal(t, previewResult.ChangeSummary)
 
-	autogold.ExpectFile(t, output, autogold.Name("TestTranslateBasicWithEdit-up"))
+	upResult, err := stack.Up(ctx)
+	require.NoError(t, err)
+
+	autogold.Expect(&map[string]int{"replace": 1, "same": 1}).Equal(t, upResult.Summary.ResourceChanges)
 }
 
 func TestTranslateWithDependency(t *testing.T) {
-	statePath := setupTFStack(t, "testdata/tf_dependency_stack")
-	stackFolder, stackName := createPulumiStack(t)
+	t.Parallel()
 
-	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"))
+	ctx := context.Background()
+	statePath := setupTFStack(t, "testdata/tf_dependency_stack")
+	workspace := createPulumiStack(t)
+	stackFolder := workspace.WorkDir()
+	stackSummary, err := workspace.Stack(ctx)
+	require.NoError(t, err)
+	stackName := stackSummary.Name
+
+	err = pkg.TranslateAndWriteStateWithWorkspace(statePath, workspace, filepath.Join(stackFolder, "state.json"))
 	require.NoError(t, err)
 
-	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
+	stack, err := auto.SelectStack(ctx, stackName, workspace)
+	require.NoError(t, err)
+
+	importStackState(t, ctx, stack, filepath.Join(stackFolder, "state.json"))
 
 	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_dependency_stack", "package.json"))
 	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_dependency_stack", "index.ts"))
-	_ = runCommand(t, stackFolder, "pulumi", "install")
 
-	output := runCommand(t, stackFolder, "pulumi", "up", "--yes")
-	autogold.ExpectFile(t, output)
+	err = workspace.Install(ctx, nil)
+	require.NoError(t, err)
+
+	upResult, err := stack.Up(ctx)
+	require.NoError(t, err)
+
+	autogold.Expect(&map[string]int{"same": 5}).Equal(t, upResult.Summary.ResourceChanges)
 }
 
 func TestTranslateAWSStack(t *testing.T) {
-	statePath := setupTFStack(t, "testdata/tf_aws_stack")
-	stackFolder, stackName := createPulumiStack(t)
+	t.Parallel()
 
-	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"))
+	ctx := context.Background()
+	statePath := setupTFStack(t, "testdata/tf_aws_stack")
+	workspace := createPulumiStack(t)
+	stackFolder := workspace.WorkDir()
+	stackSummary, err := workspace.Stack(ctx)
+	require.NoError(t, err)
+	stackName := stackSummary.Name
+
+	err = pkg.TranslateAndWriteStateWithWorkspace(statePath, workspace, filepath.Join(stackFolder, "state.json"))
 	require.NoError(t, err)
 
-	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
+	stack, err := auto.SelectStack(ctx, stackName, workspace)
+	require.NoError(t, err)
+
+	importStackState(t, ctx, stack, filepath.Join(stackFolder, "state.json"))
 
 	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_aws_stack", "package.json"))
 	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_aws_stack", "index.ts"))
-	_ = runCommand(t, stackFolder, "pulumi", "install")
-	// TODO: Why do BucketLifecycleConfiguration and RolePolicy produce diffs.
-	output := runCommand(t, stackFolder, "pulumi", "preview", "--diff")
 
-	autogold.ExpectFile(t, output)
+	err = workspace.Install(ctx, nil)
+	require.NoError(t, err)
+
+	// TODO: Why do BucketLifecycleConfiguration and RolePolicy produce diffs.
+	result, err := stack.Preview(ctx, optpreview.Diff())
+	require.NoError(t, err)
+
+	t.Logf("StdOut: %v", result.StdOut)
+	t.Logf("StdErr: %v", result.StdErr)
+
+	autogold.Expect(map[apitype.OpType]int{
+		apitype.OpType("create"): 1,
+		apitype.OpType("same"):   21,
+		apitype.OpType("update"): 2,
+	}).Equal(t, result.ChangeSummary)
 }
 
 func TestTranslateAWSStackWithEdit(t *testing.T) {
-	statePath := setupTFStack(t, "testdata/tf_aws_stack")
-	stackFolder, stackName := createPulumiStack(t)
+	t.Parallel()
 
-	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"))
+	ctx := context.Background()
+	statePath := setupTFStack(t, "testdata/tf_aws_stack")
+	workspace := createPulumiStack(t)
+	stackFolder := workspace.WorkDir()
+	stackSummary, err := workspace.Stack(ctx)
+	require.NoError(t, err)
+	stackName := stackSummary.Name
+
+	err = pkg.TranslateAndWriteStateWithWorkspace(statePath, workspace, filepath.Join(stackFolder, "state.json"))
 	require.NoError(t, err)
 
-	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
+	stack, err := auto.SelectStack(ctx, stackName, workspace)
+	require.NoError(t, err)
+
+	importStackState(t, ctx, stack, filepath.Join(stackFolder, "state.json"))
 
 	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_aws_stack", "package.json"))
 	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_aws_stack", "index.ts"))
-	_ = runCommand(t, stackFolder, "pulumi", "install")
-	output := runCommand(t, stackFolder, "pulumi", "preview", "--diff")
 
-	autogold.ExpectFile(t, output, autogold.Name("TestTranslateAWSStackWithEdit-preview"))
+	err = workspace.Install(ctx, nil)
+	require.NoError(t, err)
 
-	output = runCommand(t, stackFolder, "pulumi", "up", "--yes")
-	autogold.ExpectFile(t, output, autogold.Name("TestTranslateAWSStackWithEdit-up1"))
+	previewResult, err := stack.Preview(ctx, optpreview.Diff())
+
+	t.Logf("StdOut: %v", previewResult.StdOut)
+	t.Logf("StdErr: %v", previewResult.StdErr)
+
+	require.NoError(t, err)
+
+	autogold.Expect(map[apitype.OpType]int{
+		apitype.OpType("create"): 1,
+		apitype.OpType("same"):   21,
+		apitype.OpType("update"): 2,
+	}).Equal(t, previewResult.ChangeSummary)
+
+	upResult, err := stack.Up(ctx)
+	require.NoError(t, err)
+
+	t.Logf("StdOut: %v", upResult.StdOut)
+	t.Logf("StdErr: %v", upResult.StdErr)
+
+	autogold.Expect(&map[string]int{"create": 1, "same": 21, "update": 2}).Equal(t, upResult.Summary.ResourceChanges)
 
 	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_aws_stack2", "package.json"))
 	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_aws_stack2", "index.ts"))
 
-	output = runCommand(t, stackFolder, "pulumi", "up", "--yes")
-	autogold.ExpectFile(t, output, autogold.Name("TestTranslateAWSStackWithEdit-up2"))
+	upResult, err = stack.Up(ctx)
+
+	t.Logf("StdOut: %v", upResult.StdOut)
+	t.Logf("StdErr: %v", upResult.StdErr)
+
+	require.NoError(t, err)
+
+	autogold.Expect(&map[string]int{"same": 23, "update": 1}).Equal(t, upResult.Summary.ResourceChanges)
 }

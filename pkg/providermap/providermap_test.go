@@ -26,6 +26,8 @@ import (
 )
 
 func TestRecommendPulumiProvider(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name                         string
 		input                        TerraformProvider
@@ -168,6 +170,8 @@ func TestRecommendPulumiProvider(t *testing.T) {
 }
 
 func TestProviderMappingUsesProvidersThatExist(t *testing.T) {
+	t.Parallel()
+
 	for k := range providerMapping {
 		parts := strings.Split(string(k), "/")
 		ok, err := checkProviderExists(context.Background(), parts[0], parts[1], parts[2])

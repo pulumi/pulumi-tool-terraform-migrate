@@ -22,6 +22,8 @@ import (
 // This is an example test showing how GetMappingFromBinary would be used.
 // To run this test, you would need a real Pulumi provider binary that implements GetMapping.
 func TestGetMappingFromBinary_Example(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	// Install a small provider like random
@@ -54,6 +56,8 @@ func TestGetMappingFromBinary_Example(t *testing.T) {
 }
 
 func TestGetMappingFromBinary_RequiresBinaryPath(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	_, err := GetMappingFromBinary(ctx, "", GetMappingOptions{
@@ -65,6 +69,8 @@ func TestGetMappingFromBinary_RequiresBinaryPath(t *testing.T) {
 }
 
 func TestGetMappingFromBinary_RequiresKey(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	_, err := GetMappingFromBinary(ctx, "/path/to/binary", GetMappingOptions{

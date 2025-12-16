@@ -17,6 +17,8 @@ import (
 )
 
 func TestConvertSimple(t *testing.T) {
+	t.Parallel()
+
 	data, err := TranslateStateWithWorkspace("testdata/bucket_state.json", setupMinimalPulumiTestProject(t))
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
@@ -108,6 +110,8 @@ func TestConvertSimple(t *testing.T) {
 }
 
 func TestConvertInvolved(t *testing.T) {
+	t.Parallel()
+
 	data, err := TranslateStateWithWorkspace("testdata/tofu_state.json", setupMinimalPulumiTestProject(t))
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)

@@ -25,7 +25,16 @@ type StackExport struct {
 }
 
 func TranslateAndWriteState(tofuStateFilePath string, pulumiProgramDir string, outputFilePath string) error {
-	stackExport, err := TranslateState(tofuStateFilePath, pulumiProgramDir)
+	ctx := context.Background()
+	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(pulumiProgramDir))
+	if err != nil {
+		return fmt.Errorf("failed to create workspace: %w", err)
+	}
+	return TranslateAndWriteStateWithWorkspace(tofuStateFilePath, workspace, outputFilePath)
+}
+
+func TranslateAndWriteStateWithWorkspace(tofuStateFilePath string, workspace auto.Workspace, outputFilePath string) error {
+	stackExport, err := TranslateStateWithWorkspace(tofuStateFilePath, workspace)
 	if err != nil {
 		return err
 	}
@@ -70,7 +79,19 @@ func TranslateStateWithWorkspace(tofuStateFilePath string, workspace auto.Worksp
 	if err != nil {
 		return nil, err
 	}
-	editedDeployment, err := InsertResourcesIntoDeployment(pulumiState, "dev", "example", deployment)
+	projectSettings, err := workspace.ProjectSettings(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stackSummary, err := workspace.Stack(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	stackName := stackSummary.Name
+	projectName := string(projectSettings.Name)
+
+	editedDeployment, err := InsertResourcesIntoDeployment(pulumiState, stackName, projectName, deployment)
 	if err != nil {
 		return nil, err
 	}

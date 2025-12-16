@@ -1,11 +1,8 @@
-`Previewing update (dev)
-
-View Live: https://app.pulumi.com/pulumi/pulumi-stack-975022797/dev/previews/33102246-43d2-4862-a3cc-ec4aa7f0a4e3
-
+`Previewing update (pulumi-stack-1243819650):
   pulumi:pulumi:Stack: (same)
-    [urn=urn:pulumi:dev::pulumi-stack-975022797::pulumi:pulumi:Stack::pulumi-stack-975022797-dev]
+    [urn=urn:pulumi:pulumi-stack-1243819650::pulumi-stack-1243819650::pulumi:pulumi:Stack::pulumi-stack-1243819650-pulumi-stack-1243819650]
     + pulumi:providers:aws: (create)
-        [urn=urn:pulumi:dev::pulumi-stack-975022797::pulumi:providers:aws::aws]
+        [urn=urn:pulumi:pulumi-stack-1243819650::pulumi-stack-1243819650::pulumi:providers:aws::aws]
         defaultTags              : (json) {
             tags: {
                 Environment: "dev"
@@ -17,21 +14,11 @@ View Live: https://app.pulumi.com/pulumi/pulumi-stack-975022797/dev/previews/331
         region                   : "us-east-1"
         skipCredentialsValidation: "false"
         skipRegionValidation     : "true"
-        version                  : "7.13.0"
-    pulumi-internal-policies@v0.0.6 [advisory]  s3-bucket-replication-enabled  (aws:s3/bucket:Bucket: this)Encourages use of cross-region replication for S3 buckets.
-S3 buckets should have cross-region replication.
-    pulumi-internal-policies@v0.0.6 [advisory]  s3-bucket-replication-enabled  (aws:s3/bucket:Bucket: lambda_artifacts)Encourages use of cross-region replication for S3 buckets.
-S3 buckets should have cross-region replication.
-    ~ aws:lambda/function:Function: (update)
-        [id=data-pipeline4-data-processor]
-        [urn=urn:pulumi:dev::pulumi-stack-975022797::aws:lambda/function:Function::data_processor]
-        [provider: urn:pulumi:dev::pulumi-stack-975022797::pulumi:providers:aws::default_7_12_0::a339fe8e-e15d-4203-8719-c0ca5d3f414e => urn:pulumi:dev::pulumi-stack-975022797::pulumi:providers:aws::aws::[unknown]]
-      - lastModified  : "2025-12-11T16:41:10.128+0000"
-      ~ sourceCodeHash: "Uk59ixjEaDAJDlKLgE/2RRsCDSterPmhbfoI1psRc90=" => "WOXk56IZHSfv437p4+37MXDkh1D/pNyZ+Gf4dUyGsVo="
+        version                  : "7.14.0"
     ~ aws:s3/bucketLifecycleConfiguration:BucketLifecycleConfiguration: (update)
-        [id=data-pipeline4-data-lake-894850187425]
-        [urn=urn:pulumi:dev::pulumi-stack-975022797::aws:s3/bucketLifecycleConfiguration:BucketLifecycleConfiguration::this]
-        [provider: urn:pulumi:dev::pulumi-stack-975022797::pulumi:providers:aws::default_7_12_0::a339fe8e-e15d-4203-8719-c0ca5d3f414e => urn:pulumi:dev::pulumi-stack-975022797::pulumi:providers:aws::aws::[unknown]]
+        [id=data-pipeline4-data-lake-616138583583]
+        [urn=urn:pulumi:pulumi-stack-1243819650::pulumi-stack-1243819650::aws:s3/bucketLifecycleConfiguration:BucketLifecycleConfiguration::this]
+        [provider: urn:pulumi:pulumi-stack-1243819650::pulumi-stack-1243819650::pulumi:providers:aws::default_7_12_0::5c4746a8-1899-46d4-a07c-f9602f618ec6 => urn:pulumi:pulumi-stack-1243819650::pulumi-stack-1243819650::pulumi:providers:aws::aws::[unknown]]
         region: "us-east-1"
         rules : [
             [0]: {
@@ -52,59 +39,21 @@ S3 buckets should have cross-region replication.
                 ]
             }
         ]
-    ~ aws:iam/rolePolicy:RolePolicy: (update)
-        [id=data-pipeline4-lambda-role:data-pipeline4-lambda-s3-access]
-        [urn=urn:pulumi:dev::pulumi-stack-975022797::aws:iam/rolePolicy:RolePolicy::lambda_s3_access]
-        [provider: urn:pulumi:dev::pulumi-stack-975022797::pulumi:providers:aws::default_7_12_0::a339fe8e-e15d-4203-8719-c0ca5d3f414e => urn:pulumi:dev::pulumi-stack-975022797::pulumi:providers:aws::aws::[unknown]]
-      ~ policy: (json) {
-          ~ Statement: [
-                [0]: {
-                        Action  : [
-                            [0]: "s3:GetObject"
-                            [1]: "s3:PutObject"
-                            [2]: "s3:DeleteObject"
-                            [3]: "s3:ListBucket"
-                        ]
-                        Effect  : "Allow"
-                        Resource: [
-                            [0]: "arn:aws:s3:::data-pipeline4-data-lake-894850187425"
-                            [1]: "arn:aws:s3:::data-pipeline4-data-lake-894850187425/*"
-                        ]
-                    }
-                [1]: {
-                        Action  : [
-                            [0]: "sqs:ReceiveMessage"
-                            [1]: "sqs:DeleteMessage"
-                            [2]: "sqs:GetQueueAttributes"
-                        ]
-                        Effect  : "Allow"
-                        Resource: "arn:aws:sqs:us-east-1:894850187425:data-pipeline4-data-processing"
-                    }
-              ~ [2]: {
-                        Action  : [
-                            [0]: "logs:CreateLogGroup"
-                            [1]: "logs:CreateLogStream"
-                            [2]: "logs:PutLogEvents"
-                        ]
-                        Effect  : "Allow"
-                      ~ Resource: "arn:aws:logs:us-east-1:894850187425:*" => "arn:aws:logs:us-west-2:894850187425:*"
-                    }
-            ]
-            Version  : "2012-10-17"
-        }
+    ~ aws:lambda/function:Function: (update)
+        [id=data-pipeline4-data-processor]
+        [urn=urn:pulumi:pulumi-stack-1243819650::pulumi-stack-1243819650::aws:lambda/function:Function::data_processor]
+        [provider: urn:pulumi:pulumi-stack-1243819650::pulumi-stack-1243819650::pulumi:providers:aws::default_7_12_0::5c4746a8-1899-46d4-a07c-f9602f618ec6 => urn:pulumi:pulumi-stack-1243819650::pulumi-stack-1243819650::pulumi:providers:aws::aws::[unknown]]
+      - lastModified  : "2025-12-16T21:12:52.000+0000"
+      ~ sourceCodeHash: "Uk59ixjEaDAJDlKLgE/2RRsCDSterPmhbfoI1psRc90=" => "WOXk56IZHSfv437p4+37MXDkh1D/pNyZ+Gf4dUyGsVo="
     --outputs:--
-  + dataLakeBucketArn        : "arn:aws:s3:::data-pipeline4-data-lake-894850187425"
-  + dataLakeBucketName       : "data-pipeline4-data-lake-894850187425"
+  + dataLakeBucketArn        : "arn:aws:s3:::data-pipeline4-data-lake-616138583583"
+  + dataLakeBucketName       : "data-pipeline4-data-lake-616138583583"
   + dynamodbTableName        : "data-pipeline4-file-metadata"
-  + lambdaArtifactsBucketName: "data-pipeline4-lambda-artifacts-894850187425"
-  + lambdaFunctionArn        : "arn:aws:lambda:us-east-1:894850187425:function:data-pipeline4-data-processor"
-  + sqsQueueUrl              : "https://sqs.us-east-1.amazonaws.com/894850187425/data-pipeline4-data-processing"
+  + lambdaArtifactsBucketName: "data-pipeline4-lambda-artifacts-616138583583"
+  + lambdaFunctionArn        : "arn:aws:lambda:us-east-1:616138583583:function:data-pipeline4-data-processor"
+  + sqsQueueUrl              : "https://sqs.us-east-1.amazonaws.com/616138583583/data-pipeline4-data-processing"
 Resources:
     + 1 to create
-    ~ 3 to update
-    4 changes. 20 unchanged
-
-Policy Packs run:
-    Name                      Version
-    pulumi-internal-policies  0.0.6
+    ~ 2 to update
+    3 changes. 21 unchanged
 `
