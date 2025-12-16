@@ -65,15 +65,14 @@ type DeploymentResult struct {
 	StackName   string
 }
 
-func GetDeployment(outputFolder string) (*DeploymentResult, error) {
-	ctx := context.Background()
-	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(outputFolder))
+func GetDeployment(ctx context.Context, pulumiProjectDir string) (*DeploymentResult, error) {
+	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(pulumiProjectDir))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
 
 	// TODO[pulumi/pulumi#21266]: Use automation API to get the selected stack name once the issue is fixed.
-	stackName, err := getStackName(outputFolder)
+	stackName, err := getStackName(pulumiProjectDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stack name: %w", err)
 	}
