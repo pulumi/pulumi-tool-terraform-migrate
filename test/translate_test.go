@@ -302,6 +302,7 @@ func TestTranslateAWSStack(t *testing.T) {
 	}).Equal(t, result.ChangeSummary)
 }
 
+// TODO if we skip the edit bits in this one is it still needed?
 func TestTranslateAWSStackWithEdit(t *testing.T) {
 	t.Parallel()
 
@@ -340,23 +341,25 @@ func TestTranslateAWSStackWithEdit(t *testing.T) {
 		apitype.OpType("update"): 2,
 	}).Equal(t, previewResult.ChangeSummary)
 
-	upResult, err := stack.Up(ctx)
-	require.NoError(t, err)
+	// pulumi up in AWS in CI is rather slow and expensive, can we skip this and limit to preview?
 
-	t.Logf("StdOut: %v", upResult.StdOut)
-	t.Logf("StdErr: %v", upResult.StdErr)
+	// upResult, err := stack.Up(ctx)
+	// require.NoError(t, err)
 
-	autogold.Expect(&map[string]int{"create": 1, "same": 21, "update": 2}).Equal(t, upResult.Summary.ResourceChanges)
+	// t.Logf("StdOut: %v", upResult.StdOut)
+	// t.Logf("StdErr: %v", upResult.StdErr)
 
-	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_aws_stack2", "package.json"))
-	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_aws_stack2", "index.ts"))
+	// autogold.Expect(&map[string]int{"create": 1, "same": 21, "update": 2}).Equal(t, upResult.Summary.ResourceChanges)
 
-	upResult, err = stack.Up(ctx)
+	// replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_aws_stack2", "package.json"))
+	// replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_aws_stack2", "index.ts"))
 
-	t.Logf("StdOut: %v", upResult.StdOut)
-	t.Logf("StdErr: %v", upResult.StdErr)
+	// upResult, err = stack.Up(ctx)
 
-	require.NoError(t, err)
+	// t.Logf("StdOut: %v", upResult.StdOut)
+	// t.Logf("StdErr: %v", upResult.StdErr)
 
-	autogold.Expect(&map[string]int{"same": 23, "update": 1}).Equal(t, upResult.Summary.ResourceChanges)
+	// require.NoError(t, err)
+
+	// autogold.Expect(&map[string]int{"same": 23, "update": 1}).Equal(t, upResult.Summary.ResourceChanges)
 }
