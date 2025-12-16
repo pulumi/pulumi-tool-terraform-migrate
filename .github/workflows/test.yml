@@ -6,6 +6,7 @@ on:
 env:
   PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
   PULUMI_API: https://api.pulumi-staging.io
+  AWS_REGION: us-west-2
 
 jobs:
   test:
@@ -14,6 +15,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Generate Pulumi Access Token
+        id: generate_pulumi_token
+        uses: pulumi/auth-actions@1c89817aab0c66407723cdef72b05266e7376640 # v1.0.1
+        with:
+          organization: pulumi
+          requested-token-type: urn:pulumi:token-type:access_token:organization
+          export-environment-variables: false
+
+      - name: Export AWS Credentials
+        uses: pulumi/esc-action@efb0bc8946938f0dfbfa00e829196ec95f0d0ea7 # v1.4.0
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ steps.generate_pulumi_token.outputs.pulumi-access-token }}
+        with:
+          environment: logins/pulumi-ci
 
       - name: Set up Go
         uses: actions/setup-go@v5
