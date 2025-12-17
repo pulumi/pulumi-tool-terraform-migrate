@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,6 +10,9 @@ import (
 
 	"github.com/hexops/autogold/v2"
 	"github.com/pulumi/pulumi-terraform-migrate/pkg"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto/optpreview"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,10 +58,11 @@ func createPulumiStack(t *testing.T) (string, string) {
 	require.NoError(t, err)
 	t.Logf("Pulumi stack directory: %s", dir)
 
-	_ = runCommand(t, dir, "pulumi", "new", "typescript", "--dir", dir, "--yes")
+	stackName := filepath.Base(dir)
+
+	_ = runCommand(t, dir, "pulumi", "new", "typescript", "--dir", dir, "--yes", "--stack", stackName)
 	_ = runCommand(t, dir, "pulumi", "up", "--yes")
 
-	stackName := filepath.Base(dir)
 	return dir, stackName
 }
 
@@ -83,9 +88,11 @@ func replaceIndexTs(t *testing.T, stackFolder string, indexTsPath string) {
 
 func TestTranslateBasic(t *testing.T) {
 	t.Parallel()
-	skipIfCI(t)
+
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, stackName := createPulumiStack(t)
+
+	ctx := context.Background()
 
 	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "")
 	require.NoError(t, err)
@@ -94,10 +101,23 @@ func TestTranslateBasic(t *testing.T) {
 
 	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_random_stack", "index.ts"))
 	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_random_stack", "package.json"))
-	_ = runCommand(t, stackFolder, "pulumi", "install")
-	output := runCommand(t, stackFolder, "pulumi", "preview", "--diff")
 
-	autogold.ExpectFile(t, output)
+	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(stackFolder))
+	require.NoError(t, err)
+
+	err = workspace.Install(ctx, nil)
+	require.NoError(t, err)
+
+	stack, err := auto.SelectStack(ctx, stackName, workspace)
+	require.NoError(t, err)
+	require.NotNil(t, stack)
+
+	result, err := stack.Preview(ctx, optpreview.Diff())
+	require.NoError(t, err)
+
+	t.Logf("pulumi preview --diff:\n%s\n%s", result.StdOut, result.StdErr)
+
+	autogold.Expect(map[apitype.OpType]int{apitype.OpType("same"): 2}).Equal(t, result.ChangeSummary)
 }
 
 func TestTranslateBasicWithDependencies(t *testing.T) {
