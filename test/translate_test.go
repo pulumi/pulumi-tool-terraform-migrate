@@ -82,6 +82,7 @@ func replaceIndexTs(t *testing.T, stackFolder string, indexTsPath string) {
 }
 
 func TestTranslateBasic(t *testing.T) {
+	t.Parallel()
 	skipIfCI(t)
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, stackName := createPulumiStack(t)
@@ -113,6 +114,7 @@ func TestTranslateBasicWithDependencies(t *testing.T) {
 }
 
 func TestTranslateBasicWithEdit(t *testing.T) {
+	t.Parallel()
 	skipIfCI(t)
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, stackName := createPulumiStack(t)
@@ -136,6 +138,7 @@ func TestTranslateBasicWithEdit(t *testing.T) {
 }
 
 func TestTranslateWithDependency(t *testing.T) {
+	t.Parallel()
 	skipIfCI(t)
 	statePath := setupTFStack(t, "testdata/tf_dependency_stack")
 	stackFolder, stackName := createPulumiStack(t)
@@ -154,6 +157,7 @@ func TestTranslateWithDependency(t *testing.T) {
 }
 
 func TestTranslateAWSStack(t *testing.T) {
+	t.Parallel()
 	skipIfCI(t)
 	statePath := setupTFStack(t, "testdata/tf_aws_stack")
 	stackFolder, stackName := createPulumiStack(t)
@@ -173,6 +177,7 @@ func TestTranslateAWSStack(t *testing.T) {
 }
 
 func TestTranslateAWSStackWithEdit(t *testing.T) {
+	t.Parallel()
 	skipIfCI(t)
 
 	statePath := setupTFStack(t, "testdata/tf_aws_stack")

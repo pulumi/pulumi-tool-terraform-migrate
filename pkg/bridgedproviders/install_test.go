@@ -28,6 +28,7 @@ import (
 // This is an integration test that actually downloads and installs a provider.
 // It's skipped by default but can be enabled for manual testing.
 func TestInstallProvider_Integration(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	// Install a small provider like random to the standard Pulumi home
@@ -56,6 +57,7 @@ func TestInstallProvider_Integration(t *testing.T) {
 }
 
 func TestInstallProvider_RequiresName(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	_, err := InstallProvider(ctx, InstallProviderOptions{
@@ -67,6 +69,7 @@ func TestInstallProvider_RequiresName(t *testing.T) {
 }
 
 func TestInstallProvider_RequiresVersion(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	_, err := InstallProvider(ctx, InstallProviderOptions{
@@ -78,6 +81,7 @@ func TestInstallProvider_RequiresVersion(t *testing.T) {
 }
 
 func TestInstallProvider_InvalidVersion(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	_, err := InstallProvider(ctx, InstallProviderOptions{
@@ -90,6 +94,7 @@ func TestInstallProvider_InvalidVersion(t *testing.T) {
 }
 
 func TestGetProviderBinaryPath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		pluginDir  string
@@ -136,6 +141,7 @@ func TestGetProviderBinaryPath(t *testing.T) {
 }
 
 func TestGetInstalledProviderPath_RequiresName(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	_, err := GetInstalledProviderPath(ctx, "", "v4.16.7")
@@ -145,6 +151,7 @@ func TestGetInstalledProviderPath_RequiresName(t *testing.T) {
 }
 
 func TestGetInstalledProviderPath_RequiresVersion(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	_, err := GetInstalledProviderPath(ctx, "random", "")
@@ -154,6 +161,7 @@ func TestGetInstalledProviderPath_RequiresVersion(t *testing.T) {
 }
 
 func TestGetInstalledProviderPath_NotFound(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	providerName := "nonexistent"
 	version := "1.0.0"

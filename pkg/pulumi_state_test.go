@@ -12,6 +12,7 @@ import (
 )
 
 func TestInsertResourcesIntoDeployment(t *testing.T) {
+	t.Parallel()
 	data, err := InsertResourcesIntoDeployment(&PulumiState{
 		Providers: []PulumiResource{
 			{

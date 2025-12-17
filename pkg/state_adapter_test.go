@@ -19,6 +19,7 @@ func createPulumiStack(t *testing.T) string {
 }
 
 func TestConvertSimple(t *testing.T) {
+	t.Parallel()
 	if os.Getenv("CI") == "true" {
 		t.Skip("Skipping test in CI: TODO: set up pulumi credentials in CI")
 	}
@@ -47,6 +48,7 @@ func TestConvertWithDependencies(t *testing.T) {
 }
 
 func TestConvertInvolved(t *testing.T) {
+	t.Parallel()
 	if os.Getenv("CI") == "true" {
 		t.Skip("Skipping test in CI: TODO: set up pulumi credentials in CI")
 	}
