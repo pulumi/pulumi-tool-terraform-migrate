@@ -3,7 +3,9 @@ package pkg
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -22,12 +24,21 @@ type StackExport struct {
 	Version    int                  `json:"version"`
 }
 
-func TranslateAndWriteState(tofuStateFilePath string, pulumiProgramDir string, outputFilePath string) error {
-	stackExport, err := TranslateState(tofuStateFilePath, pulumiProgramDir)
+type RequiredProviderExport struct {
+	// The name of the Pulumi provider, such as "aws" or "azure" or "gcp".
+	Name string `json:"name"`
+	// The version of the Pulumi provider, such as "7.12.0" or "6.30.0".
+	Version string `json:"version"`
+}
+
+func TranslateAndWriteState(
+	tofuStateFilePath string, pulumiProgramDir string, outputFilePath string, requiredProvidersOutputFilePath string,
+) error {
+	res, err := TranslateState(tofuStateFilePath, pulumiProgramDir)
 	if err != nil {
 		return err
 	}
-	bytes, err := json.Marshal(stackExport)
+	bytes, err := json.Marshal(res.Export)
 	if err != nil {
 		return fmt.Errorf("failed to marshal stack export: %w", err)
 	}
@@ -35,10 +46,30 @@ func TranslateAndWriteState(tofuStateFilePath string, pulumiProgramDir string, o
 	if err != nil {
 		return fmt.Errorf("failed to write stack export: %w", err)
 	}
+
+	if requiredProvidersOutputFilePath != "" {
+		requiredProviders := make([]RequiredProviderExport, 0, len(res.RequiredProviders))
+		for _, provider := range res.RequiredProviders {
+			requiredProviders = append(requiredProviders, RequiredProviderExport{Name: provider.Name, Version: provider.Version})
+		}
+		bytes, err := json.Marshal(requiredProviders)
+		if err != nil {
+			return fmt.Errorf("failed to marshal required providers: %w", err)
+		}
+		err = os.WriteFile(requiredProvidersOutputFilePath, bytes, 0o600)
+		if err != nil {
+			return fmt.Errorf("failed to write required providers: %w", err)
+		}
+	}
 	return nil
 }
 
-func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*StackExport, error) {
+type TranslateStateResult struct {
+	Export            StackExport
+	RequiredProviders []*info.Provider
+}
+
+func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*TranslateStateResult, error) {
 	tfState, err := tofu.LoadTerraformState(tofuStateFilePath)
 	if err != nil {
 		return nil, err
@@ -63,9 +94,14 @@ func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*StackEx
 		return nil, err
 	}
 
-	return &StackExport{
-		Deployment: editedDeployment,
-		Version:    3,
+	requiredProviders := slices.Collect(maps.Values(pulumiProviders))
+
+	return &TranslateStateResult{
+		Export: StackExport{
+			Deployment: editedDeployment,
+			Version:    3,
+		},
+		RequiredProviders: requiredProviders,
 	}, nil
 }
 

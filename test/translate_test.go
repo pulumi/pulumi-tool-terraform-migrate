@@ -86,7 +86,7 @@ func TestTranslateBasic(t *testing.T) {
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"))
+	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "")
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
@@ -99,12 +99,25 @@ func TestTranslateBasic(t *testing.T) {
 	autogold.ExpectFile(t, output)
 }
 
+func TestTranslateBasicWithDependencies(t *testing.T) {
+	skipIfCI(t)
+	statePath := setupTFStack(t, "testdata/tf_random_stack")
+	stackFolder, _ := createPulumiStack(t)
+
+	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"), filepath.Join(stackFolder, "dependencies.json"))
+	require.NoError(t, err)
+
+	dependencies, err := os.ReadFile(filepath.Join(stackFolder, "dependencies.json"))
+	require.NoError(t, err)
+	autogold.Expect(`[{"name":"random","version":"4.18.1"}]`).Equal(t, string(dependencies))
+}
+
 func TestTranslateBasicWithEdit(t *testing.T) {
 	skipIfCI(t)
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"))
+	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "")
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
@@ -127,7 +140,7 @@ func TestTranslateWithDependency(t *testing.T) {
 	statePath := setupTFStack(t, "testdata/tf_dependency_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"))
+	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "")
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
@@ -145,7 +158,7 @@ func TestTranslateAWSStack(t *testing.T) {
 	statePath := setupTFStack(t, "testdata/tf_aws_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"))
+	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "")
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
@@ -165,7 +178,7 @@ func TestTranslateAWSStackWithEdit(t *testing.T) {
 	statePath := setupTFStack(t, "testdata/tf_aws_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"))
+	err := pkg.TranslateAndWriteState(statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "")
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
