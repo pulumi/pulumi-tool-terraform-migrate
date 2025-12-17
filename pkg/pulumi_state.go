@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
@@ -30,6 +31,34 @@ type PulumiState struct {
 	Resources []PulumiResource
 }
 
+func getStackName(projectFolder string) (string, error) {
+	cmd := exec.Command("pulumi", "stack", "ls", "--json")
+	cmd.Dir = projectFolder
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get stack name: %w", err)
+	}
+
+	var stacks []struct {
+		Name    string `json:"name"`
+		Current bool   `json:"current"`
+	}
+	err = json.Unmarshal(output, &stacks)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal stack list: %w", err)
+	}
+	if len(stacks) == 0 {
+		return "", fmt.Errorf("no stacks found")
+	}
+
+	for _, stack := range stacks {
+		if stack.Current {
+			return stack.Name, nil
+		}
+	}
+	return "", fmt.Errorf("no current stack found")
+}
+
 func GetDeployment(outputFolder string) (apitype.DeploymentV3, error) {
 	ctx := context.Background()
 	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(outputFolder))
@@ -37,12 +66,13 @@ func GetDeployment(outputFolder string) (apitype.DeploymentV3, error) {
 		return apitype.DeploymentV3{}, fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	currentStack, err := workspace.Stack(context.TODO())
+	// TODO[pulumi/pulumi#21266]: Use automation API to get the selected stack name once the issue is fixed.
+	stackName, err := getStackName(outputFolder)
 	if err != nil {
-		return apitype.DeploymentV3{}, fmt.Errorf("failed to get current stack: %w", err)
+		return apitype.DeploymentV3{}, fmt.Errorf("failed to get stack name: %w", err)
 	}
 
-	untypedDeployment, err := workspace.ExportStack(ctx, currentStack.Name)
+	untypedDeployment, err := workspace.ExportStack(ctx, stackName)
 	if err != nil {
 		return apitype.DeploymentV3{}, fmt.Errorf("failed to export stack: %w", err)
 	}
