@@ -56,5 +56,11 @@ jobs:
         run: |
           pulumi login --local
 
+      - name: Warmup pulumi new
+        # TODO[pulumi/pulumi#21285]
+        run: |
+          mkdir /tmp/project
+          pulumi new typescript --dir /tmp/project --yes
+
       - name: Run tests
         run: go test -v ./...
