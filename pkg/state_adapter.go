@@ -3,7 +3,9 @@ package pkg
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -22,17 +24,21 @@ type StackExport struct {
 	Version    int                  `json:"version"`
 }
 
-type DependencyExport struct {
-	Name    string `json:"name"`
+type RequiredProviderExport struct {
+	// The name of the Pulumi provider, such as "aws" or "azure" or "gcp".
+	Name string `json:"name"`
+	// The version of the Pulumi provider, such as "7.12.0" or "6.30.0".
 	Version string `json:"version"`
 }
 
-func TranslateAndWriteState(tofuStateFilePath string, pulumiProgramDir string, outputFilePath string, dependencyOutputFilePath string) error {
-	stackExport, dependencies, err := TranslateState(tofuStateFilePath, pulumiProgramDir)
+func TranslateAndWriteState(
+	tofuStateFilePath string, pulumiProgramDir string, outputFilePath string, requiredProvidersOutputFilePath string,
+) error {
+	res, err := TranslateState(tofuStateFilePath, pulumiProgramDir)
 	if err != nil {
 		return err
 	}
-	bytes, err := json.Marshal(stackExport)
+	bytes, err := json.Marshal(res.Export)
 	if err != nil {
 		return fmt.Errorf("failed to marshal stack export: %w", err)
 	}
@@ -41,62 +47,62 @@ func TranslateAndWriteState(tofuStateFilePath string, pulumiProgramDir string, o
 		return fmt.Errorf("failed to write stack export: %w", err)
 	}
 
-	if dependencyOutputFilePath != "" {
-		dependencyExport := make([]DependencyExport, 0, len(dependencies))
-		for name, version := range dependencies {
-			dependencyExport = append(dependencyExport, DependencyExport{Name: name, Version: version})
+	if requiredProvidersOutputFilePath != "" {
+		requiredProviders := make([]RequiredProviderExport, 0, len(res.RequiredProviders))
+		for _, provider := range res.RequiredProviders {
+			requiredProviders = append(requiredProviders, RequiredProviderExport{Name: provider.Name, Version: provider.Version})
 		}
-		bytes, err := json.Marshal(dependencyExport)
+		bytes, err := json.Marshal(requiredProviders)
 		if err != nil {
-			return fmt.Errorf("failed to marshal dependencies: %w", err)
+			return fmt.Errorf("failed to marshal required providers: %w", err)
 		}
-		err = os.WriteFile(dependencyOutputFilePath, bytes, 0o600)
+		err = os.WriteFile(requiredProvidersOutputFilePath, bytes, 0o600)
 		if err != nil {
-			return fmt.Errorf("failed to write dependencies: %w", err)
+			return fmt.Errorf("failed to write required providers: %w", err)
 		}
 	}
 	return nil
 }
 
-func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*StackExport, map[string]string, error) {
+type TranslateStateResult struct {
+	Export            StackExport
+	RequiredProviders []*info.Provider
+}
+
+func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*TranslateStateResult, error) {
 	tfState, err := tofu.LoadTerraformState(tofuStateFilePath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	pulumiState, err := convertState(tfState, pulumiProviders)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	deployment, err := GetDeployment(pulumiProgramDir)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	editedDeployment, err := InsertResourcesIntoDeployment(pulumiState, "dev", "example", deployment)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	dependencies := getProviderDependencies(pulumiProviders)
+	requiredProviders := slices.Collect(maps.Values(pulumiProviders))
 
-	return &StackExport{
-		Deployment: editedDeployment,
-		Version:    3,
-	}, dependencies, nil
-}
-
-func getProviderDependencies(pulumiProviders map[providermap.TerraformProviderName]*info.Provider) map[string]string {
-	dependencies := make(map[string]string)
-	for _, provider := range pulumiProviders {
-		dependencies[provider.Name] = provider.Version
-	}
-	return dependencies
+	return &TranslateStateResult{
+		Export: StackExport{
+			Deployment: editedDeployment,
+			Version:    3,
+		},
+		RequiredProviders: requiredProviders,
+	}, nil
 }
 
 func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*info.Provider) (*PulumiState, error) {
