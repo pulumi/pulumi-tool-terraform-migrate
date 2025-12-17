@@ -6,6 +6,7 @@ on:
 env:
   AWS_REGION: us-west-2
   OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
+  PULUMI_CONFIG_PASSPHRASE: 123456
 
 permissions:
   id-token: write
@@ -34,6 +35,12 @@ jobs:
         with:
           environment: logins/pulumi-ci
 
+      - name: Unset PULUMI_ACCESS_TOKEN
+        run: echo "PULUMI_ACCESS_TOKEN=" >> $GITHUB_ENV
+
+      - name: Set up Pulumi
+        uses: pulumi/actions@v4
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -44,6 +51,10 @@ jobs:
 
       - name: Set up OpenTofu
         uses: opentofu/setup-opentofu@v1
+
+      - name: Setup local Pulumi backend
+        run: |
+          pulumi login --local
 
       - name: Run tests
         run: go test -v ./...
