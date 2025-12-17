@@ -89,7 +89,8 @@ func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*Transla
 	if err != nil {
 		return nil, err
 	}
-	editedDeployment, err := InsertResourcesIntoDeployment(pulumiState, "dev", "example", deployment)
+
+	editedDeployment, err := InsertResourcesIntoDeployment(pulumiState, deployment.StackName, deployment.ProjectName, deployment.Deployment)
 	if err != nil {
 		return nil, err
 	}

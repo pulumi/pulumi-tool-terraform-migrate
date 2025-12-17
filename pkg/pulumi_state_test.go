@@ -121,5 +121,5 @@ func TestGetDeployment(t *testing.T) {
 
 	deployment, err := GetDeployment(testDir)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(deployment.Resources))
+	require.Equal(t, 1, len(deployment.Deployment.Resources))
 }
