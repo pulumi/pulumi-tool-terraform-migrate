@@ -98,6 +98,7 @@ resource "null_resource" "test" {
 }
 
 func TestReadTerraformStateJSON(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -116,6 +117,7 @@ func TestReadTerraformStateJSON(t *testing.T) {
 }
 
 func TestReadTerraformStateJSON_InvalidFile(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -136,6 +138,7 @@ func TestReadTerraformStateJSON_InvalidFile(t *testing.T) {
 }
 
 func TestLoadTerraformState_JSON(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -150,6 +153,7 @@ func TestLoadTerraformState_JSON(t *testing.T) {
 }
 
 func TestLoadTerraformState_Tfstate(t *testing.T) {
+	t.Parallel()
 	skipIfTofuNotAvailable(t)
 
 	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
@@ -167,6 +171,7 @@ func TestLoadTerraformState_Tfstate(t *testing.T) {
 }
 
 func TestLoadTerraformState_UnsupportedFormat(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -182,6 +187,7 @@ func TestLoadTerraformState_UnsupportedFormat(t *testing.T) {
 }
 
 func TestLoadBinaryStateWithTofu(t *testing.T) {
+	t.Parallel()
 	skipIfTofuNotAvailable(t)
 
 	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
@@ -198,6 +204,7 @@ func TestLoadBinaryStateWithTofu(t *testing.T) {
 }
 
 func TestLoadBinaryStateWithTofu_NonExistentFile(t *testing.T) {
+	t.Parallel()
 	skipIfTofuNotAvailable(t)
 
 	tmpDir, err := os.MkdirTemp("", "tofu-test-*")

@@ -43,6 +43,7 @@ resource "random_string" "random" {
 }
 
 func TestGetPulumiProvidersForTerraformState(t *testing.T) {
+	t.Parallel()
 	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)

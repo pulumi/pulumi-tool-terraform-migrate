@@ -9,6 +9,7 @@ import (
 )
 
 func TestResourceToCtyValue(t *testing.T) {
+	t.Parallel()
 	state, err := LoadTerraformState("testdata/apigatway_state.json")
 	if err != nil {
 		t.Fatalf("failed to read Terraform resource: %v", err)

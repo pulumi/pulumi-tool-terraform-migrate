@@ -23,12 +23,14 @@ import (
 )
 
 func TestDefaultVisitOptions(t *testing.T) {
+	t.Parallel()
 	opts := &VisitOptions{}
 	assert.NotNil(t, opts)
 	assert.False(t, opts.IncludeDataSources, "Data sources should be skipped by default (zero value)")
 }
 
 func TestVisitResources_NilState(t *testing.T) {
+	t.Parallel()
 	visited := 0
 	err := VisitResources(nil, func(res *tfjson.StateResource) error {
 		visited++
@@ -39,6 +41,7 @@ func TestVisitResources_NilState(t *testing.T) {
 }
 
 func TestVisitResources_EmptyState(t *testing.T) {
+	t.Parallel()
 	state := &tfjson.State{}
 	visited := 0
 	err := VisitResources(state, func(res *tfjson.StateResource) error {
@@ -50,6 +53,7 @@ func TestVisitResources_EmptyState(t *testing.T) {
 }
 
 func TestVisitResources_SkipDataSources(t *testing.T) {
+	t.Parallel()
 	state := &tfjson.State{
 		Values: &tfjson.StateValues{
 			RootModule: &tfjson.StateModule{
@@ -88,6 +92,7 @@ func TestVisitResources_SkipDataSources(t *testing.T) {
 }
 
 func TestVisitResources_IncludeDataSources(t *testing.T) {
+	t.Parallel()
 	state := &tfjson.State{
 		Values: &tfjson.StateValues{
 			RootModule: &tfjson.StateModule{
@@ -120,6 +125,7 @@ func TestVisitResources_IncludeDataSources(t *testing.T) {
 }
 
 func TestVisitResources_WithChildModules(t *testing.T) {
+	t.Parallel()
 	state := &tfjson.State{
 		Values: &tfjson.StateValues{
 			RootModule: &tfjson.StateModule{
@@ -187,6 +193,7 @@ func TestVisitResources_WithChildModules(t *testing.T) {
 }
 
 func TestVisitResources_VisitorError(t *testing.T) {
+	t.Parallel()
 	state := &tfjson.State{
 		Values: &tfjson.StateValues{
 			RootModule: &tfjson.StateModule{
