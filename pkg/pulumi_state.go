@@ -59,31 +59,50 @@ func getStackName(projectFolder string) (string, error) {
 	return "", fmt.Errorf("no current stack found")
 }
 
-func GetDeployment(outputFolder string) (apitype.DeploymentV3, error) {
+type DeploymentResult struct {
+	Deployment  apitype.DeploymentV3
+	ProjectName string
+	StackName   string
+}
+
+func GetDeployment(outputFolder string) (*DeploymentResult, error) {
 	ctx := context.Background()
 	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(outputFolder))
 	if err != nil {
-		return apitype.DeploymentV3{}, fmt.Errorf("failed to create workspace: %w", err)
+		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
 
 	// TODO[pulumi/pulumi#21266]: Use automation API to get the selected stack name once the issue is fixed.
 	stackName, err := getStackName(outputFolder)
 	if err != nil {
-		return apitype.DeploymentV3{}, fmt.Errorf("failed to get stack name: %w", err)
+		return nil, fmt.Errorf("failed to get stack name: %w", err)
 	}
 
 	untypedDeployment, err := workspace.ExportStack(ctx, stackName)
 	if err != nil {
-		return apitype.DeploymentV3{}, fmt.Errorf("failed to export stack: %w", err)
+		return nil, fmt.Errorf("failed to export stack: %w", err)
 	}
 
 	deployment := apitype.DeploymentV3{}
 	err = json.Unmarshal(untypedDeployment.Deployment, &deployment)
 	if err != nil {
-		return apitype.DeploymentV3{}, fmt.Errorf("failed to unmarshal stack deployment: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal stack deployment: %w", err)
 	}
 
-	return deployment, nil
+	projectSettings, err := workspace.ProjectSettings(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project settings: %w", err)
+	}
+
+	if projectSettings == nil {
+		return nil, fmt.Errorf("project settings are nil")
+	}
+
+	return &DeploymentResult{
+		Deployment:  deployment,
+		ProjectName: string(projectSettings.Name),
+		StackName:   stackName,
+	}, nil
 }
 
 func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName string, deployment apitype.DeploymentV3) (apitype.DeploymentV3, error) {
