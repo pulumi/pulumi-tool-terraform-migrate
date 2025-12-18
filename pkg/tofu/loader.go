@@ -278,7 +278,7 @@ func pickTempWorkspaceName(ctx context.Context, tofu *tfexec.Terraform) (string,
 		return "", err
 	}
 
-	var allWorkspacesSet map[string]struct{}
+	allWorkspacesSet := make(map[string]struct{})
 	for _, w := range allWorkspaces {
 		allWorkspacesSet[w] = struct{}{}
 	}
