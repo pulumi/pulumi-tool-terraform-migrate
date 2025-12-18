@@ -1,13 +1,18 @@
 package pkg
 
 import (
+	"context"
+	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/hexops/autogold/v2"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -119,7 +124,46 @@ func TestGetDeployment(t *testing.T) {
 	_ = runCommand(t, testDir, "pulumi", "stack", "select", "dev")
 	_ = runCommand(t, testDir, "pulumi", "up", "--yes")
 
-	deployment, err := GetDeployment(testDir)
+	deployment, err := GetDeployment(context.Background(), testDir)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(deployment.Deployment.Resources))
+}
+
+func TestGetDeployment_NoStacksFound(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+
+	pulumiYaml := fmt.Sprintf(`name: test-project-%d
+runtime: yaml
+`, rand.Int31())
+	err := os.WriteFile(filepath.Join(tempDir, "Pulumi.yaml"), []byte(pulumiYaml), 0644)
+	require.NoError(t, err)
+
+	_, err = GetDeployment(context.Background(), tempDir)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no stacks found")
+}
+
+func TestGetDeployment_NoStacksSelected(t *testing.T) {
+	t.Parallel()
+
+	// Create a temporary directory for the test project
+	tempDir := t.TempDir()
+
+	// Create a minimal Pulumi.yaml project file
+	pulumiYaml := fmt.Sprintf(`name: test-project-%d
+runtime: yaml
+`, rand.Int31())
+
+	err := os.WriteFile(filepath.Join(tempDir, "Pulumi.yaml"), []byte(pulumiYaml), 0644)
+	require.NoError(t, err)
+
+	_ = runCommand(t, tempDir, "pulumi", "stack", "init", "dev", "--no-select")
+
+	_, err = GetDeployment(context.Background(), tempDir)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no current stack found")
 }
