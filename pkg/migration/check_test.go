@@ -15,6 +15,7 @@
 package migration
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -481,6 +482,8 @@ func TestCheckUniqueMapping(t *testing.T) {
 func TestCheckStateConsistency(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
+
 	t.Run("no errors when resources match state", func(t *testing.T) {
 		t.Parallel()
 
@@ -534,7 +537,7 @@ func TestCheckStateConsistency(t *testing.T) {
 		}
 
 		result := &CheckResult{}
-		err := checkStateConsistency(mf, result)
+		err := checkStateConsistency(ctx, mf, result)
 
 		require.NoError(t, err)
 		assert.False(t, result.HasErrors())
@@ -561,7 +564,7 @@ func TestCheckStateConsistency(t *testing.T) {
 		}
 
 		result := &CheckResult{}
-		err := checkStateConsistency(mf, result)
+		err := checkStateConsistency(ctx, mf, result)
 
 		require.NoError(t, err)
 		assert.False(t, result.HasErrors())
@@ -604,7 +607,7 @@ func TestCheckStateConsistency(t *testing.T) {
 		}
 
 		result := &CheckResult{}
-		err := checkStateConsistency(mf, result)
+		err := checkStateConsistency(ctx, mf, result)
 
 		require.NoError(t, err)
 		assert.True(t, result.HasErrors())
@@ -650,7 +653,7 @@ func TestCheckStateConsistency(t *testing.T) {
 		}
 
 		result := &CheckResult{}
-		err := checkStateConsistency(mf, result)
+		err := checkStateConsistency(ctx, mf, result)
 
 		require.NoError(t, err)
 		assert.True(t, result.HasErrors())
@@ -676,7 +679,7 @@ func TestCheckStateConsistency(t *testing.T) {
 		}
 
 		result := &CheckResult{}
-		err := checkStateConsistency(mf, result)
+		err := checkStateConsistency(ctx, mf, result)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to load state")
@@ -701,7 +704,7 @@ func TestCheckStateConsistency(t *testing.T) {
 		}
 
 		result := &CheckResult{}
-		err := checkStateConsistency(mf, result)
+		err := checkStateConsistency(ctx, mf, result)
 
 		require.Error(t, err)
 	})
@@ -709,6 +712,8 @@ func TestCheckStateConsistency(t *testing.T) {
 
 func TestCheckMigrationIntegrity(t *testing.T) {
 	t.Parallel()
+
+	ctx := context.Background()
 
 	t.Run("passes all checks with valid migration", func(t *testing.T) {
 		t.Parallel()
@@ -758,7 +763,7 @@ func TestCheckMigrationIntegrity(t *testing.T) {
 			},
 		}
 
-		result, err := CheckMigrationIntegrity(mf)
+		result, err := CheckMigrationIntegrity(ctx, mf)
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -809,7 +814,7 @@ func TestCheckMigrationIntegrity(t *testing.T) {
 			},
 		}
 
-		result, err := CheckMigrationIntegrity(mf)
+		result, err := CheckMigrationIntegrity(ctx, mf)
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -845,7 +850,7 @@ func TestCheckMigrationIntegrity(t *testing.T) {
 			},
 		}
 
-		result, err := CheckMigrationIntegrity(mf)
+		result, err := CheckMigrationIntegrity(ctx, mf)
 
 		require.Error(t, err)
 		assert.Nil(t, result)

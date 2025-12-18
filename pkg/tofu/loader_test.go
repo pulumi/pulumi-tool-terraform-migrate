@@ -15,6 +15,7 @@
 package tofu
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -97,55 +98,18 @@ resource "null_resource" "test" {
 	return statePath
 }
 
-func TestReadTerraformStateJSON(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	statePath := createTestStateJSON(t, tmpDir)
-
-	state, err := ReadTerraformStateJSON(statePath)
-	require.NoError(t, err)
-	assert.NotNil(t, state)
-	assert.Equal(t, "1.0", state.FormatVersion)
-	assert.Equal(t, "1.5.0", state.TerraformVersion)
-	assert.NotNil(t, state.Values)
-	assert.NotNil(t, state.Values.RootModule)
-	assert.Len(t, state.Values.RootModule.Resources, 1)
-	assert.Equal(t, "null_resource.test", state.Values.RootModule.Resources[0].Address)
-}
-
-func TestReadTerraformStateJSON_InvalidFile(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	// Test with non-existent file
-	_, err = ReadTerraformStateJSON(filepath.Join(tmpDir, "nonexistent.json"))
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to read state file")
-
-	// Test with invalid JSON
-	invalidPath := filepath.Join(tmpDir, "invalid.json")
-	err = os.WriteFile(invalidPath, []byte("not valid json"), 0644)
-	require.NoError(t, err)
-
-	_, err = ReadTerraformStateJSON(invalidPath)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse state JSON")
-}
-
 func TestLoadTerraformState_JSON(t *testing.T) {
 	t.Parallel()
+
+	ctx := context.Background()
+
 	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
 	statePath := createTestStateJSON(t, tmpDir)
 
-	state, err := LoadTerraformState(statePath)
+	state, err := LoadTerraformState(ctx, statePath)
 	require.NoError(t, err)
 	assert.NotNil(t, state)
 	assert.Equal(t, "1.0", state.FormatVersion)
@@ -196,7 +160,7 @@ func TestLoadBinaryStateWithTofu(t *testing.T) {
 
 	statePath := createTestStateTfstate(t, tmpDir)
 
-	state, err := loadBinaryStateWithTofu(statePath)
+	state, err := loadWorkspaceState(statePath)
 	require.NoError(t, err)
 	assert.NotNil(t, state)
 	assert.NotEmpty(t, state.FormatVersion)
@@ -213,7 +177,7 @@ func TestLoadBinaryStateWithTofu_NonExistentFile(t *testing.T) {
 
 	nonExistentPath := filepath.Join(tmpDir, "nonexistent.tfstate")
 
-	_, err = loadBinaryStateWithTofu(nonExistentPath)
+	_, err = loadWorkspaceState(nonExistentPath)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to convert binary state file")
 }
