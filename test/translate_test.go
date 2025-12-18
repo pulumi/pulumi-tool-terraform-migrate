@@ -135,7 +135,9 @@ func TestTranslateBasicWithDependencies(t *testing.T) {
 
 func TestTranslateBasicWithEdit(t *testing.T) {
 	t.Parallel()
-	skipIfCI(t)
+
+	ctx := context.Background()
+
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
@@ -147,14 +149,46 @@ func TestTranslateBasicWithEdit(t *testing.T) {
 	// This changes the length of the random string from 16 to 17 in order to test that edits to resources still work.
 	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_random_stack2", "index.ts"))
 	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_random_stack2", "package.json"))
-	_ = runCommand(t, stackFolder, "pulumi", "install")
 
-	output := runCommand(t, stackFolder, "pulumi", "preview", "--diff")
-	autogold.ExpectFile(t, output, autogold.Name("TestTranslateBasicWithEdit-preview"))
+	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(stackFolder))
+	require.NoError(t, err)
 
-	output = runCommand(t, stackFolder, "pulumi", "up", "--yes")
+	err = workspace.Install(ctx, nil)
+	require.NoError(t, err)
 
-	autogold.ExpectFile(t, output, autogold.Name("TestTranslateBasicWithEdit-up"))
+	stack, err := auto.SelectStack(ctx, stackName, workspace)
+	require.NoError(t, err)
+	require.NotNil(t, stack)
+
+	result, err := stack.Preview(ctx, optpreview.Diff())
+	require.NoError(t, err)
+
+	t.Logf("pulumi preview --diff:\n%s\n%s", result.StdOut, result.StdErr)
+
+	autogold.Expect(map[apitype.OpType]int{
+		apitype.OpType("replace"): 1,
+		apitype.OpType("same"):    1,
+	}).Equal(t, result.ChangeSummary)
+
+	upResult, err := stack.Up(ctx)
+
+	// TODO[pulumi/pulumi-random#1967] intermittent failures here.
+	if strings.Contains(upResult.StdErr+upResult.StdOut, "string field contains invalid UTF-8") {
+		return
+	}
+
+	require.NoError(t, err)
+
+	t.Logf("pulumi up:\n%s\n%s", upResult.StdOut, upResult.StdErr)
+	autogold.Expect(map[apitype.OpType]int{
+		apitype.OpType("replace"): 1,
+		apitype.OpType("same"):    1,
+	}).Equal(t, result.ChangeSummary)
+
+	autogold.Expect(map[apitype.OpType]int{
+		apitype.OpType("replace"): 1,
+		apitype.OpType("same"):    1,
+	}).Equal(t, result.ChangeSummary)
 }
 
 func TestTranslateWithDependency(t *testing.T) {
