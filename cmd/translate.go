@@ -27,8 +27,7 @@ Example:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Converting Terraform state from: %s\n", inputPath)
 		fmt.Printf("Output will be written to: %s\n", outputFile)
-
-		err := pkg.TranslateAndWriteState(inputPath, stackFolder, outputFile, requiredProvidersOutputFile)
+		err := pkg.TranslateAndWriteState(cmd.Context(), inputPath, stackFolder, outputFile, requiredProvidersOutputFile)
 		if err != nil {
 			return fmt.Errorf("failed to convert and write Terraform state: %w", err)
 		}

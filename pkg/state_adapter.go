@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -32,9 +33,13 @@ type RequiredProviderExport struct {
 }
 
 func TranslateAndWriteState(
-	tofuStateFilePath string, pulumiProgramDir string, outputFilePath string, requiredProvidersOutputFilePath string,
+	ctx context.Context,
+	tofuStateFilePath string,
+	pulumiProgramDir string,
+	outputFilePath string,
+	requiredProvidersOutputFilePath string,
 ) error {
-	res, err := TranslateState(tofuStateFilePath, pulumiProgramDir)
+	res, err := TranslateState(ctx, tofuStateFilePath, pulumiProgramDir)
 	if err != nil {
 		return err
 	}
@@ -69,8 +74,10 @@ type TranslateStateResult struct {
 	RequiredProviders []*info.Provider
 }
 
-func TranslateState(tofuStateFilePath string, pulumiProgramDir string) (*TranslateStateResult, error) {
-	tfState, err := tofu.LoadTerraformState(tofuStateFilePath)
+func TranslateState(ctx context.Context, tofuStateFilePath string, pulumiProgramDir string) (*TranslateStateResult, error) {
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: tofuStateFilePath,
+	})
 	if err != nil {
 		return nil, err
 	}
