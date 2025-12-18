@@ -16,6 +16,7 @@ package tofu
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -32,6 +33,8 @@ import (
 // See [LoadTerraformState].
 type LoadTerraformStateOptions struct {
 	// Path to the explicit terraform.tfstate file.  Only one of [ProjectDir], [StateFilePath] should be given.
+	//
+	// To facilitate testing, if this file path ends with .json it is simply read directly.
 	StateFilePath string
 
 	// Path to the root directory where Terraform sources are located.
@@ -62,6 +65,19 @@ type LoadTerraformStateOptions struct {
 // See also: https://github.com/pulumi/pulumi-service/issues/34864
 func LoadTerraformState(ctx context.Context, opts LoadTerraformStateOptions) (finalState *tfjson.State, finalError error) {
 	if opts.StateFilePath != "" {
+		// Direct reading JSON case to facilitate testing.
+		if filepath.Ext(opts.StateFilePath) == ".json" {
+			bytes, err := os.ReadFile(opts.StateFilePath)
+			if err != nil {
+				return nil, err
+			}
+			var st tfjson.State
+			if err := json.Unmarshal(bytes, &st); err != nil {
+				return nil, err
+			}
+			return &st, nil
+		}
+
 		contract.Assertf(opts.Workspace == "", "Workspace is not compatible with StateFilePath")
 		if opts.ProjectDir == "" {
 			opts.ProjectDir = filepath.Dir(opts.StateFilePath)
