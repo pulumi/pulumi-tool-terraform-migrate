@@ -50,9 +50,9 @@ type LoadTerraformStateOptions struct {
 // As of the time of writing, `tofu show -json` pre-supposes having access to providers and running `tofu init -json`.
 // The command will init the providers if necessary.
 //
-// Additionally there is a problem reading states that rely on providers from Terraform registry with OpenTOFU.
+// OpenTOFU has a problem reading states created by Terraform proper that rely on providers from Terraform registry.
 // LoadTerraformState works around this by using a temporary workspace to convert providers to their OpenTOFU registry
-// equivalents and extracts the OpenTOFU-based state without modifying the original workspace.
+// equivalents and extracts the OpenTOFU-translated state without modifying the original workspace.
 //
 // Common errors:
 //
@@ -121,7 +121,7 @@ func loadStateFilePath(
 	}
 
 	defer func() {
-		err := tofu.WorkspaceDelete(ctx, tempWorkspace)
+		err := tofu.WorkspaceDelete(ctx, tempWorkspace, tfexec.Force(true))
 		if err != nil {
 			finalError = errors.Join(finalError, err)
 		}
@@ -177,8 +177,8 @@ func loadWorkspaceStateInner(
 		return state, nil
 
 	// Working around this error: https://github.com/pulumi/pulumi-service/issues/34864
-	case strings.Contains(err.Error(),
-		"Could not load the schema for provider registry.opentofu.org/hashicorp") &&
+	case strings.Contains(err.Error(), "Failed to load plugin schemas") &&
+		strings.Contains(err.Error(), "while loading schemas for plugin components") &&
 		workaroundRegistryError:
 
 		tempWorkspace, err := pickTempWorkspaceName(ctx, tofu)
@@ -187,7 +187,7 @@ func loadWorkspaceStateInner(
 		}
 
 		defer func() {
-			err := tofu.WorkspaceDelete(ctx, tempWorkspace)
+			err := tofu.WorkspaceDelete(ctx, tempWorkspace, tfexec.Force(true))
 			if err != nil {
 				finalError = errors.Join(finalError, err)
 			}
@@ -197,11 +197,66 @@ func loadWorkspaceStateInner(
 			return nil, err
 		}
 
+		// The workaround may modify .terraform.lock.hcl which will break terraform access. Save and restore
+		// this file when applying the workaround..
+		lockFile := filepath.Join(projectDir, ".terraform.lock.hcl")
+		lockFileInfo, _ := os.Stat(lockFile)
+		lockBytes, _ := os.ReadFile(lockFile)
+		if len(lockBytes) > 0 {
+			defer func() {
+				if err := os.WriteFile(lockFile, lockBytes, lockFileInfo.Mode()); err != nil {
+					finalError = errors.Join(finalError, err)
+				}
+			}()
+		}
+
+		if err := fixupProviderError(ctx, tofu, tempWorkspace); err != nil {
+			return nil, err
+		}
+
 		return loadWorkspaceStateInner(ctx, tofu, projectDir, tempWorkspace,
 			false /* workaroundRegistryError */) // avoid infinite workaround regress here
 	default:
 		return nil, err
 	}
+}
+
+// Runs tofu init --upgrade && tofu plan && tofu apply in a given workspace.
+func fixupProviderError(ctx context.Context, tofu *tfexec.Terraform, workspace string) (finalError error) {
+	currentWorkspace, err := tofu.WorkspaceShow(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := tofu.WorkspaceSelect(ctx, currentWorkspace); err != nil {
+			finalError = errors.Join(finalError, err)
+		}
+	}()
+
+	if err := tofu.WorkspaceSelect(ctx, workspace); err != nil {
+		return err
+	}
+
+	// Running this will re-initialize providers to OpenTOFU versions.
+	if err := tofu.Init(ctx, &tfexec.UpgradeOption{}); err != nil {
+		return err
+	}
+
+	changes, err := tofu.Plan(ctx, tfexec.Refresh(false))
+	if err != nil {
+		return err
+	}
+
+	if changes {
+		return fmt.Errorf("tofu plan detects changes, refusing to run apply")
+	}
+
+	if err := tofu.Apply(ctx, tfexec.Refresh(false)); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Creates destWorkspace with the given state file. Does not modify the currently selected workspace.
@@ -216,6 +271,12 @@ func newWorkspace(
 		return err
 	}
 
+	defer func() {
+		if err := tofu.WorkspaceSelect(ctx, currentWorkspace); err != nil {
+			finalError = errors.Join(finalError, err)
+		}
+	}()
+
 	if err := tofu.WorkspaceNew(ctx, newWorkspaceName); err != nil {
 		return err
 	}
@@ -223,12 +284,6 @@ func newWorkspace(
 	if err := tofu.WorkspaceSelect(ctx, newWorkspaceName); err != nil {
 		return err
 	}
-
-	defer func() {
-		if err := tofu.WorkspaceSelect(ctx, currentWorkspace); err != nil {
-			finalError = errors.Join(finalError, err)
-		}
-	}()
 
 	if err := tofu.StatePush(ctx, stateFilePath); err != nil {
 		return err
