@@ -308,8 +308,13 @@ func newWorkspace(
 		return err
 	}
 
-	if err := tofu.StatePush(ctx, stateFilePath); err != nil {
+	absPath, err := filepath.Abs(stateFilePath)
+	if err != nil {
 		return err
+	}
+
+	if err := tofu.StatePush(ctx, absPath); err != nil {
+		return fmt.Errorf("tofu failed pushing state: %w", err)
 	}
 
 	return nil
