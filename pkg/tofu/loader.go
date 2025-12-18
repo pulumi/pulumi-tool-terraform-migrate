@@ -181,12 +181,18 @@ func loadWorkspaceStateInner(
 		strings.Contains(err.Error(), "while loading schemas for plugin components") &&
 		workaroundRegistryError:
 
+		fmt.Fprintln(os.Stderr, "Error reading Terraform-generated state with OpenTofu. Computing OpenTofu state.")
+
 		tempWorkspace, err := pickTempWorkspaceName(ctx, tofu)
 		if err != nil {
 			return nil, err
 		}
 
+		fmt.Fprintln(os.Stderr, "Creating a temporary workspace", tempWorkspace)
+
 		defer func() {
+			fmt.Fprintln(os.Stderr, "Cleaning up the temporary workspace", tempWorkspace)
+
 			err := tofu.WorkspaceDelete(ctx, tempWorkspace, tfexec.Force(true))
 			if err != nil {
 				finalError = errors.Join(finalError, err)
@@ -238,7 +244,7 @@ func fixupProviderError(ctx context.Context, tofu *tfexec.Terraform, workspace s
 		return err
 	}
 
-	// Running this will re-initialize providers to OpenTOFU versions.
+	fmt.Fprintln(os.Stderr, "Running tofu init -upgrade in the workspace", workspace)
 	if err := tofu.Init(ctx, &tfexec.UpgradeOption{}); err != nil {
 		return err
 	}
@@ -252,6 +258,7 @@ func fixupProviderError(ctx context.Context, tofu *tfexec.Terraform, workspace s
 		return fmt.Errorf("tofu plan detects changes, refusing to run apply")
 	}
 
+	fmt.Fprintln(os.Stderr, "Running tofu apply -refresh=false in the workspace", workspace)
 	if err := tofu.Apply(ctx, tfexec.Refresh(false)); err != nil {
 		return err
 	}
