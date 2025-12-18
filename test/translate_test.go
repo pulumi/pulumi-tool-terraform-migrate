@@ -121,7 +121,8 @@ func TestTranslateBasic(t *testing.T) {
 }
 
 func TestTranslateBasicWithDependencies(t *testing.T) {
-	skipIfCI(t)
+	t.Parallel()
+
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, _ := createPulumiStack(t)
 
