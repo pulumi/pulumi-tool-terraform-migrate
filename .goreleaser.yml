@@ -1,0 +1,25 @@
+dist: goreleaser
+project_name: pulumi-tool-terraform-migrate
+version: 2
+snapshot:
+  version_template: "{{ .Version }}-SNAPSHOT"
+checksum:
+  name_template: "{{ .ProjectName }}-{{ .Version }}-checksums.txt"
+archives:
+- id: archive
+  name_template: '{{ .Binary }}-{{ .Tag }}-{{ .Os }}-{{ .Arch }}'
+builds:
+- id: pulumi-tool-terraform-migrate
+  binary: pulumi-tool-terraform-migrate
+  goarch:
+  - amd64
+  - arm64
+  goos:
+  - darwin
+  - windows
+  - linux
+  ldflags:
+  - -s
+  - -w
+  - -X github.com/pulumi/pulumi-tool-terraform-migrate/pkg/version.Version={{.Tag}}
+  main: .
