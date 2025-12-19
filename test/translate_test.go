@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/hexops/autogold/v2"
-	"github.com/pulumi/pulumi-terraform-migrate/pkg"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optpreview"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"

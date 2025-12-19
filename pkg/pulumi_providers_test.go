@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pulumi/pulumi-terraform-migrate/pkg/tofu"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 	"github.com/stretchr/testify/require"
 )
 
