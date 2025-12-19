@@ -1,4 +1,4 @@
-module github.com/pulumi/pulumi-terraform-migrate
+module github.com/pulumi/pulumi-tool-terraform-migrate
 
 go 1.24.7
 

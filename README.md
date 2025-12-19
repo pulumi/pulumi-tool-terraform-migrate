@@ -1,4 +1,4 @@
-# pulumi-terraform-migrate
+# pulumi-tool-terraform-migrate
 
 This is an EXPERIMENTAL tool for assisting migrating Terraform projects to Pulumi.
 
@@ -13,7 +13,7 @@ infrastructure, staying in the purely symbolic exploratory world.
 The key command is translate:
 
 ```
-pulumi-terraform-migrate translate \
+pulumi plugin run terraform-migrate -- translate \
   --input-path terraform.tfstate \
   --output-file pulumi.json \
   --stack-folder path/to/pulumi/stack

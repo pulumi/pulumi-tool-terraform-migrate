@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/pulumi/pulumi-terraform-migrate/cmd"
+import "github.com/pulumi/pulumi-tool-terraform-migrate/cmd"
 
 func main() {
 	cmd.Execute()

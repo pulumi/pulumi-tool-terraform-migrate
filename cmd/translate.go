@@ -17,7 +17,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/pulumi/pulumi-terraform-migrate/pkg"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg"
 	"github.com/spf13/cobra"
 )
 

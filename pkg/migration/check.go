@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	tfjson "github.com/hashicorp/terraform-json"
-	"github.com/pulumi/pulumi-terraform-migrate/pkg/tofu"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 )
 
 // CheckError represents a validation error found during migration check

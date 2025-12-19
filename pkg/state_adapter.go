@@ -27,9 +27,9 @@ import (
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
-	"github.com/pulumi/pulumi-terraform-migrate/pkg/bridge"
-	"github.com/pulumi/pulumi-terraform-migrate/pkg/providermap"
-	"github.com/pulumi/pulumi-terraform-migrate/pkg/tofu"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/bridge"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 )

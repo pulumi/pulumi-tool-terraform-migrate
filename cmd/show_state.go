@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pulumi/pulumi-terraform-migrate/pkg/tofu"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 	"github.com/spf13/cobra"
 )
 
