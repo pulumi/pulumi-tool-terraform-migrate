@@ -46,21 +46,25 @@ type LoadTerraformStateOptions struct {
 	Workspace string
 }
 
-// LoadTerraformState loads a Terraform or OpenTOFU state. For
+// LoadTerraformState loads a Terraform or OpenTofu state.
 //
 // It uses the `tofu show -json` format to convert it to the official `*tfjson.State` format.
 //
-// As of the time of writing, `tofu show -json` pre-supposes having access to providers and running `tofu init -json`.
-// The command will init the providers if necessary.
+// As of the time of writing, `tofu show -json` pre-supposes having access to providers and running `tofu init`. This
+// command may run `tofu init` if necessary.
 //
-// OpenTOFU has a problem reading states created by Terraform proper that rely on providers from Terraform registry.
-// LoadTerraformState works around this by using a temporary workspace to convert providers to their OpenTOFU registry
-// equivalents and extracts the OpenTOFU-translated state without modifying the original workspace.
+// OpenTofu sometimes has a problem reading states created by Terraform proper that rely on providers from the
+// Terraform registry. LoadTerraformState works around this by using a temporary workspace to convert providers to
+// their OpenTofu registry equivalents and extracts the OpenTofu-translated state without modifying the original
+// workspace. This workaround calls `tofu init`, `tofu plan -refresh=false` and, conditionally on plan being a
+// no-change plan, `tofu apply -refresh=false`. If `tofu plan` indicates changes the workaround will fail and an error
+// will be returned instead.
 //
 // Common errors:
 //
 // - will fail if `tofu` binary is not in PATH
 // - will fail if `tofu` fails to authenticate to an state backend such as the S3 state backend
+// - will fail if `tofu` cannot read a Terraform-initiated state and `tofu plan -refresh=false` wants changes
 //
 // See also: https://github.com/pulumi/pulumi-service/issues/34864
 func LoadTerraformState(ctx context.Context, opts LoadTerraformStateOptions) (finalState *tfjson.State, finalError error) {
