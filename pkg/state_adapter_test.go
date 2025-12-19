@@ -15,6 +15,7 @@
 package pkg
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -37,8 +38,9 @@ func TestConvertSimple(t *testing.T) {
 	if os.Getenv("CI") == "true" {
 		t.Skip("Skipping test in CI: TODO: set up pulumi credentials in CI")
 	}
+	ctx := context.Background()
 	stackFolder := createPulumiStack(t)
-	data, err := TranslateState("testdata/bucket_state.json", stackFolder)
+	data, err := TranslateState(ctx, "testdata/bucket_state.json", stackFolder)
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -50,8 +52,9 @@ func TestConvertWithDependencies(t *testing.T) {
 	if os.Getenv("CI") == "true" {
 		t.Skip("Skipping test in CI: TODO: set up pulumi credentials in CI")
 	}
+	ctx := context.Background()
 	stackFolder := createPulumiStack(t)
-	res, err := TranslateState("testdata/bucket_state.json", stackFolder)
+	res, err := TranslateState(ctx, "testdata/bucket_state.json", stackFolder)
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -66,8 +69,9 @@ func TestConvertInvolved(t *testing.T) {
 	if os.Getenv("CI") == "true" {
 		t.Skip("Skipping test in CI: TODO: set up pulumi credentials in CI")
 	}
+	ctx := context.Background()
 	stackFolder := createPulumiStack(t)
-	data, err := TranslateState("testdata/tofu_state.json", stackFolder)
+	data, err := TranslateState(ctx, "testdata/tofu_state.json", stackFolder)
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}

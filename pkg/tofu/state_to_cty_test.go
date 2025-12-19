@@ -15,6 +15,7 @@
 package tofu
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hexops/autogold/v2"
@@ -24,7 +25,12 @@ import (
 
 func TestResourceToCtyValue(t *testing.T) {
 	t.Parallel()
-	state, err := LoadTerraformState("testdata/apigatway_state.json")
+
+	ctx := context.Background()
+
+	state, err := LoadTerraformState(ctx, LoadTerraformStateOptions{
+		StateFilePath: "testdata/apigatway_state.json",
+	})
 	if err != nil {
 		t.Fatalf("failed to read Terraform resource: %v", err)
 	}

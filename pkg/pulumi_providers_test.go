@@ -15,6 +15,7 @@
 package pkg
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -58,13 +59,18 @@ resource "random_string" "random" {
 
 func TestGetPulumiProvidersForTerraformState(t *testing.T) {
 	t.Parallel()
+
+	ctx := context.Background()
+
 	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
 	statePath := createTestStateTfstate(t, tmpDir)
 
-	terraformState, err := tofu.LoadTerraformState(statePath)
+	terraformState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: statePath,
+	})
 	require.NoError(t, err)
 
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(terraformState)

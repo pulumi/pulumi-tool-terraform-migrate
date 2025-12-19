@@ -15,6 +15,7 @@
 package migration
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -58,7 +59,7 @@ func (cr *CheckResult) AddErrorWithSuggestion(category, message, suggestion stri
 }
 
 // CheckMigrationIntegrity performs all integrity checks on the migration file
-func CheckMigrationIntegrity(migrationFile *MigrationFile) (*CheckResult, error) {
+func CheckMigrationIntegrity(ctx context.Context, migrationFile *MigrationFile) (*CheckResult, error) {
 	result := &CheckResult{}
 
 	// Check 1: Verify files exist
@@ -68,7 +69,7 @@ func CheckMigrationIntegrity(migrationFile *MigrationFile) (*CheckResult, error)
 	checkUniqueMapping(migrationFile, result)
 
 	// Check 3: Verify resources match Terraform state
-	if err := checkStateConsistency(migrationFile, result); err != nil {
+	if err := checkStateConsistency(ctx, migrationFile, result); err != nil {
 		return nil, err
 	}
 
@@ -160,7 +161,7 @@ func checkUniqueMapping(mf *MigrationFile, result *CheckResult) {
 }
 
 // checkStateConsistency verifies that resources in migration.json match the Terraform state
-func checkStateConsistency(mf *MigrationFile, result *CheckResult) error {
+func checkStateConsistency(ctx context.Context, mf *MigrationFile, result *CheckResult) error {
 	for i, stack := range mf.Migration.Stacks {
 		stackPrefix := fmt.Sprintf("stack[%d] (%s)", i, stack.PulumiStack)
 
@@ -170,7 +171,9 @@ func checkStateConsistency(mf *MigrationFile, result *CheckResult) error {
 		}
 
 		// Load the Terraform state
-		state, err := tofu.LoadTerraformState(stack.TFState)
+		state, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+			StateFilePath: stack.TFState,
+		})
 		if err != nil {
 			return fmt.Errorf("failed to load state for %s: %w", stackPrefix, err)
 		}

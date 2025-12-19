@@ -15,16 +15,57 @@
 package tofu
 
 import (
-	"encoding/json"
-	"os"
+	"context"
 	"os/exec"
-	"path/filepath"
 	"testing"
 
-	tfjson "github.com/hashicorp/terraform-json"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func Test_LoadTerraformState(t *testing.T) {
+	t.Parallel()
+	skipIfTofuNotAvailable(t)
+
+	ctx := context.Background()
+
+	type testCase struct {
+		name            string
+		opts            LoadTerraformStateOptions
+		expectResources int
+	}
+
+	testCases := []testCase{
+		{
+			name: "tofu-state-filepath",
+			opts: LoadTerraformStateOptions{
+				StateFilePath: "testdata/tofu-project/terraform.tfstate",
+			},
+			expectResources: 1,
+		},
+		{
+			name: "tofu-state-projectdir",
+			opts: LoadTerraformStateOptions{
+				ProjectDir: "testdata/tofu-project",
+			},
+			expectResources: 1,
+		},
+		{
+			name: "tf-state-filepath",
+			opts: LoadTerraformStateOptions{
+				StateFilePath: "testdata/tf-project/terraform.tfstate",
+			},
+			expectResources: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			state, err := LoadTerraformState(ctx, tc.opts)
+			require.NoError(t, err)
+			require.Equal(t, tc.expectResources, len(state.Values.RootModule.Resources))
+		})
+	}
+}
 
 // skipIfTofuNotAvailable skips the test if tofu is not in PATH
 func skipIfTofuNotAvailable(t *testing.T) {
@@ -32,188 +73,4 @@ func skipIfTofuNotAvailable(t *testing.T) {
 	if _, err := exec.LookPath("tofu"); err != nil {
 		t.Skip("tofu binary not found in PATH, skipping test")
 	}
-}
-
-// createTestStateJSON creates a test state file in JSON format
-func createTestStateJSON(t *testing.T, dir string) string {
-	t.Helper()
-
-	state := &tfjson.State{
-		FormatVersion:    "1.0",
-		TerraformVersion: "1.5.0",
-		Values: &tfjson.StateValues{
-			RootModule: &tfjson.StateModule{
-				Resources: []*tfjson.StateResource{
-					{
-						Address: "null_resource.test",
-						Mode:    tfjson.ManagedResourceMode,
-						Type:    "null_resource",
-						Name:    "test",
-					},
-				},
-			},
-		},
-	}
-
-	data, err := json.MarshalIndent(state, "", "  ")
-	require.NoError(t, err)
-
-	path := filepath.Join(dir, "test.json")
-	err = os.WriteFile(path, data, 0644)
-	require.NoError(t, err)
-
-	return path
-}
-
-// createTestStateTfstate creates a test state file in tfstate format
-func createTestStateTfstate(t *testing.T, dir string) string {
-	t.Helper()
-	skipIfTofuNotAvailable(t)
-
-	// Create a minimal Terraform configuration
-	tfConfig := `
-resource "null_resource" "test" {
-}
-`
-	configPath := filepath.Join(dir, "main.tf")
-	err := os.WriteFile(configPath, []byte(tfConfig), 0644)
-	require.NoError(t, err)
-
-	// Initialize and create state
-	cmd := exec.Command("tofu", "init")
-	cmd.Dir = dir
-	err = cmd.Run()
-	require.NoError(t, err)
-
-	cmd = exec.Command("tofu", "apply", "-auto-approve")
-	cmd.Dir = dir
-	err = cmd.Run()
-	require.NoError(t, err)
-
-	statePath := filepath.Join(dir, "terraform.tfstate")
-	_, err = os.Stat(statePath)
-	require.NoError(t, err)
-
-	return statePath
-}
-
-func TestReadTerraformStateJSON(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	statePath := createTestStateJSON(t, tmpDir)
-
-	state, err := ReadTerraformStateJSON(statePath)
-	require.NoError(t, err)
-	assert.NotNil(t, state)
-	assert.Equal(t, "1.0", state.FormatVersion)
-	assert.Equal(t, "1.5.0", state.TerraformVersion)
-	assert.NotNil(t, state.Values)
-	assert.NotNil(t, state.Values.RootModule)
-	assert.Len(t, state.Values.RootModule.Resources, 1)
-	assert.Equal(t, "null_resource.test", state.Values.RootModule.Resources[0].Address)
-}
-
-func TestReadTerraformStateJSON_InvalidFile(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	// Test with non-existent file
-	_, err = ReadTerraformStateJSON(filepath.Join(tmpDir, "nonexistent.json"))
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to read state file")
-
-	// Test with invalid JSON
-	invalidPath := filepath.Join(tmpDir, "invalid.json")
-	err = os.WriteFile(invalidPath, []byte("not valid json"), 0644)
-	require.NoError(t, err)
-
-	_, err = ReadTerraformStateJSON(invalidPath)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse state JSON")
-}
-
-func TestLoadTerraformState_JSON(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	statePath := createTestStateJSON(t, tmpDir)
-
-	state, err := LoadTerraformState(statePath)
-	require.NoError(t, err)
-	assert.NotNil(t, state)
-	assert.Equal(t, "1.0", state.FormatVersion)
-	assert.Equal(t, "1.5.0", state.TerraformVersion)
-}
-
-func TestLoadTerraformState_Tfstate(t *testing.T) {
-	t.Parallel()
-	skipIfTofuNotAvailable(t)
-
-	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	statePath := createTestStateTfstate(t, tmpDir)
-
-	state, err := LoadTerraformState(statePath)
-	require.NoError(t, err)
-	assert.NotNil(t, state)
-	assert.NotEmpty(t, state.FormatVersion)
-	assert.NotEmpty(t, state.TerraformVersion)
-	assert.NotNil(t, state.Values)
-}
-
-func TestLoadTerraformState_UnsupportedFormat(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	// Create a file with unsupported extension
-	unsupportedPath := filepath.Join(tmpDir, "state.txt")
-	err = os.WriteFile(unsupportedPath, []byte("test"), 0644)
-	require.NoError(t, err)
-
-	_, err = LoadTerraformState(unsupportedPath)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported state file format")
-}
-
-func TestLoadBinaryStateWithTofu(t *testing.T) {
-	t.Parallel()
-	skipIfTofuNotAvailable(t)
-
-	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	statePath := createTestStateTfstate(t, tmpDir)
-
-	state, err := loadBinaryStateWithTofu(statePath)
-	require.NoError(t, err)
-	assert.NotNil(t, state)
-	assert.NotEmpty(t, state.FormatVersion)
-	assert.NotNil(t, state.Values)
-}
-
-func TestLoadBinaryStateWithTofu_NonExistentFile(t *testing.T) {
-	t.Parallel()
-	skipIfTofuNotAvailable(t)
-
-	tmpDir, err := os.MkdirTemp("", "tofu-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	nonExistentPath := filepath.Join(tmpDir, "nonexistent.tfstate")
-
-	_, err = loadBinaryStateWithTofu(nonExistentPath)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to convert binary state file")
 }
