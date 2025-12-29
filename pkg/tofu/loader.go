@@ -139,7 +139,7 @@ func LoadTerraformState(ctx context.Context, opts LoadTerraformStateOptions) (fi
 		}
 	}()
 
-	// Almost every tofu operations assumes init and will fail; init early.
+	// Almost every tofu operation assumes init and will fail; init early.
 	if err := tofu.Init(ctx); err != nil {
 		return nil, fmt.Errorf("tofu init failed: %w", err)
 	}
@@ -280,7 +280,7 @@ func loadWorkspaceStateInner(
 func fixupProviderError(ctx context.Context, tofu *tfexec.Terraform, workspace string) (finalError error) {
 	currentWorkspace, err := tofu.WorkspaceShow(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("tofu workspace show failed: %w", err)
 	}
 
 	defer func() {
