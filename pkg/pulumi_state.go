@@ -25,7 +25,6 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 )
 
 func makeUrn(stackName, projectName, typeName, resourceName string) resource.URN {
@@ -120,7 +119,22 @@ func GetDeployment(outputFolder string) (*DeploymentResult, error) {
 }
 
 func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName string, deployment apitype.DeploymentV3) (apitype.DeploymentV3, error) {
-	contract.Assertf(len(deployment.Resources) == 1, "expected stack resource in state, got %d", len(deployment.Resources))
+	nres := len(deployment.Resources)
+
+	if nres == 0 {
+		return apitype.DeploymentV3{}, fmt.Errorf(
+			"No Stack resource found in the Pulumi state for stack '%q'. "+
+				"Please run `pulumi up` to populate the initial Pulumi state and configure secrets providers, then try again.",
+			stackName)
+	}
+
+	if nres > 1 {
+		return apitype.DeploymentV3{}, fmt.Errorf(
+			"Found %d resources in stack %q, expected 1 (Stack resource). "+
+				"Migrating resources into stacks with pre-existing resources is not yet supported",
+			nres, stackName)
+	}
+
 	stackResource := deployment.Resources[0]
 
 	now := time.Now()

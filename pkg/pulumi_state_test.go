@@ -123,6 +123,54 @@ func skipIfCI(t *testing.T) {
 	}
 }
 
+func TestInsertResourcesIntoDeployment_ZeroResources(t *testing.T) {
+	t.Parallel()
+	_, err := InsertResourcesIntoDeployment(&PulumiState{
+		Providers: []PulumiResource{
+			{
+				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+				Type: "pulumi:providers:aws",
+				Name: "default_7.12.0",
+			},
+		},
+		Resources: []PulumiResource{},
+	}, "dev", "example", apitype.DeploymentV3{
+		Resources: []apitype.ResourceV3{},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "No Stack resource found")
+}
+
+func TestInsertResourcesIntoDeployment_MultipleResources(t *testing.T) {
+	t.Parallel()
+	_, err := InsertResourcesIntoDeployment(&PulumiState{
+		Providers: []PulumiResource{
+			{
+				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+				Type: "pulumi:providers:aws",
+				Name: "default_7.12.0",
+			},
+		},
+		Resources: []PulumiResource{},
+	}, "dev", "example", apitype.DeploymentV3{
+		Resources: []apitype.ResourceV3{
+			{
+				URN:  "urn:pulumi:dev::example::pulumi:pulumi:Stack::example-dev",
+				Type: "pulumi:pulumi:Stack",
+				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+			},
+			{
+				URN:  "urn:pulumi:dev::example::aws:s3/bucket:Bucket::my-bucket",
+				Type: "aws:s3/bucket:Bucket",
+				ID:   "b339fe8e-e15d-4203-8719-c0ca5d3f414f",
+			},
+		},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Found 2 resources")
+	require.Contains(t, err.Error(), "expected 1")
+}
+
 func TestGetDeployment(t *testing.T) {
 	skipIfCI(t)
 	testDir, err := os.MkdirTemp("", "test-deployment-*")
