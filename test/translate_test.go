@@ -108,7 +108,7 @@ func TestTranslateBasic(t *testing.T) {
 
 	ctx := context.Background()
 
-	err = pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "")
+	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "")
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
