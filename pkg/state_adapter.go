@@ -48,12 +48,18 @@ type RequiredProviderExport struct {
 
 func TranslateAndWriteState(
 	ctx context.Context,
-	tofuStateFilePath string,
+	tfDir string,
 	pulumiProgramDir string,
 	outputFilePath string,
 	requiredProvidersOutputFilePath string,
 ) error {
-	res, err := TranslateState(ctx, tofuStateFilePath, pulumiProgramDir)
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		ProjectDir: tfDir,
+	})
+	if err != nil {
+		return err
+	}
+	res, err := TranslateState(ctx, tfState, pulumiProgramDir)
 	if err != nil {
 		return err
 	}
@@ -88,14 +94,7 @@ type TranslateStateResult struct {
 	RequiredProviders []*info.Provider
 }
 
-func TranslateState(ctx context.Context, tofuStateFilePath string, pulumiProgramDir string) (*TranslateStateResult, error) {
-	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
-		StateFilePath: tofuStateFilePath,
-	})
-	if err != nil {
-		return nil, err
-	}
-
+func TranslateState(ctx context.Context, tfState *tfjson.State, pulumiProgramDir string) (*TranslateStateResult, error) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
 	if err != nil {
 		return nil, err

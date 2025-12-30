@@ -64,7 +64,7 @@ func setupTFStack(t *testing.T, terraformSourcesPath string) string {
 	t.Cleanup(func() {
 		_ = runCommand(t, dir, "tofu", "destroy", "-auto-approve")
 	})
-	return filepath.Join(dir, "terraform.tfstate")
+	return dir
 }
 
 func createPulumiStack(t *testing.T) (string, string) {

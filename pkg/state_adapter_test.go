@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/hexops/autogold/v2"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,7 +41,7 @@ func TestConvertSimple(t *testing.T) {
 	}
 	ctx := context.Background()
 	stackFolder := createPulumiStack(t)
-	data, err := TranslateState(ctx, "testdata/bucket_state.json", stackFolder)
+	data, err := translateStateFromJson(ctx, "testdata/bucket_state.json", stackFolder)
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -54,7 +55,7 @@ func TestConvertWithDependencies(t *testing.T) {
 	}
 	ctx := context.Background()
 	stackFolder := createPulumiStack(t)
-	res, err := TranslateState(ctx, "testdata/bucket_state.json", stackFolder)
+	res, err := translateStateFromJson(ctx, "testdata/bucket_state.json", stackFolder)
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -71,10 +72,20 @@ func TestConvertInvolved(t *testing.T) {
 	}
 	ctx := context.Background()
 	stackFolder := createPulumiStack(t)
-	data, err := TranslateState(ctx, "testdata/tofu_state.json", stackFolder)
+	data, err := translateStateFromJson(ctx, "testdata/tofu_state.json", stackFolder)
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
 
 	autogold.ExpectFile(t, data)
+}
+
+func translateStateFromJson(ctx context.Context, tfStateJson string, pulumiProgramDir string) (*TranslateStateResult, error) {
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: tfStateJson,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return TranslateState(ctx, tfState, pulumiProgramDir)
 }
