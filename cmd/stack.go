@@ -56,7 +56,7 @@ This file recommends Pulumi plugins and versions to install into the project, fo
   pulumi plugin install resource aws 7.12.0
 
 The tool may run 'tofu', 'tofu init', 'tofu refresh' to extract the Terraform state and these commands may require
-authorizing read-only access to the cloud accounts. The tool never runs destructive commands such as 'tofu apply'.
+authorizing read-only access to the cloud accounts. The tool never runs mutating commands such as 'tofu apply'.
 
 See also:
 
