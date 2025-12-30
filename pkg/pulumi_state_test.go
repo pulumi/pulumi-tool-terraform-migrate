@@ -30,9 +30,11 @@ func TestInsertResourcesIntoDeployment(t *testing.T) {
 	data, err := InsertResourcesIntoDeployment(&PulumiState{
 		Providers: []PulumiResource{
 			{
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-				Type: "pulumi:providers:aws",
-				Name: "default_7.12.0",
+				PulumiResourceID: PulumiResourceID{
+					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+					Type: "pulumi:providers:aws",
+					Name: "default_7.12.0",
+				},
 				Inputs: resource.PropertyMap{
 					"region":                    resource.NewProperty("us-east-1"),
 					"skipCredentialsValidation": resource.NewProperty(false),
@@ -49,9 +51,11 @@ func TestInsertResourcesIntoDeployment(t *testing.T) {
 		},
 		Resources: []PulumiResource{
 			{
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-				Type: "aws_s3_bucket",
-				Name: "example",
+				PulumiResourceID: PulumiResourceID{
+					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+					Type: "aws_s3_bucket",
+					Name: "example",
+				},
 				Inputs: resource.PropertyMap{
 					"bucket":  resource.NewProperty("example"),
 					"key":     resource.NewProperty("example"),
@@ -64,9 +68,11 @@ func TestInsertResourcesIntoDeployment(t *testing.T) {
 				},
 			},
 			{
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-				Type: "aws_s3_bucket_object",
-				Name: "example",
+				PulumiResourceID: PulumiResourceID{
+					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+					Type: "aws_s3_bucket_object",
+					Name: "example",
+				},
 				Inputs: resource.PropertyMap{
 					"bucket":  resource.NewProperty("example"),
 					"key":     resource.NewProperty("example"),
@@ -128,9 +134,11 @@ func TestInsertResourcesIntoDeployment_ZeroResources(t *testing.T) {
 	_, err := InsertResourcesIntoDeployment(&PulumiState{
 		Providers: []PulumiResource{
 			{
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-				Type: "pulumi:providers:aws",
-				Name: "default_7.12.0",
+				PulumiResourceID: PulumiResourceID{
+					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+					Type: "pulumi:providers:aws",
+					Name: "default_7.12.0",
+				},
 			},
 		},
 		Resources: []PulumiResource{},
@@ -146,9 +154,11 @@ func TestInsertResourcesIntoDeployment_MultipleResources(t *testing.T) {
 	_, err := InsertResourcesIntoDeployment(&PulumiState{
 		Providers: []PulumiResource{
 			{
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-				Type: "pulumi:providers:aws",
-				Name: "default_7.12.0",
+				PulumiResourceID: PulumiResourceID{
+					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+					Type: "pulumi:providers:aws",
+					Name: "default_7.12.0",
+				},
 			},
 		},
 		Resources: []PulumiResource{},
