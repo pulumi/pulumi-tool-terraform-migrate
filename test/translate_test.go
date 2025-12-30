@@ -101,14 +101,14 @@ func replaceIndexTs(t *testing.T, stackFolder string, indexTsPath string) {
 }
 
 func TestTranslateBasic(t *testing.T) {
-	t.Parallel()
+	isolatePulumiHome(t)
 
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
 	ctx := context.Background()
 
-	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "")
+	err = pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "")
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
@@ -135,7 +135,7 @@ func TestTranslateBasic(t *testing.T) {
 }
 
 func TestTranslateBasicWithDependencies(t *testing.T) {
-	t.Parallel()
+	isolatePulumiHome(t)
 
 	ctx := context.Background()
 
@@ -151,7 +151,7 @@ func TestTranslateBasicWithDependencies(t *testing.T) {
 }
 
 func TestTranslateBasicWithEdit(t *testing.T) {
-	t.Parallel()
+	isolatePulumiHome(t)
 
 	ctx := context.Background()
 
@@ -282,4 +282,16 @@ func TestTranslateAWSStackWithEdit(t *testing.T) {
 
 	output = runCommand(t, stackFolder, "pulumi", "up", "--yes")
 	autogold.ExpectFile(t, output, autogold.Name("TestTranslateAWSStackWithEdit-up2"))
+}
+
+// Running many tests in parallel exposes race conditions in Pulumi plugin handling; isolate PULUMI_HOME. Note that
+// this helper conflicts with `t.Parallel()`.
+func isolatePulumiHome(t *testing.T) {
+	t.Helper()
+	pulumiHome, err := os.MkdirTemp("", "pulumi-home-")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		os.RemoveAll(pulumiHome)
+	})
+	t.Setenv("PULUMI_HOME", pulumiHome)
 }
