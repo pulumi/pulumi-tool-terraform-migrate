@@ -102,7 +102,6 @@ func TestInsertResourcesIntoDeployment(t *testing.T) {
 	for i := range data.Resources {
 		data.Resources[i].Created = nil
 		data.Resources[i].Modified = nil
-
 	}
 
 	autogold.ExpectFile(t, data)
