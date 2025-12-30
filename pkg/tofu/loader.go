@@ -154,6 +154,10 @@ func LoadTerraformState(ctx context.Context, opts LoadTerraformStateOptions) (fi
 			return nil, err
 		}
 
+		if err := newWorkspace(ctx, tofu, tempWorkspace, opts.StateFilePath); err != nil {
+			return nil, fmt.Errorf("temp workspace construction failed: %w", err)
+		}
+
 		defer func() {
 			err := tofu.WorkspaceDelete(ctx, tempWorkspace, tfexec.Force(true))
 			if err != nil {
@@ -161,10 +165,6 @@ func LoadTerraformState(ctx context.Context, opts LoadTerraformStateOptions) (fi
 				finalError = errors.Join(finalError, err)
 			}
 		}()
-
-		if err := newWorkspace(ctx, tofu, tempWorkspace, opts.StateFilePath); err != nil {
-			return nil, fmt.Errorf("temp workspace construction failed: %w", err)
-		}
 
 		opts = LoadTerraformStateOptions{
 			ProjectDir: opts.ProjectDir,
