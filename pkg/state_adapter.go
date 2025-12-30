@@ -129,26 +129,40 @@ func TranslateState(ctx context.Context, tfState *tfjson.State, pulumiProgramDir
 func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*info.Provider) (*PulumiState, error) {
 	pulumiState := &PulumiState{}
 
-	for _, provider := range pulumiProviders {
+	// TODO[pulumi/pulumi-service#35512]: This assumes one Pulumi provider per Terraform provider.
+	// This means that provider aliases are not supported.
+	providerTable := map[providermap.TerraformProviderName]PulumiResourceID{}
+
+	for tfProviderName, provider := range pulumiProviders {
 		inputs, err := GetProviderInputs(provider.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get provider inputs: %w", err)
 		}
 		uuid := uuid.NewString()
-		pulumiState.Providers = append(pulumiState.Providers, PulumiResource{
-			ID:      uuid,
-			Type:    "pulumi:providers:" + provider.Name,
-			Name:    "default_" + strings.ReplaceAll(provider.Version, ".", "_"),
+		providerResource := PulumiResource{
+			PulumiResourceID: PulumiResourceID{
+				ID:   uuid,
+				Type: "pulumi:providers:" + provider.Name,
+				Name: "default_" + strings.ReplaceAll(provider.Version, ".", "_"),
+			},
 			Inputs:  inputs,
 			Outputs: inputs,
-		})
+			// No Provider link here as it is already a provider.
+		}
+		pulumiState.Providers = append(pulumiState.Providers, providerResource)
+		providerTable[tfProviderName] = providerResource.PulumiResourceID
 	}
 
 	err := tofu.VisitResources(tfState, func(resource *tfjson.StateResource) error {
-		pulumiResource, err := convertResourceState(resource, pulumiProviders)
+		pulumiResource, err := convertResourceStateExceptProviderLink(resource, pulumiProviders)
 		if err != nil {
 			return fmt.Errorf("failed to convert resource state for %s with ID %s: %w", resource.Type, resource.Address, err)
 		}
+		providerLink, ok := providerTable[providermap.TerraformProviderName(resource.ProviderName)]
+		if !ok {
+			return fmt.Errorf("failed resolving provider for Terraform resource at %q", resource.Address)
+		}
+		pulumiResource.Provider = &providerLink
 		pulumiState.Resources = append(pulumiState.Resources, pulumiResource)
 		return nil
 	}, &tofu.VisitOptions{})
@@ -159,7 +173,10 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 	return pulumiState, nil
 }
 
-func convertResourceState(res *tfjson.StateResource, pulumiProviders map[providermap.TerraformProviderName]*info.Provider) (PulumiResource, error) {
+func convertResourceStateExceptProviderLink(
+	res *tfjson.StateResource,
+	pulumiProviders map[providermap.TerraformProviderName]*info.Provider,
+) (PulumiResource, error) {
 	prov, ok := pulumiProviders[providermap.TerraformProviderName(res.ProviderName)]
 	if !ok {
 		return PulumiResource{}, fmt.Errorf("no Pulumi provider found for Terraform provider: %s", res.ProviderName)
@@ -191,10 +208,12 @@ func convertResourceState(res *tfjson.StateResource, pulumiProviders map[provide
 	}
 
 	return PulumiResource{
-		ID:      props["id"].StringValue(),
-		Type:    string(pulumiTypeToken),
+		PulumiResourceID: PulumiResourceID{
+			ID:   props["id"].StringValue(),
+			Name: res.Name,
+			Type: string(pulumiTypeToken),
+		},
 		Inputs:  inputs,
 		Outputs: props,
-		Name:    res.Name,
 	}, nil
 }

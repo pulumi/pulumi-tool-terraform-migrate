@@ -27,12 +27,17 @@ import (
 
 func TestInsertResourcesIntoDeployment(t *testing.T) {
 	t.Parallel()
+
+	awsProviderID := PulumiResourceID{
+		ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+		Type: "pulumi:providers:aws",
+		Name: "default_7.12.0",
+	}
+
 	data, err := InsertResourcesIntoDeployment(&PulumiState{
 		Providers: []PulumiResource{
 			{
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-				Type: "pulumi:providers:aws",
-				Name: "default_7.12.0",
+				PulumiResourceID: awsProviderID,
 				Inputs: resource.PropertyMap{
 					"region":                    resource.NewProperty("us-east-1"),
 					"skipCredentialsValidation": resource.NewProperty(false),
@@ -49,9 +54,12 @@ func TestInsertResourcesIntoDeployment(t *testing.T) {
 		},
 		Resources: []PulumiResource{
 			{
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-				Type: "aws_s3_bucket",
-				Name: "example",
+				PulumiResourceID: PulumiResourceID{
+					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+					Type: "aws_s3_bucket",
+					Name: "example",
+				},
+				Provider: &awsProviderID,
 				Inputs: resource.PropertyMap{
 					"bucket":  resource.NewProperty("example"),
 					"key":     resource.NewProperty("example"),
@@ -64,9 +72,12 @@ func TestInsertResourcesIntoDeployment(t *testing.T) {
 				},
 			},
 			{
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-				Type: "aws_s3_bucket_object",
-				Name: "example",
+				PulumiResourceID: PulumiResourceID{
+					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+					Type: "aws_s3_bucket_object",
+					Name: "example",
+				},
+				Provider: &awsProviderID,
 				Inputs: resource.PropertyMap{
 					"bucket":  resource.NewProperty("example"),
 					"key":     resource.NewProperty("example"),
@@ -96,10 +107,122 @@ func TestInsertResourcesIntoDeployment(t *testing.T) {
 	for i := range data.Resources {
 		data.Resources[i].Created = nil
 		data.Resources[i].Modified = nil
-
 	}
 
 	autogold.ExpectFile(t, data)
+}
+
+func TestInsertResourcesIntoDeployment_multi_provider(t *testing.T) {
+	t.Parallel()
+
+	randomProviderID := PulumiResourceID{
+		ID:   "random-provider-id",
+		Type: "pulumi:providers:random",
+		Name: "default_4.18.1",
+	}
+
+	tlsProviderID := PulumiResourceID{
+		ID:   "tls-provider-id",
+		Type: "pulumi:providers:tls",
+		Name: "default_5.2.3",
+	}
+
+	data, err := InsertResourcesIntoDeployment(&PulumiState{
+		Providers: []PulumiResource{
+			{
+				PulumiResourceID: randomProviderID,
+				Inputs: resource.PropertyMap{
+					"version": resource.NewProperty("4.18.1"),
+				},
+				Outputs: resource.PropertyMap{
+					"version": resource.NewProperty("4.18.1"),
+				},
+			},
+			{
+				PulumiResourceID: tlsProviderID,
+				Inputs: resource.PropertyMap{
+					"version": resource.NewProperty("5.2.3"),
+				},
+				Outputs: resource.PropertyMap{
+					"version": resource.NewProperty("5.2.3"),
+				},
+			},
+		},
+		Resources: []PulumiResource{
+			{
+				PulumiResourceID: PulumiResourceID{
+					ID:   "random-string-id",
+					Type: "random:index/randomString:RandomString",
+					Name: "example",
+				},
+				Provider: &randomProviderID,
+				Inputs: resource.PropertyMap{
+					"length": resource.NewProperty(float64(16)),
+				},
+				Outputs: resource.PropertyMap{
+					"length": resource.NewProperty(float64(16)),
+					"result": resource.NewProperty("test-random-value"),
+				},
+			},
+			{
+				PulumiResourceID: PulumiResourceID{
+					ID:   "tls-key-id",
+					Type: "tls:index/privateKey:PrivateKey",
+					Name: "example",
+				},
+				Provider: &tlsProviderID,
+				Inputs: resource.PropertyMap{
+					"algorithm": resource.NewProperty("RSA"),
+					"rsaBits":   resource.NewProperty(float64(4096)),
+				},
+				Outputs: resource.PropertyMap{
+					"algorithm": resource.NewProperty("RSA"),
+					"rsaBits":   resource.NewProperty(float64(4096)),
+				},
+			},
+		},
+	}, "dev", "example", apitype.DeploymentV3{
+		Resources: []apitype.ResourceV3{
+			{
+				URN:  "urn:pulumi:dev::example::pulumi:pulumi:Stack::example-dev",
+				Type: "pulumi:pulumi:Stack",
+				ID:   "stack-id",
+			},
+		},
+	})
+	require.NoError(t, err, "failed to make deployment")
+
+	require.Equal(t, 5, len(data.Resources), "expected 5 resources (1 stack, 2 providers, 2 resources)")
+
+	var randomProvider, tlsProvider *apitype.ResourceV3
+	for i := range data.Resources {
+		if data.Resources[i].Type == "pulumi:providers:random" {
+			randomProvider = &data.Resources[i]
+		}
+		if data.Resources[i].Type == "pulumi:providers:tls" {
+			tlsProvider = &data.Resources[i]
+		}
+	}
+	require.NotNil(t, randomProvider, "random provider should be in deployment")
+	require.NotNil(t, tlsProvider, "tls provider should be in deployment")
+
+	var randomStringResource, tlsKeyResource *apitype.ResourceV3
+	for i := range data.Resources {
+		if data.Resources[i].Type == "random:index/randomString:RandomString" {
+			randomStringResource = &data.Resources[i]
+		}
+		if data.Resources[i].Type == "tls:index/privateKey:PrivateKey" {
+			tlsKeyResource = &data.Resources[i]
+		}
+	}
+	require.NotNil(t, randomStringResource, "random_string resource should be in deployment")
+	require.NotNil(t, tlsKeyResource, "tls_private_key resource should be in deployment")
+
+	// The Provider field is a string in the format: "urn::provider-id"
+	require.Contains(t, string(randomStringResource.Provider), string(randomProvider.URN),
+		"random_string should be linked to random provider")
+	require.Contains(t, string(tlsKeyResource.Provider), string(tlsProvider.URN),
+		"tls_private_key should be linked to tls provider")
 }
 
 func runCommand(t *testing.T, dir string, command string, args ...string) string {
@@ -128,9 +251,11 @@ func TestInsertResourcesIntoDeployment_ZeroResources(t *testing.T) {
 	_, err := InsertResourcesIntoDeployment(&PulumiState{
 		Providers: []PulumiResource{
 			{
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-				Type: "pulumi:providers:aws",
-				Name: "default_7.12.0",
+				PulumiResourceID: PulumiResourceID{
+					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+					Type: "pulumi:providers:aws",
+					Name: "default_7.12.0",
+				},
 			},
 		},
 		Resources: []PulumiResource{},
@@ -146,9 +271,11 @@ func TestInsertResourcesIntoDeployment_MultipleResources(t *testing.T) {
 	_, err := InsertResourcesIntoDeployment(&PulumiState{
 		Providers: []PulumiResource{
 			{
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-				Type: "pulumi:providers:aws",
-				Name: "default_7.12.0",
+				PulumiResourceID: PulumiResourceID{
+					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
+					Type: "pulumi:providers:aws",
+					Name: "default_7.12.0",
+				},
 			},
 		},
 		Resources: []PulumiResource{},
