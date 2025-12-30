@@ -294,4 +294,6 @@ func isolatePulumiHome(t *testing.T) {
 		os.RemoveAll(pulumiHome)
 	})
 	t.Setenv("PULUMI_HOME", pulumiHome)
+
+	_ = runCommand(t, pulumiHome, "pulumi", "login", "--local")
 }
