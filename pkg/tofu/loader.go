@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -55,11 +56,11 @@ type LoadTerraformStateOptions struct {
 //
 // Requires `tofu` in path and executes these commands:
 //
-//		tofu init
-//		tofu refresh
-//		tofu show -json
-//	    tofu workspace *
-//	    tofu state {push,pull}
+//	tofu init
+//	tofu refresh
+//	tofu show -json
+//	tofu workspace *
+//	tofu state {push,pull}
 //
 // OpenTofu sometimes has a problem reading states created by Terraform proper that rely on providers from the
 // Terraform registry. LoadTerraformState works around this by using a temporary workspace to convert providers to
@@ -117,7 +118,7 @@ func LoadTerraformState(ctx context.Context, opts LoadTerraformStateOptions) (fi
 
 	// Similarly stash away and restore `.terraform` directory to avoid OpenTofu breaking Terraform.
 	dotTerraform := filepath.Join(opts.ProjectDir, ".terraform")
-	dotTerraformBak := filepath.Join(opts.ProjectDir, ".terraform.bak")
+	dotTerraformBak := generateUniqueBackupFileName(opts.ProjectDir, ".terraform")
 	stat, err := os.Stat(dotTerraform)
 	dotTerraformExists := err == nil && stat.IsDir()
 
@@ -420,4 +421,27 @@ func pickTempWorkspaceName(ctx context.Context, tofu *tfexec.Terraform) (string,
 
 		i++
 	}
+}
+
+func generateUniqueBackupFileName(dir, prefix string) string {
+	i := 0
+	for {
+		candidate := filepath.Join(dir, fmt.Sprintf("%s.bak%d", prefix, i))
+		if i == 0 {
+			candidate = filepath.Join(dir, fmt.Sprintf("%s.bak", prefix))
+		}
+		if !fileOrFolderExists(candidate) {
+			return candidate
+		}
+		i++
+
+		contract.Assertf(i < 1000,
+			"Failed to generate a unique %s.bak1, .bak2, .bak3 filename in %q after i=1000 iterations",
+			prefix, dir)
+	}
+}
+
+func fileOrFolderExists(path string) bool {
+	_, err := os.Stat(path)
+	return !errors.Is(err, fs.ErrNotExist)
 }
