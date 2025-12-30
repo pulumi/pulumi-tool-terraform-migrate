@@ -140,7 +140,9 @@ func LoadTerraformState(ctx context.Context, opts LoadTerraformStateOptions) (fi
 		}
 	}()
 
-	// Almost every tofu operation assumes init and will fail; init early.
+	// Almost every tofu operation assumes init and will fail it not initialized; init early. Running tofu init is
+	// a cached operation that is cheaper the second time around it reuses the lock file and provider downloads
+	// under .terraform.
 	if err := tofu.Init(ctx); err != nil {
 		return nil, fmt.Errorf("tofu init failed: %w", err)
 	}
