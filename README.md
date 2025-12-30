@@ -11,7 +11,7 @@ This tool is useful in pipelines that given a Terraform project with sources and
 sources and state tracking the same infrastructure. Crucially such pipelines should not do any write operations on the
 actual infrastructure, staying in the purely symbolic exploratory world.
 
-The key command is translate an entire stack:
+The key command translates an entire stack:
 
 ```
 $ pulumi plugin run terraform-migrate -- stack --help
