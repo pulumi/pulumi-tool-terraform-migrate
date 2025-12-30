@@ -58,8 +58,8 @@ type LoadTerraformStateOptions struct {
 //		tofu init
 //		tofu refresh
 //		tofu show -json
-//	     tofu workspace *
-//	     tofu state {push,pull}
+//	    tofu workspace *
+//	    tofu state {push,pull}
 //
 // OpenTofu sometimes has a problem reading states created by Terraform proper that rely on providers from the
 // Terraform registry. LoadTerraformState works around this by using a temporary workspace to convert providers to
