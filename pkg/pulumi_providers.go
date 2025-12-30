@@ -93,26 +93,5 @@ func GetPulumiProvidersForTerraformState(tfState *tfjson.State) (map[providermap
 
 func GetProviderInputs(providerName string) (resource.PropertyMap, error) {
 	// TODO[pulumi/pulumi-service#35411]: produce correct provider inputs or fail gracefully with instructions
-	switch providerName {
-	case "aws":
-		return resource.PropertyMap{
-			"region":                    resource.NewProperty("us-east-1"),
-			"skipCredentialsValidation": resource.NewProperty(false),
-			"skipRegionValidation":      resource.NewProperty(true),
-			"version":                   resource.NewProperty("7.12.0"),
-		}, nil
-	case "archive":
-		return resource.PropertyMap{
-			"version": resource.NewProperty("0.3.5"),
-		}, nil
-	case "random":
-		return resource.PropertyMap{
-			"version": resource.NewProperty("4.18.1"),
-		}, nil
-	case "tls":
-		return resource.PropertyMap{
-			"version": resource.NewProperty("5.2.3"),
-		}, nil
-	}
-	return nil, fmt.Errorf("unsupported provider: %s", providerName)
+	return resource.PropertyMap{}, nil
 }
