@@ -21,6 +21,8 @@ import (
 
 	"github.com/hexops/autogold/v2"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/stretchr/testify/require"
 )
 
@@ -67,7 +69,22 @@ func TestConvertInvolved(t *testing.T) {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
 
-	autogold.ExpectFile(t, data)
+	autogold.ExpectFile(t, data.Export)
+}
+
+func TestConvertWithSensitiveValues(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	stackFolder := createPulumiStack(t)
+	data, err := translateStateFromJson(ctx, "testdata/tofu_random_sensitive_state.json", stackFolder)
+	if err != nil {
+		t.Fatalf("failed to convert Terraform state: %v", err)
+	}
+
+	password := data.Export.Deployment.Resources[2]
+	require.Equal(t, tokens.Type("random:index/randomPassword:RandomPassword"), password.Type)
+	_, ok := password.Outputs["result"].(*resource.Secret)
+	require.True(t, ok)
 }
 
 func translateStateFromJson(ctx context.Context, tfStateJson string, pulumiProgramDir string) (*TranslateStateResult, error) {

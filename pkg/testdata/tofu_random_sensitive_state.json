@@ -1,0 +1,39 @@
+{
+    "format_version": "1.0",
+    "terraform_version": "1.9.1",
+    "values": {
+        "root_module": {
+            "resources": [
+                {
+                    "address": "random_password.password",
+                    "mode": "managed",
+                    "type": "random_password",
+                    "name": "password",
+                    "provider_name": "registry.opentofu.org/hashicorp/random",
+                    "schema_version": 3,
+                    "values": {
+                        "bcrypt_hash": "$2a$10$KKTU7lB4KmN3h.HEdF.Zdexrd.5yj5AOrRzIBwKzHmSziR3bHeH2q",
+                        "id": "none",
+                        "keepers": null,
+                        "length": 16,
+                        "lower": true,
+                        "min_lower": 0,
+                        "min_numeric": 0,
+                        "min_special": 0,
+                        "min_upper": 0,
+                        "number": true,
+                        "numeric": true,
+                        "override_special": "/@£$",
+                        "result": "7BDcazvBGyfvBW@p",
+                        "special": true,
+                        "upper": true
+                    },
+                    "sensitive_values": {
+                        "bcrypt_hash": true,
+                        "result": true
+                    }
+                }
+            ]
+        }
+    }
+}
