@@ -24,16 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createPulumiStack(t *testing.T) string {
-	dir, err := os.MkdirTemp("", "pulumi-stack-")
-	require.NoError(t, err)
-	t.Logf("Pulumi stack directory: %s", dir)
-
-	_ = runCommand(t, dir, "pulumi", "new", "typescript", "--dir", dir, "--yes")
-	_ = runCommand(t, dir, "pulumi", "up", "--yes")
-	return dir
-}
-
 func TestConvertSimple(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("CI") == "true" {
@@ -88,4 +78,94 @@ func translateStateFromJson(ctx context.Context, tfStateJson string, pulumiProgr
 		return nil, err
 	}
 	return TranslateState(ctx, tfState, pulumiProgramDir)
+}
+
+func Test_convertState_simple(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: "testdata/bucket_state.json",
+	})
+	require.NoError(t, err, "failed to load Terraform state")
+
+	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
+	require.NoError(t, err, "failed to get Pulumi providers")
+
+	pulumiState, err := convertState(tfState, pulumiProviders)
+	require.NoError(t, err, "failed to convert state")
+
+	require.Equal(t, 1, len(pulumiState.Providers), "expected 1 provider")
+	require.Equal(t, 1, len(pulumiState.Resources), "expected 1 resource")
+	require.Equal(t, "pulumi:providers:aws", pulumiState.Providers[0].PulumiResourceID.Type)
+
+	resource := pulumiState.Resources[0]
+	require.NotNil(t, resource.Provider, "resource has no provider")
+	provider, err := pulumiState.FindProvider(*resource.Provider)
+	require.NoError(t, err, "failed to find provider for resource")
+	require.Equal(t, "pulumi:providers:aws", provider.PulumiResourceID.Type)
+}
+
+func Test_convertState_multi_provider(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: "testdata/multi_provider_state/state.json",
+	})
+	require.NoError(t, err, "failed to load Terraform state")
+
+	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
+	require.NoError(t, err, "failed to get Pulumi providers")
+
+	pulumiState, err := convertState(tfState, pulumiProviders)
+	require.NoError(t, err, "failed to convert state")
+
+	require.Equal(t, 2, len(pulumiState.Providers), "expected 2 providers")
+	require.Equal(t, 2, len(pulumiState.Resources), "expected 2 resources")
+
+	providerTypes := make(map[string]bool)
+	for _, provider := range pulumiState.Providers {
+		providerTypes[provider.PulumiResourceID.Type] = true
+	}
+	require.True(t, providerTypes["pulumi:providers:random"], "random provider should exist")
+	require.True(t, providerTypes["pulumi:providers:tls"], "tls provider should exist")
+
+	var randomResource *PulumiResource
+	for i := range pulumiState.Resources {
+		if pulumiState.Resources[i].PulumiResourceID.Type == "random:index/randomString:RandomString" {
+			randomResource = &pulumiState.Resources[i]
+			break
+		}
+	}
+	require.NotNil(t, randomResource, "random_string resource not found")
+	require.NotNil(t, randomResource.Provider, "random_string has no provider")
+	randomProvider, err := pulumiState.FindProvider(*randomResource.Provider)
+	require.NoError(t, err, "failed to find provider for random_string")
+	require.Equal(t, "pulumi:providers:random", randomProvider.PulumiResourceID.Type,
+		"random_string should be linked to random provider")
+
+	var tlsResource *PulumiResource
+	for i := range pulumiState.Resources {
+		if pulumiState.Resources[i].PulumiResourceID.Type == "tls:index/privateKey:PrivateKey" {
+			tlsResource = &pulumiState.Resources[i]
+			break
+		}
+	}
+	require.NotNil(t, tlsResource, "tls_private_key resource not found")
+	require.NotNil(t, tlsResource.Provider, "tls_private_key has no provider")
+	tlsProvider, err := pulumiState.FindProvider(*tlsResource.Provider)
+	require.NoError(t, err, "failed to find provider for tls_private_key")
+	require.Equal(t, "pulumi:providers:tls", tlsProvider.PulumiResourceID.Type,
+		"tls_private_key should be linked to tls provider")
+}
+
+func createPulumiStack(t *testing.T) string {
+	dir, err := os.MkdirTemp("", "pulumi-stack-")
+	require.NoError(t, err)
+	t.Logf("Pulumi stack directory: %s", dir)
+
+	_ = runCommand(t, dir, "pulumi", "new", "typescript", "--dir", dir, "--yes")
+	_ = runCommand(t, dir, "pulumi", "up", "--yes")
+	return dir
 }

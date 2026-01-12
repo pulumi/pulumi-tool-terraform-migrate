@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Facilities to help decide which Pulumi provider use for a given Terraform or OpenTOFU provider.
+// Facilities to help decide which Pulumi provider use for a given Terraform or OpenTofu provider.
 //
 // Pulumi maintains bridged providers listed in this file:
 //

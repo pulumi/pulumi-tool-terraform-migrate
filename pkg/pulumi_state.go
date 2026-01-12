@@ -25,23 +25,49 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 )
 
 func makeUrn(stackName, projectName, typeName, resourceName string) resource.URN {
 	return resource.URN(fmt.Sprintf("urn:pulumi:%s::%s::%s::%s", stackName, projectName, typeName, resourceName))
 }
 
+// Identifier within a stack.
+type PulumiResourceID struct {
+	ID   string
+	Name string
+	Type string
+}
+
+func (p PulumiResourceID) Equal(other PulumiResourceID) bool {
+	return p.ID == other.ID && p.Name == other.Name && p.Type == other.Type
+}
+
 type PulumiResource struct {
-	ID      string
-	Name    string
-	Type    string
+	PulumiResourceID
+
 	Inputs  resource.PropertyMap
 	Outputs resource.PropertyMap
+
+	// For resources this identifies the associated provider.
+	//
+	// For provider resources this nil.
+	Provider *PulumiResourceID
 }
 
 type PulumiState struct {
 	Providers []PulumiResource
 	Resources []PulumiResource
+}
+
+func (st PulumiState) FindProvider(identity PulumiResourceID) (PulumiResource, error) {
+	for _, p := range st.Providers {
+		if p.PulumiResourceID.Equal(identity) {
+			return p, nil
+		}
+	}
+	return PulumiResource{}, fmt.Errorf("No providers found with ID=%q Name=%q Type=%q",
+		identity.ID, identity.Name, identity.Type)
 }
 
 func getStackName(projectFolder string) (string, error) {
@@ -135,24 +161,38 @@ func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName st
 			nres, stackName)
 	}
 
-	stackResource := deployment.Resources[0]
-
 	now := time.Now()
 
-	providerState := state.Providers[0]
-	provider := apitype.ResourceV3{
-		URN:      makeUrn(stackName, projectName, providerState.Type, providerState.Name),
-		Custom:   true,
-		ID:       resource.ID(providerState.ID),
-		Type:     tokens.Type(providerState.Type),
-		Inputs:   providerState.Inputs.Mappable(),
-		Outputs:  providerState.Outputs.Mappable(),
-		Created:  &now,
-		Modified: &now,
+	stackResource, err := findStackResource(deployment)
+	if err != nil {
+		return apitype.DeploymentV3{}, err
 	}
-	deployment.Resources = append(deployment.Resources, provider)
+
+	for _, providerState := range state.Providers {
+		provider := apitype.ResourceV3{
+			URN:      makeUrn(stackName, projectName, providerState.Type, providerState.Name),
+			Custom:   true,
+			ID:       resource.ID(providerState.ID),
+			Type:     tokens.Type(providerState.Type),
+			Inputs:   providerState.Inputs.Mappable(),
+			Outputs:  providerState.Outputs.Mappable(),
+			Created:  &now,
+			Modified: &now,
+		}
+		deployment.Resources = append(deployment.Resources, provider)
+	}
 
 	for _, res := range state.Resources {
+		contract.Assertf(res.Provider != nil, "Expected a provider association for a custom resource")
+
+		providerRecord, err := state.FindProvider(*res.Provider)
+		if err != nil {
+			return apitype.DeploymentV3{}, err
+		}
+
+		providerURN := makeUrn(stackName, projectName, providerRecord.Type, providerRecord.Name)
+		providerLink := fmt.Sprintf("%s::%s", providerURN, providerRecord.ID)
+
 		deployment.Resources = append(deployment.Resources, apitype.ResourceV3{
 			URN:      makeUrn(stackName, projectName, res.Type, res.Name),
 			Custom:   true,
@@ -161,11 +201,20 @@ func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName st
 			Inputs:   res.Inputs.Mappable(),
 			Outputs:  res.Outputs.Mappable(),
 			Parent:   resource.URN(stackResource.URN),
-			Provider: string(provider.URN) + "::" + string(provider.ID),
+			Provider: providerLink,
 			Created:  &now,
 			Modified: &now,
 		})
 	}
 
 	return deployment, nil
+}
+
+func findStackResource(deployment apitype.DeploymentV3) (apitype.ResourceV3, error) {
+	for _, r := range deployment.Resources {
+		if string(r.URN.QualifiedType()) == "pulumi:pulumi:Stack" {
+			return r, nil
+		}
+	}
+	return apitype.ResourceV3{}, fmt.Errorf("No resources with qualified type pulumi:pulumi:Stack")
 }

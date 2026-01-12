@@ -20,6 +20,7 @@ import (
 	"github.com/blang/semver"
 )
 
+// A full name such as "registry.terraform.io/hashicorp/aws"
 type TerraformProviderName string
 
 type TerraformProvider struct {
@@ -54,7 +55,7 @@ type providerMappingDetail struct {
 	latestVersionByTerraformMajor map[int]string
 }
 
-// providerMapping maps Terraform/OpenTOFU provider identifiers to Pulumi provider names.
+// providerMapping maps Terraform/OpenTofu provider identifiers to Pulumi provider names.
 // This is based on the provider list from https://github.com/pulumi/ci-mgmt/blob/master/provider-ci/providers.json
 var providerMapping = map[TerraformProviderName]providerMappingDetail{
 	// HashiCorp providers
