@@ -66,7 +66,7 @@ func (s setChecker) IsSet(ctx context.Context, v interface{}) ([]interface{}, bo
 }
 
 func convertTFValueToPulumiValue(
-	tfValue cty.Value, res shim.Resource, pulumiResource *info.Resource, sensitivePaths []cty.Path,
+	ctx context.Context, tfValue cty.Value, res shim.Resource, pulumiResource *info.Resource, sensitivePaths []cty.Path,
 ) (resource.PropertyMap, error) {
 	instanceState := terraformState{
 		stateValue: tfValue,
@@ -76,7 +76,7 @@ func convertTFValueToPulumiValue(
 
 	// This assumes that the schema version of the resource state is exactly the same as the one in the provider.
 	// TODO: add an assert for this.
-	props, err := tfbridge.MakeTerraformResult(context.TODO(), setChecker{}, instanceState, res.Schema(), pulumiResource.Fields, nil, true)
+	props, err := tfbridge.MakeTerraformResult(ctx, setChecker{}, instanceState, res.Schema(), pulumiResource.Fields, nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make Terraform result: %w", err)
 	}
@@ -87,7 +87,7 @@ func convertTFValueToPulumiValue(
 		return nil, fmt.Errorf("failed to ensure secrets: %w", err)
 	}
 
-	if err := tfbridge.RawStateInjectDelta(context.TODO(), res.Schema(), pulumiResource.Fields, props, res.SchemaType(), instanceState); err != nil {
+	if err := tfbridge.RawStateInjectDelta(ctx, res.Schema(), pulumiResource.Fields, props, res.SchemaType(), instanceState); err != nil {
 		return nil, err
 	}
 

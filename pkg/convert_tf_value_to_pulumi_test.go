@@ -15,6 +15,7 @@
 package pkg
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hexops/autogold/v2"
@@ -28,6 +29,7 @@ import (
 
 func TestConvertTFValueToPulumiValue(t *testing.T) {
 	t.Parallel()
+	ctx := context.Background()
 
 	tests := []struct {
 		name           string
@@ -470,7 +472,7 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			props, err := convertTFValueToPulumiValue(test.val, test.res, test.pulumiResource, test.sensitivePaths)
+			props, err := convertTFValueToPulumiValue(ctx, test.val, test.res, test.pulumiResource, test.sensitivePaths)
 			if err != nil {
 				t.Fatalf("failed to convert cty.Value to map[string]interface{}: %v", err)
 			}
