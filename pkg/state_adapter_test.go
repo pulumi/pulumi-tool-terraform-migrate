@@ -109,7 +109,7 @@ func Test_convertState_simple(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	pulumiState, err := convertState(tfState, pulumiProviders)
+	pulumiState, err := convertState(ctx, tfState, pulumiProviders)
 	require.NoError(t, err, "failed to convert state")
 
 	require.Equal(t, 1, len(pulumiState.Providers), "expected 1 provider")
@@ -135,7 +135,7 @@ func Test_convertState_multi_provider(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	pulumiState, err := convertState(tfState, pulumiProviders)
+	pulumiState, err := convertState(ctx, tfState, pulumiProviders)
 	require.NoError(t, err, "failed to convert state")
 
 	require.Equal(t, 2, len(pulumiState.Providers), "expected 2 providers")
