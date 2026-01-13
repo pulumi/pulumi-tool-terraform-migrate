@@ -1,0 +1,11 @@
+resource.PropertyMap{
+	resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{
+		V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+			V: resource.PropertyMap{},
+		}},
+	},
+	resource.PropertyKey("id"):       resource.PropertyValue{V: "id"},
+	resource.PropertyKey("name"):     resource.PropertyValue{V: "public"},
+	resource.PropertyKey("password"): resource.PropertyValue{V: &resource.Secret{Element: resource.PropertyValue{V: "secret123"}}},
+	resource.PropertyKey("token"):    resource.PropertyValue{V: &resource.Secret{Element: resource.PropertyValue{V: "abc-token"}}},
+}

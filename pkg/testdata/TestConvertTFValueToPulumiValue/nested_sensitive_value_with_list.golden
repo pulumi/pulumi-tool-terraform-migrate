@@ -1,0 +1,30 @@
+resource.PropertyMap{
+	resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{
+		V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+			V: resource.PropertyMap{
+				resource.PropertyKey("ps"): resource.PropertyValue{
+					V: resource.PropertyMap{resource.PropertyKey("props"): resource.PropertyValue{
+						V: resource.PropertyMap{resource.PropertyKey("arr"): resource.PropertyValue{
+							V: resource.PropertyMap{resource.PropertyKey("el"): resource.PropertyValue{
+								V: resource.PropertyMap{
+									resource.PropertyKey("0"): resource.PropertyValue{
+										V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+											V: resource.PropertyMap{},
+										}},
+									},
+									resource.PropertyKey("1"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{V: resource.PropertyMap{}}}},
+								},
+							}},
+						}},
+					}},
+				},
+				resource.PropertyKey("renamed"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("props"): resource.PropertyValue{V: "prop"}}},
+			},
+		}},
+	},
+	resource.PropertyKey("id"): resource.PropertyValue{V: "id"},
+	resource.PropertyKey("props"): resource.PropertyValue{V: []resource.PropertyValue{
+		{V: resource.PropertyMap{resource.PropertyKey("subprop"): resource.PropertyValue{V: "y"}}},
+		{V: resource.PropertyMap{resource.PropertyKey("subprop"): resource.PropertyValue{V: &resource.Secret{Element: resource.PropertyValue{V: "z"}}}}},
+	}},
+}

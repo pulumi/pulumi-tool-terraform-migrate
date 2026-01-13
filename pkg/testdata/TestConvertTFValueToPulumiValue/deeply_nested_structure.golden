@@ -1,0 +1,39 @@
+resource.PropertyMap{
+	resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{
+		V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+			V: resource.PropertyMap{
+				resource.PropertyKey("ps"): resource.PropertyValue{
+					V: resource.PropertyMap{resource.PropertyKey("level1s"): resource.PropertyValue{
+						V: resource.PropertyMap{resource.PropertyKey("arr"): resource.PropertyValue{
+							V: resource.PropertyMap{resource.PropertyKey("el"): resource.PropertyValue{
+								V: resource.PropertyMap{resource.PropertyKey("0"): resource.PropertyValue{
+									V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+										V: resource.PropertyMap{
+											resource.PropertyKey("ps"): resource.PropertyValue{
+												V: resource.PropertyMap{resource.PropertyKey("level2s"): resource.PropertyValue{
+													V: resource.PropertyMap{resource.PropertyKey("arr"): resource.PropertyValue{
+														V: resource.PropertyMap{resource.PropertyKey("el"): resource.PropertyValue{
+															V: resource.PropertyMap{resource.PropertyKey("0"): resource.PropertyValue{
+																V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+																	V: resource.PropertyMap{},
+																}},
+															}},
+														}},
+													}},
+												}},
+											},
+											resource.PropertyKey("renamed"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("level2s"): resource.PropertyValue{V: "level2"}}},
+										},
+									}},
+								}},
+							}},
+						}},
+					}},
+				},
+				resource.PropertyKey("renamed"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("level1s"): resource.PropertyValue{V: "level1"}}},
+			},
+		}},
+	},
+	resource.PropertyKey("id"):      resource.PropertyValue{V: "id"},
+	resource.PropertyKey("level1s"): resource.PropertyValue{V: []resource.PropertyValue{{V: resource.PropertyMap{resource.PropertyKey("level2s"): resource.PropertyValue{V: []resource.PropertyValue{{V: resource.PropertyMap{resource.PropertyKey("level3"): resource.PropertyValue{V: &resource.Secret{Element: resource.PropertyValue{V: "deep"}}}}}}}}}}},
+}

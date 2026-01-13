@@ -5,5 +5,5 @@ resource.PropertyMap{
 		}},
 	},
 	resource.PropertyKey("id"):   resource.PropertyValue{V: "id"},
-	resource.PropertyKey("prop"): resource.PropertyValue{V: "y"},
+	resource.PropertyKey("prop"): resource.PropertyValue{V: &resource.Secret{Element: resource.PropertyValue{V: "y"}}},
 }

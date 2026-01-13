@@ -4,8 +4,22 @@ resource.PropertyMap{
 			V: resource.PropertyMap{
 				resource.PropertyKey("ps"): resource.PropertyValue{
 					V: resource.PropertyMap{resource.PropertyKey("props"): resource.PropertyValue{
-						V: resource.PropertyMap{resource.PropertyKey("arr"): resource.PropertyValue{
-							V: resource.PropertyMap{},
+						V: &resource.Secret{Element: resource.PropertyValue{
+							V: resource.PropertyMap{resource.PropertyKey("replace"): resource.PropertyValue{
+								V: resource.PropertyMap{resource.PropertyKey("raw"): resource.PropertyValue{
+									V: resource.PropertyMap{
+										resource.PropertyKey("type"): resource.PropertyValue{
+											V: []resource.PropertyValue{
+												{
+													V: "set",
+												},
+												{V: "string"},
+											},
+										},
+										resource.PropertyKey("value"): resource.PropertyValue{V: []resource.PropertyValue{{V: "y"}}},
+									},
+								}},
+							}},
 						}},
 					}},
 				},
@@ -13,5 +27,6 @@ resource.PropertyMap{
 			},
 		}},
 	},
+	resource.PropertyKey("id"):    resource.PropertyValue{V: "id"},
 	resource.PropertyKey("props"): resource.PropertyValue{V: []resource.PropertyValue{{V: "y"}}},
 }

@@ -1,0 +1,19 @@
+resource.PropertyMap{
+	resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{
+		V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+			V: resource.PropertyMap{resource.PropertyKey("ps"): resource.PropertyValue{
+				V: resource.PropertyMap{resource.PropertyKey("tags"): resource.PropertyValue{
+					V: resource.PropertyMap{resource.PropertyKey("map"): resource.PropertyValue{
+						V: resource.PropertyMap{},
+					}},
+				}},
+			}},
+		}},
+	},
+	resource.PropertyKey("id"): resource.PropertyValue{V: "id"},
+	resource.PropertyKey("tags"): resource.PropertyValue{V: resource.PropertyMap{
+		resource.PropertyKey("env"):     resource.PropertyValue{V: "production"},
+		resource.PropertyKey("project"): resource.PropertyValue{V: "migrate"},
+		resource.PropertyKey("team"):    resource.PropertyValue{V: "platform"},
+	}},
+}

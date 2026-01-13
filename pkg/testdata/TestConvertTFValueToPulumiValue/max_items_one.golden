@@ -1,0 +1,19 @@
+resource.PropertyMap{
+	resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{
+		V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+			V: resource.PropertyMap{resource.PropertyKey("ps"): resource.PropertyValue{
+				V: resource.PropertyMap{resource.PropertyKey("prop"): resource.PropertyValue{
+					V: resource.PropertyMap{resource.PropertyKey("plu"): resource.PropertyValue{
+						V: resource.PropertyMap{resource.PropertyKey("i"): resource.PropertyValue{
+							V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+								V: resource.PropertyMap{},
+							}},
+						}},
+					}},
+				}},
+			}},
+		}},
+	},
+	resource.PropertyKey("id"):   resource.PropertyValue{V: "id"},
+	resource.PropertyKey("prop"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("subprop"): resource.PropertyValue{V: &resource.Secret{Element: resource.PropertyValue{V: "y"}}}}},
+}
