@@ -101,7 +101,7 @@ func TranslateState(ctx context.Context, tfState *tfjson.State, pulumiProgramDir
 		return nil, err
 	}
 
-	pulumiState, err := convertState(ctx, tfState, pulumiProviders)
+	pulumiState, err := convertState(tfState, pulumiProviders)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func TranslateState(ctx context.Context, tfState *tfjson.State, pulumiProgramDir
 	}, nil
 }
 
-func convertState(ctx context.Context, tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*info.Provider) (*PulumiState, error) {
+func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*info.Provider) (*PulumiState, error) {
 	pulumiState := &PulumiState{}
 
 	// TODO[pulumi/pulumi-service#35512]: This assumes one Pulumi provider per Terraform provider.
@@ -155,7 +155,7 @@ func convertState(ctx context.Context, tfState *tfjson.State, pulumiProviders ma
 	}
 
 	err := tofu.VisitResources(tfState, func(resource *tfjson.StateResource) error {
-		pulumiResource, err := convertResourceStateExceptProviderLink(ctx, resource, pulumiProviders)
+		pulumiResource, err := convertResourceStateExceptProviderLink(resource, pulumiProviders)
 		if err != nil {
 			return fmt.Errorf("failed to convert resource state for %s with ID %s: %w", resource.Type, resource.Address, err)
 		}
@@ -175,7 +175,6 @@ func convertState(ctx context.Context, tfState *tfjson.State, pulumiProviders ma
 }
 
 func convertResourceStateExceptProviderLink(
-	ctx context.Context,
 	res *tfjson.StateResource,
 	pulumiProviders map[providermap.TerraformProviderName]*info.Provider,
 ) (PulumiResource, error) {
@@ -209,7 +208,7 @@ func convertResourceStateExceptProviderLink(
 		return PulumiResource{}, fmt.Errorf("failed to get Pulumi type token: %w", err)
 	}
 	resourceInfo := prov.Resources[res.Type]
-	props, err := convertTFValueToPulumiValue(ctx, ctyValue, shimResource, resourceInfo, sensitivePaths)
+	props, err := convertTFValueToPulumiValue(ctyValue, shimResource, resourceInfo, sensitivePaths)
 	if err != nil {
 		return PulumiResource{}, fmt.Errorf("failed to convert value to Pulumi value: %w", err)
 	}

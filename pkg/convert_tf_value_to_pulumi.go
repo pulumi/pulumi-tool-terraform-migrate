@@ -22,7 +22,6 @@ import (
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
 	shim "github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfshim"
-	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/valueshim"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/bridge"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
@@ -34,14 +33,7 @@ type terraformState struct {
 	meta       map[string]interface{}
 }
 
-var (
-	_ tfbridge.TerraformState               = terraformState{}
-	_ tfbridge.TerraformStateWithTypedValue = terraformState{}
-)
-
-func (t terraformState) Value() valueshim.Value {
-	return valueshim.FromCtyValue(t.stateValue)
-}
+var _ tfbridge.TerraformState = terraformState{}
 
 func (t terraformState) Meta() map[string]interface{} {
 	return t.meta
@@ -66,7 +58,7 @@ func (s setChecker) IsSet(ctx context.Context, v interface{}) ([]interface{}, bo
 }
 
 func convertTFValueToPulumiValue(
-	ctx context.Context, tfValue cty.Value, res shim.Resource, pulumiResource *info.Resource, sensitivePaths []cty.Path,
+	tfValue cty.Value, res shim.Resource, pulumiResource *info.Resource, sensitivePaths []cty.Path,
 ) (resource.PropertyMap, error) {
 	instanceState := terraformState{
 		stateValue: tfValue,
@@ -76,7 +68,7 @@ func convertTFValueToPulumiValue(
 
 	// This assumes that the schema version of the resource state is exactly the same as the one in the provider.
 	// TODO: add an assert for this.
-	props, err := tfbridge.MakeTerraformResult(ctx, setChecker{}, instanceState, res.Schema(), pulumiResource.Fields, nil, true)
+	props, err := tfbridge.MakeTerraformResult(context.TODO(), setChecker{}, instanceState, res.Schema(), pulumiResource.Fields, nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make Terraform result: %w", err)
 	}
@@ -87,10 +79,11 @@ func convertTFValueToPulumiValue(
 		return nil, fmt.Errorf("failed to ensure secrets: %w", err)
 	}
 
-	schemaType := valueshim.FromCtyType(bridge.ImpliedType(res.Schema(), false))
-	if err := tfbridge.RawStateInjectDelta(ctx, res.Schema(), pulumiResource.Fields, props, schemaType, instanceState); err != nil {
-		return nil, err
-	}
+	// TODO: fix raw state deltas
+	// schemaType := bridge.ImpliedType(res.Schema(), false)
+	// if err := tfbridge.RawStateInjectDelta(context.TODO(), res.Schema(), pulumiResource.Fields, props, valueshim.FromCtyType(schemaType), instanceState); err != nil {
+	// 	return nil, err
+	// }
 
 	return secretedProps, nil
 }
