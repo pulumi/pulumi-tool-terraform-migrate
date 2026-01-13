@@ -431,7 +431,13 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to convert cty.Value to map[string]interface{}: %v", err)
 			}
-			autogold.ExpectFile(t, props)
+			autogold.ExpectFile(t, struct {
+				Input cty.Value
+				Result  resource.PropertyMap
+			}{
+				Input: test.val,
+				Result: props,
+			})
 		})
 	}
 }

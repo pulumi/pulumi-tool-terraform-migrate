@@ -1,9 +1,31 @@
-resource.PropertyMap{
-	resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{
-		V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
-			V: resource.PropertyMap{},
-		}},
+struct {
+	Input  cty.Value
+	Result resource.PropertyMap
+}{
+	Input: cty.Value{
+		ty: cty.Type{
+			typeImpl: cty.typeObject{AttrTypes: map[string]cty.Type{
+				"id": {typeImpl: cty.primitiveType{
+					Kind: cty.primitiveTypeKind(83),
+				}},
+				"secret_count": {typeImpl: cty.primitiveType{Kind: cty.primitiveTypeKind(78)}},
+			}},
+		},
+		v: map[string]interface{}{
+			"id": "id",
+			"secret_count": &big.Float{
+				prec: 64,
+				form: big.form(1),
+				mant: big.nat{
+					big.Word(12105675798371893248),
+				},
+				exp: 6,
+			},
+		},
 	},
-	resource.PropertyKey("id"):          resource.PropertyValue{V: "id"},
-	resource.PropertyKey("secretCount"): resource.PropertyValue{V: &resource.Secret{Element: resource.PropertyValue{V: 42}}},
+	Result: resource.PropertyMap{
+		resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{V: resource.PropertyMap{}}}},
+		resource.PropertyKey("id"):                       resource.PropertyValue{V: "id"},
+		resource.PropertyKey("secretCount"):              resource.PropertyValue{V: &resource.Secret{Element: resource.PropertyValue{V: 42}}},
+	},
 }
