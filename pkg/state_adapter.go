@@ -32,6 +32,7 @@ import (
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/zclconf/go-cty/cty"
 )
 
 type StackExport struct {
@@ -192,12 +193,22 @@ func convertResourceStateExceptProviderLink(
 		return PulumiResource{}, fmt.Errorf("failed to convert resource to CTY value: %w", err)
 	}
 
+	var sensitivePaths []cty.Path
+	if res.SensitiveValues != nil {
+		sensitiveValues := map[string]interface{}{}
+		err := json.Unmarshal(res.SensitiveValues, &sensitiveValues)
+		if err != nil {
+			return PulumiResource{}, fmt.Errorf("failed to unmarshal sensitive values: %w", err)
+		}
+		sensitivePaths = tofu.SensitiveObjToCtyPath(sensitiveValues)
+	}
+
 	pulumiTypeToken, err := bridge.PulumiTypeToken(res.Type, prov)
 	if err != nil {
 		return PulumiResource{}, fmt.Errorf("failed to get Pulumi type token: %w", err)
 	}
 	resourceInfo := prov.Resources[res.Type]
-	props, err := convertTFValueToPulumiValue(ctyValue, shimResource, resourceInfo)
+	props, err := convertTFValueToPulumiValue(ctyValue, shimResource, resourceInfo, sensitivePaths)
 	if err != nil {
 		return PulumiResource{}, fmt.Errorf("failed to convert value to Pulumi value: %w", err)
 	}
