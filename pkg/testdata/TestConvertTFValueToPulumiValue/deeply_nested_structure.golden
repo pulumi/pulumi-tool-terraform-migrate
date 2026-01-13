@@ -1,0 +1,62 @@
+struct {
+	Input  cty.Value
+	Result resource.PropertyMap
+}{
+	Input: cty.Value{
+		ty: cty.Type{
+			typeImpl: cty.typeObject{AttrTypes: map[string]cty.Type{
+				"id": {typeImpl: cty.primitiveType{
+					Kind: cty.primitiveTypeKind(83),
+				}},
+				"level1": {typeImpl: cty.typeList{ElementTypeT: cty.Type{typeImpl: cty.typeObject{
+					AttrTypes: map[string]cty.Type{"level2": {
+						typeImpl: cty.typeList{ElementTypeT: cty.Type{
+							typeImpl: cty.typeObject{AttrTypes: map[string]cty.Type{
+								"level3": {typeImpl: cty.primitiveType{
+									Kind: cty.primitiveTypeKind(83),
+								}},
+							}},
+						}},
+					}},
+				}}}},
+			}},
+		},
+		v: map[string]interface{}{
+			"id":     "id",
+			"level1": []interface{}{map[string]interface{}{"level2": []interface{}{map[string]interface{}{"level3": "deep"}}}},
+		},
+	},
+	Result: resource.PropertyMap{
+		resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{V: resource.PropertyMap{
+			resource.PropertyKey("ps"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("level1s"): resource.PropertyValue{
+				V: resource.PropertyMap{resource.PropertyKey("arr"): resource.PropertyValue{
+					V: resource.PropertyMap{resource.PropertyKey("el"): resource.PropertyValue{
+						V: resource.PropertyMap{resource.PropertyKey("0"): resource.PropertyValue{
+							V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+								V: resource.PropertyMap{
+									resource.PropertyKey("ps"): resource.PropertyValue{
+										V: resource.PropertyMap{resource.PropertyKey("level2s"): resource.PropertyValue{
+											V: resource.PropertyMap{resource.PropertyKey("arr"): resource.PropertyValue{
+												V: resource.PropertyMap{resource.PropertyKey("el"): resource.PropertyValue{
+													V: resource.PropertyMap{resource.PropertyKey("0"): resource.PropertyValue{
+														V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+															V: resource.PropertyMap{},
+														}},
+													}},
+												}},
+											}},
+										}},
+									},
+									resource.PropertyKey("renamed"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("level2s"): resource.PropertyValue{V: "level2"}}},
+								},
+							}},
+						}},
+					}},
+				}},
+			}}},
+			resource.PropertyKey("renamed"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("level1s"): resource.PropertyValue{V: "level1"}}},
+		}}}},
+		resource.PropertyKey("id"):      resource.PropertyValue{V: "id"},
+		resource.PropertyKey("level1s"): resource.PropertyValue{V: []resource.PropertyValue{{V: resource.PropertyMap{resource.PropertyKey("level2s"): resource.PropertyValue{V: []resource.PropertyValue{{V: resource.PropertyMap{resource.PropertyKey("level3"): resource.PropertyValue{V: &resource.Secret{Element: resource.PropertyValue{V: "deep"}}}}}}}}}}},
+	},
+}

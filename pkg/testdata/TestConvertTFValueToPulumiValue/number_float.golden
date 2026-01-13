@@ -1,0 +1,31 @@
+struct {
+	Input  cty.Value
+	Result resource.PropertyMap
+}{
+	Input: cty.Value{
+		ty: cty.Type{
+			typeImpl: cty.typeObject{AttrTypes: map[string]cty.Type{
+				"id": {typeImpl: cty.primitiveType{
+					Kind: cty.primitiveTypeKind(83),
+				}},
+				"prop": {typeImpl: cty.primitiveType{Kind: cty.primitiveTypeKind(78)}},
+			}},
+		},
+		v: map[string]interface{}{
+			"id": "id",
+			"prop": &big.Float{
+				prec: 53,
+				form: big.form(1),
+				mant: big.nat{
+					big.Word(14480694097861998592),
+				},
+				exp: 2,
+			},
+		},
+	},
+	Result: resource.PropertyMap{
+		resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{V: resource.PropertyMap{}}}},
+		resource.PropertyKey("id"):                       resource.PropertyValue{V: "id"},
+		resource.PropertyKey("prop"):                     resource.PropertyValue{V: 3.14},
+	},
+}

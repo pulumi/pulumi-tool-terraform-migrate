@@ -1,0 +1,61 @@
+struct {
+	Input  cty.Value
+	Result resource.PropertyMap
+}{
+	Input: cty.Value{
+		ty: cty.Type{
+			typeImpl: cty.typeObject{AttrTypes: map[string]cty.Type{
+				"id": {typeImpl: cty.primitiveType{
+					Kind: cty.primitiveTypeKind(83),
+				}},
+				"ingress": {typeImpl: cty.typeSet{ElementTypeT: cty.Type{typeImpl: cty.typeObject{
+					AttrTypes: map[string]cty.Type{
+						"port": {
+							typeImpl: cty.primitiveType{Kind: cty.primitiveTypeKind(78)},
+						},
+						"protocol": {typeImpl: cty.primitiveType{Kind: cty.primitiveTypeKind(83)}},
+					},
+				}}}},
+			}},
+		},
+		v: map[string]interface{}{
+			"id": "id",
+			"ingress": set.Set[interface{}]{
+				vals: map[int][]interface{}{3881877108: {map[string]interface{}{
+					"port": &big.Float{
+						prec: 64,
+						form: big.form(1),
+						mant: big.nat{
+							big.Word(15960757079401037824),
+						},
+						exp: 9,
+					},
+					"protocol": "tcp",
+				}}},
+				rules: cty.setRules{Type: cty.Type{typeImpl: cty.typeObject{AttrTypes: map[string]cty.Type{
+					"port":     {typeImpl: cty.primitiveType{Kind: cty.primitiveTypeKind(78)}},
+					"protocol": {typeImpl: cty.primitiveType{Kind: cty.primitiveTypeKind(83)}},
+				}}}},
+			},
+		},
+	},
+	Result: resource.PropertyMap{
+		resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{V: resource.PropertyMap{
+			resource.PropertyKey("ps"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("ingresses"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("arr"): resource.PropertyValue{
+				V: resource.PropertyMap{resource.PropertyKey("el"): resource.PropertyValue{
+					V: resource.PropertyMap{resource.PropertyKey("0"): resource.PropertyValue{
+						V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+							V: resource.PropertyMap{},
+						}},
+					}},
+				}},
+			}}}}},
+			resource.PropertyKey("renamed"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("ingresses"): resource.PropertyValue{V: "ingress"}}},
+		}}}},
+		resource.PropertyKey("id"): resource.PropertyValue{V: "id"},
+		resource.PropertyKey("ingresses"): resource.PropertyValue{V: []resource.PropertyValue{{V: resource.PropertyMap{
+			resource.PropertyKey("port"):     resource.PropertyValue{V: 443},
+			resource.PropertyKey("protocol"): resource.PropertyValue{V: "tcp"},
+		}}}},
+	},
+}

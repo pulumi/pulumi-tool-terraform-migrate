@@ -1,0 +1,46 @@
+struct {
+	Input  cty.Value
+	Result resource.PropertyMap
+}{
+	Input: cty.Value{
+		ty: cty.Type{
+			typeImpl: cty.typeObject{AttrTypes: map[string]cty.Type{
+				"id": {typeImpl: cty.primitiveType{
+					Kind: cty.primitiveTypeKind(83),
+				}},
+				"prop": {typeImpl: cty.typeSet{ElementTypeT: cty.Type{typeImpl: cty.primitiveType{
+					Kind: cty.primitiveTypeKind(83),
+				}}}},
+			}},
+		},
+		v: map[string]interface{}{
+			"id": "id",
+			"prop": set.Set[interface{}]{
+				vals:  map[int][]interface{}{4011182279: {"y"}},
+				rules: cty.setRules{Type: cty.Type{typeImpl: cty.primitiveType{Kind: cty.primitiveTypeKind(83)}}},
+			},
+		},
+	},
+	Result: resource.PropertyMap{
+		resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{V: resource.PropertyMap{
+			resource.PropertyKey("ps"): resource.PropertyValue{V: resource.PropertyMap{
+				resource.PropertyKey("props"): resource.PropertyValue{V: &resource.Secret{
+					Element: resource.PropertyValue{V: resource.PropertyMap{
+						resource.PropertyKey("replace"): resource.PropertyValue{V: resource.PropertyMap{
+							resource.PropertyKey("raw"): resource.PropertyValue{V: resource.PropertyMap{
+								resource.PropertyKey("type"): resource.PropertyValue{V: []resource.PropertyValue{
+									{V: "set"},
+									{V: "string"},
+								}},
+								resource.PropertyKey("value"): resource.PropertyValue{V: []resource.PropertyValue{{V: "y"}}},
+							}},
+						}},
+					}},
+				}},
+			}},
+			resource.PropertyKey("renamed"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("props"): resource.PropertyValue{V: "prop"}}},
+		}}}},
+		resource.PropertyKey("id"):    resource.PropertyValue{V: "id"},
+		resource.PropertyKey("props"): resource.PropertyValue{V: []resource.PropertyValue{{V: "y"}}},
+	},
+}

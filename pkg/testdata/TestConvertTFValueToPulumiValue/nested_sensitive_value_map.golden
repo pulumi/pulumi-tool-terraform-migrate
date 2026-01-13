@@ -1,0 +1,43 @@
+struct {
+	Input  cty.Value
+	Result resource.PropertyMap
+}{
+	Input: cty.Value{
+		ty: cty.Type{
+			typeImpl: cty.typeObject{AttrTypes: map[string]cty.Type{
+				"id": {typeImpl: cty.primitiveType{
+					Kind: cty.primitiveTypeKind(83),
+				}},
+				"prop": {typeImpl: cty.typeList{ElementTypeT: cty.Type{typeImpl: cty.typeObject{
+					AttrTypes: map[string]cty.Type{"subprop": {
+						typeImpl: cty.primitiveType{Kind: cty.primitiveTypeKind(83)},
+					}},
+				}}}},
+			}},
+		},
+		v: map[string]interface{}{
+			"id":   "id",
+			"prop": []interface{}{map[string]interface{}{"subprop": "y"}},
+		},
+	},
+	Result: resource.PropertyMap{
+		resource.PropertyKey("__pulumi_raw_state_delta"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{V: resource.PropertyMap{
+			resource.PropertyKey("ps"): resource.PropertyValue{
+				V: resource.PropertyMap{resource.PropertyKey("props"): resource.PropertyValue{
+					V: resource.PropertyMap{resource.PropertyKey("arr"): resource.PropertyValue{
+						V: resource.PropertyMap{resource.PropertyKey("el"): resource.PropertyValue{
+							V: resource.PropertyMap{resource.PropertyKey("0"): resource.PropertyValue{
+								V: resource.PropertyMap{resource.PropertyKey("obj"): resource.PropertyValue{
+									V: resource.PropertyMap{},
+								}},
+							}},
+						}},
+					}},
+				}},
+			},
+			resource.PropertyKey("renamed"): resource.PropertyValue{V: resource.PropertyMap{resource.PropertyKey("props"): resource.PropertyValue{V: "prop"}}},
+		}}}},
+		resource.PropertyKey("id"):    resource.PropertyValue{V: "id"},
+		resource.PropertyKey("props"): resource.PropertyValue{V: []resource.PropertyValue{{V: resource.PropertyMap{resource.PropertyKey("subprop"): resource.PropertyValue{V: &resource.Secret{Element: resource.PropertyValue{V: "y"}}}}}}},
+	},
+}
