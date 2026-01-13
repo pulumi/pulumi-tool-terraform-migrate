@@ -1,6 +1,8 @@
 bin
 .terraform
 **/terraform.tfstate.backup
+pulumi-tool-terraform-migrate
+**/.terraform.lock.hcl
 
 go.work
 go.work.sum
