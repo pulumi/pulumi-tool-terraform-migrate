@@ -106,7 +106,8 @@ func ensureSecrets(props resource.PropertyMap, sensitivePaths []resource.Propert
 // ctyPathsToPropertyPaths converts cty.Paths to resource.PropertyPaths, translating
 // Terraform attribute names to Pulumi property names while preserving concrete indices.
 //
-// Unlike tfbridge.SchemaPathToPropertyPath which uses "*" for all element access,
+// This is based on the implementation of [tfbridge.SchemaPathToPropertyPath] in pulumi-terraform-bridge.
+// Unlike [tfbridge.SchemaPathToPropertyPath] which uses "*" for all element access,
 // this function preserves the actual index values from the cty.Path.
 func ctyPathsToPropertyPaths(paths []cty.Path, res shim.Resource, pulumiResource *info.Resource) []resource.PropertyPath {
 	propertyPaths := make([]resource.PropertyPath, 0, len(paths))
