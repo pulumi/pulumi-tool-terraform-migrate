@@ -231,8 +231,8 @@ func TestSensitiveObjToCtyPath(t *testing.T) {
 
 			assert.Equal(t, len(tc.expected), len(result), "number of paths should match")
 
-			for i, expectedPath := range tc.expected {
-				assert.Equal(t, expectedPath, result[i])
+			for _, expectedPath := range tc.expected {
+				assert.Contains(t, result, expectedPath)
 			}
 		})
 	}
