@@ -17,6 +17,7 @@ package pkg
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -53,6 +54,7 @@ func TranslateAndWriteState(
 	pulumiProgramDir string,
 	outputFilePath string,
 	requiredProvidersOutputFilePath string,
+	strict bool,
 ) error {
 	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
 		ProjectDir: tfDir,
@@ -63,6 +65,14 @@ func TranslateAndWriteState(
 	res, err := TranslateState(ctx, tfState, pulumiProgramDir)
 	if err != nil {
 		return err
+	}
+	if len(res.ErrorMessages) > 0 {
+		for _, errorMessage := range res.ErrorMessages {
+			fmt.Fprintf(os.Stderr, "failed to translate resource %s with type %s and provider %s: %v\n", errorMessage.ResourceName, errorMessage.ResourceType, errorMessage.ResourceProvider, errorMessage.ErrorMessage)
+		}
+		if strict {
+			return fmt.Errorf("failed to translate state: %w", errors.New("failed to translate state for some resources"))
+		}
 	}
 	bytes, err := json.Marshal(res.Export)
 	if err != nil {
@@ -93,6 +103,7 @@ func TranslateAndWriteState(
 type TranslateStateResult struct {
 	Export            StackExport
 	RequiredProviders []*info.Provider
+	ErrorMessages     []ErroredResource
 }
 
 func TranslateState(ctx context.Context, tfState *tfjson.State, pulumiProgramDir string) (*TranslateStateResult, error) {
@@ -101,19 +112,20 @@ func TranslateState(ctx context.Context, tfState *tfjson.State, pulumiProgramDir
 		return nil, err
 	}
 
-	pulumiState, err := convertState(tfState, pulumiProviders)
+
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to convert state: %w", err)
 	}
 
 	deployment, err := GetDeployment(pulumiProgramDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get deployment: %w", err)
 	}
 
 	editedDeployment, err := InsertResourcesIntoDeployment(pulumiState, deployment.StackName, deployment.ProjectName, deployment.Deployment)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to insert resources into deployment: %w", err)
 	}
 
 	requiredProviders := slices.Collect(maps.Values(pulumiProviders))
@@ -124,10 +136,18 @@ func TranslateState(ctx context.Context, tfState *tfjson.State, pulumiProgramDir
 			Version:    3,
 		},
 		RequiredProviders: requiredProviders,
+		ErrorMessages:     errorMessages,
 	}, nil
 }
 
-func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*info.Provider) (*PulumiState, error) {
+type ErroredResource struct {
+	ResourceName string `json:"resource_name"`
+	ResourceType string `json:"resource_type"`
+	ResourceProvider string `json:"resource_provider"`
+	ErrorMessage string `json:"error_message"`
+}
+
+func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*info.Provider) (*PulumiState, []ErroredResource, error) {
 	pulumiState := &PulumiState{}
 
 	// TODO[pulumi/pulumi-service#35512]: This assumes one Pulumi provider per Terraform provider.
@@ -137,7 +157,7 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 	for tfProviderName, provider := range pulumiProviders {
 		inputs, err := GetProviderInputs(provider.Name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get provider inputs: %w", err)
+			return nil, nil, fmt.Errorf("failed to get provider inputs: %w", err)
 		}
 		uuid := uuid.NewString()
 		providerResource := PulumiResource{
@@ -154,10 +174,18 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 		providerTable[tfProviderName] = providerResource.PulumiResourceID
 	}
 
+	errorMessages := []ErroredResource{}
+
 	err := tofu.VisitResources(tfState, func(resource *tfjson.StateResource) error {
 		pulumiResource, err := convertResourceStateExceptProviderLink(resource, pulumiProviders)
 		if err != nil {
-			return fmt.Errorf("failed to convert resource state for %s with ID %s: %w", resource.Type, resource.Address, err)
+			errorMessages = append(errorMessages, ErroredResource{
+				ResourceName: resource.Name,
+				ResourceType: resource.Type,
+				ResourceProvider: resource.ProviderName,
+				ErrorMessage: err.Error(),
+			})
+			return nil
 		}
 		providerLink, ok := providerTable[providermap.TerraformProviderName(resource.ProviderName)]
 		if !ok {
@@ -168,10 +196,10 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 		return nil
 	}, &tofu.VisitOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to visit resources: %w", err)
+		return nil, errorMessages, fmt.Errorf("failed to visit resources: %w", err)
 	}
 
-	return pulumiState, nil
+	return pulumiState, errorMessages, nil
 }
 
 func convertResourceStateExceptProviderLink(

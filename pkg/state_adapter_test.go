@@ -109,8 +109,9 @@ func Test_convertState_simple(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	pulumiState, err := convertState(tfState, pulumiProviders)
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
 	require.NoError(t, err, "failed to convert state")
+	require.Equal(t, 0, len(errorMessages), "expected no error messages")
 
 	require.Equal(t, 1, len(pulumiState.Providers), "expected 1 provider")
 	require.Equal(t, 1, len(pulumiState.Resources), "expected 1 resource")
@@ -135,8 +136,9 @@ func Test_convertState_multi_provider(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	pulumiState, err := convertState(tfState, pulumiProviders)
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
 	require.NoError(t, err, "failed to convert state")
+	require.Equal(t, 0, len(errorMessages), "expected no error messages")
 
 	require.Equal(t, 2, len(pulumiState.Providers), "expected 2 providers")
 	require.Equal(t, 2, len(pulumiState.Resources), "expected 2 resources")
@@ -175,6 +177,27 @@ func Test_convertState_multi_provider(t *testing.T) {
 	require.NoError(t, err, "failed to find provider for tls_private_key")
 	require.Equal(t, "pulumi:providers:tls", tlsProvider.PulumiResourceID.Type,
 		"tls_private_key should be linked to tls provider")
+}
+
+func Test_convertState_corrupted_state(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: "testdata/tofu_corrupted_state.json",
+	})
+	require.NoError(t, err, "failed to load Terraform state")
+
+	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
+	require.NoError(t, err, "failed to get Pulumi providers")
+
+	_, errorMessages, err := convertState(tfState, pulumiProviders)
+	require.NoError(t, err, "failed to convert state")
+	require.Equal(t, 1, len(errorMessages), "expected 1 error message")
+	require.Equal(t, "password", errorMessages[0].ResourceName)
+	require.Equal(t, "random_password", errorMessages[0].ResourceType)
+	require.Equal(t, "registry.opentofu.org/hashicorp/random", errorMessages[0].ResourceProvider)
+	require.Contains(t, errorMessages[0].ErrorMessage, "unsupported attribute \"corrupted\"")
 }
 
 func createPulumiStack(t *testing.T) string {
