@@ -249,10 +249,35 @@ func convertResourceStateExceptProviderLink(
 	return PulumiResource{
 		PulumiResourceID: PulumiResourceID{
 			ID:   props["id"].StringValue(),
-			Name: res.Name,
+			Name: pulumiNameFromTerraformAddress(res.Address, res.Type),
 			Type: string(pulumiTypeToken),
 		},
 		Inputs:  inputs,
 		Outputs: props,
 	}, nil
+}
+
+// pulumiNameFromTerraformAddress extracts a unique Pulumi resource name from a Terraform address.
+// Terraform addresses have the format:
+//   - Root module: <resource_type>.<name> e.g., "aws_s3_bucket.this"
+//   - Submodule: module.<module_name>.<resource_type>.<name> e.g., "module.s3_bucket.aws_s3_bucket.this"
+//   - Nested: module.<mod1>.module.<mod2>.<resource_type>.<name>
+//
+// We extract the module path and resource name (excluding the type) and join them with underscores.
+func pulumiNameFromTerraformAddress(address, resourceType string) string {
+	parts := strings.Split(address, ".")
+
+	var nameParts []string
+	for i := 0; i < len(parts); i++ {
+		if parts[i] == resourceType {
+			nameParts = append(nameParts, parts[i+1:]...)
+			break
+		}
+		if parts[i] == "module" && i+1 < len(parts) {
+			nameParts = append(nameParts, parts[i+1])
+			i++
+		}
+	}
+
+	return strings.Join(nameParts, "_")
 }
