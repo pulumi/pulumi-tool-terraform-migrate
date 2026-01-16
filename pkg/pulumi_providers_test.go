@@ -68,12 +68,12 @@ func TestGetPulumiProvidersForTerraformState(t *testing.T) {
 
 	statePath := createTestStateTfstate(t, tmpDir)
 
-	terraformState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
 		StateFilePath: statePath,
 	})
 	require.NoError(t, err)
 
-	pulumiProviders, err := GetPulumiProvidersForTerraformState(terraformState)
+	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err)
 
 	require.Len(t, pulumiProviders, 1)

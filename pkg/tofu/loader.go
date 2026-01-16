@@ -52,6 +52,17 @@ type LoadTerraformStateOptions struct {
 	Workspace string
 }
 
+// TofuVersionOutput represents the output of `tofu version -json`
+type TofuVersionOutput struct {
+	TerraformVersion string `json:"terraform_version"`
+	Platform         string `json:"platform"`
+
+	// A map of provider identifiers to their resolved versions, e.g.:
+	//
+	//	{"registry.terraform.io/hashicorp/random": "3.7.2"}
+	ProviderSelections map[string]string `json:"provider_selections"`
+}
+
 // LoadTerraformState loads a Terraform or OpenTofu state.
 //
 // Requires `tofu` in path and executes these commands:
@@ -198,6 +209,35 @@ func tofuNew(projectDir string) (*tfexec.Terraform, error) {
 	}
 
 	return tofu, nil
+}
+
+// GetProviderVersions extracts resolved provider versions from a Terraform/OpenTofu project directory. This should be
+// called after tofu init has been run on the project, otherwise the versions may still be unresolved.
+func GetProviderVersions(ctx context.Context, projectDir string) (TofuVersionOutput, error) {
+	tofu, err := tofuNew(projectDir)
+	if err != nil {
+		return TofuVersionOutput{}, err
+	}
+	return getProviderVersions(ctx, tofu)
+}
+
+func getProviderVersions(ctx context.Context, tofu *tfexec.Terraform) (TofuVersionOutput, error) {
+	// Run tofu version -json
+	cmd := exec.CommandContext(ctx, tofu.ExecPath(), "version", "-json")
+	cmd.Dir = tofu.WorkingDir()
+
+	var versionOutput TofuVersionOutput
+
+	output, err := cmd.Output()
+	if err != nil {
+		return versionOutput, fmt.Errorf("failed to run tofu version -json: %w", err)
+	}
+
+	if err := json.Unmarshal(output, &versionOutput); err != nil {
+		return versionOutput, fmt.Errorf("failed to parse tofu version output: %w", err)
+	}
+
+	return versionOutput, nil
 }
 
 func loadWorkspaceState(
