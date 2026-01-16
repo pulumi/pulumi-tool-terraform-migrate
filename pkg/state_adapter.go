@@ -17,6 +17,7 @@ package pkg
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -53,7 +54,7 @@ func TranslateAndWriteState(
 	pulumiProgramDir string,
 	outputFilePath string,
 	requiredProvidersOutputFilePath string,
-	errorsOutputFilePath string,
+	strict bool,
 ) error {
 	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
 		ProjectDir: tfDir,
@@ -64,6 +65,14 @@ func TranslateAndWriteState(
 	res, err := TranslateState(ctx, tfState, pulumiProgramDir)
 	if err != nil {
 		return err
+	}
+	if len(res.ErrorMessages) > 0 {
+		for _, errorMessage := range res.ErrorMessages {
+			fmt.Fprintf(os.Stderr, "failed to translate resource %s with type %s and provider %s: %v\n", errorMessage.ResourceName, errorMessage.ResourceType, errorMessage.ResourceProvider, errorMessage.ErrorMessage)
+		}
+		if strict {
+			return fmt.Errorf("failed to translate state: %w", errors.New("failed to translate state for some resources"))
+		}
 	}
 	bytes, err := json.Marshal(res.Export)
 	if err != nil {
@@ -88,16 +97,6 @@ func TranslateAndWriteState(
 			return fmt.Errorf("failed to write required providers: %w", err)
 		}
 	}
-	if errorsOutputFilePath != "" {
-		bytes, err := json.Marshal(res.ErrorMessages)
-		if err != nil {
-			return fmt.Errorf("failed to marshal errors: %w", err)
-		}
-		err = os.WriteFile(errorsOutputFilePath, bytes, 0o600)
-		if err != nil {
-			return fmt.Errorf("failed to write errors: %w", err)
-		}
-	}
 	return nil
 }
 
@@ -112,6 +111,7 @@ func TranslateState(ctx context.Context, tfState *tfjson.State, pulumiProgramDir
 	if err != nil {
 		return nil, err
 	}
+
 
 	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
 	if err != nil {

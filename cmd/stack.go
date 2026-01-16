@@ -26,7 +26,7 @@ func newStackCmd() *cobra.Command {
 	var out string
 	var to string
 	var plugins string
-	var errors string
+	var strict bool
 
 	cmd := &cobra.Command{
 		Use:   "stack",
@@ -39,8 +39,7 @@ Example:
     --from path/to/terraform-sources \
     --to path/to/pulumi-project \
     --out /tmp/pulumi-state.json \
-    --plugins /tmp/required-plugins.json \
-    --errors /tmp/errors.json
+    --plugins /tmp/required-plugins.json
 
 The translated state picks recommended Pulumi providers and resource types to represent every Terraform resource
 present in the source.
@@ -57,8 +56,6 @@ This file recommends Pulumi plugins and versions to install into the project, fo
 
   pulumi plugin install resource aws 7.12.0
 
-Setting the optional '--errors' parameter generates a 'errors.json' with all the resources which failed to be translated.
-
 The tool may run 'tofu', 'tofu init', 'tofu refresh' to extract the Terraform state and these commands may require
 authorizing read-only access to the cloud accounts. The tool never runs mutating commands such as 'tofu apply'.
 
@@ -71,7 +68,7 @@ See also:
   https://www.pulumi.com/docs/iac/cli/commands/pulumi_plugin_install/
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := pkg.TranslateAndWriteState(cmd.Context(), from, to, out, plugins, errors)
+			err := pkg.TranslateAndWriteState(cmd.Context(), from, to, out, plugins, strict)
 			if err != nil {
 				return fmt.Errorf("failed to convert and write Terraform state: %w", err)
 			}
@@ -83,7 +80,7 @@ See also:
 	cmd.Flags().StringVarP(&to, "to", "t", "", "Path to the Pulumi project folder")
 	cmd.Flags().StringVarP(&out, "out", "o", "", "Where to emit the translated Pulumi stack file")
 	cmd.Flags().StringVarP(&plugins, "plugins", "p", "", "Where to emit plugin requirements")
-	cmd.Flags().StringVarP(&errors, "errors", "e", "", "File path for a JSON file containing any resources which failed to be translated")
+	cmd.Flags().BoolVarP(&strict, "strict", "s", false, "Fail if any resources fail to be translated")
 
 	cmd.MarkFlagRequired("from")
 	cmd.MarkFlagRequired("to")
