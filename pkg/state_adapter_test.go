@@ -94,7 +94,8 @@ func translateStateFromJson(ctx context.Context, tfStateJson string, pulumiProgr
 	if err != nil {
 		return nil, err
 	}
-	return TranslateState(ctx, tfState, pulumiProgramDir)
+	// When loading from JSON, we don't have provider versions
+	return TranslateState(ctx, tfState, nil, pulumiProgramDir)
 }
 
 func Test_convertState_simple(t *testing.T) {
@@ -106,7 +107,7 @@ func Test_convertState_simple(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to load Terraform state")
 
-	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
+	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
 	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
@@ -133,7 +134,7 @@ func Test_convertState_multi_provider(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to load Terraform state")
 
-	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
+	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
 	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
@@ -188,7 +189,7 @@ func Test_convertState_corrupted_state(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to load Terraform state")
 
-	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
+	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
 	_, errorMessages, err := convertState(tfState, pulumiProviders)
