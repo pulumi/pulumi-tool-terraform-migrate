@@ -299,9 +299,9 @@ func fixupProviderError(ctx context.Context, tofu *tfexec.Terraform, workspace s
 	}
 
 	fmt.Fprintln(os.Stderr, "Running tofu refresh in the workspace", workspace)
-	if err := tofu.Refresh(ctx); err != nil {
-		return fmt.Errorf("tofu refresh failed: %w", err)
-	}
+	// if err := tofu.Refresh(ctx); err != nil {
+	// 	return fmt.Errorf("tofu refresh failed: %w", err)
+	// }
 
 	return nil
 }
