@@ -1,0 +1,190 @@
+`{
+    "version": 3,
+    "deployment": {
+        "manifest": {
+            "time": "2026-01-19T21:12:50.878992+02:00",
+            "magic": "a772ab84f380095f2bf2bdada3224c8afa8d437880060b501a3cc9c96071034b",
+            "version": "v3.209.0"
+        },
+        "secrets_providers": {
+            "type": "service",
+            "state": {
+                "url": "https://api.pulumi.com",
+                "owner": "pulumi",
+                "project": "pulumi-stack-3879545197",
+                "stack": "pulumi-stack-3879545197"
+            }
+        },
+        "resources": [
+            {
+                "urn": "urn:pulumi:pulumi-stack-3879545197::pulumi-stack-3879545197::pulumi:pulumi:Stack::pulumi-stack-3879545197-pulumi-stack-3879545197",
+                "custom": false,
+                "type": "pulumi:pulumi:Stack",
+                "created": "2026-01-19T19:12:50.619834Z",
+                "modified": "2026-01-19T19:12:50.619834Z",
+                "sourcePosition": "project:///../../../../../../private/var/folders/82/nqnqw81s1h56l5nv940f9mq00000gn/T/pulumi-stack-3879545197/node_modules/@pulumi/runtime/stack.ts#37,19",
+                "stackTrace": [
+                    {
+                        "sourcePosition": "project:///../../../../../../private/var/folders/82/nqnqw81s1h56l5nv940f9mq00000gn/T/pulumi-stack-3879545197/node_modules/@pulumi/runtime/stack.ts#37,19"
+                    },
+                    {
+                        "sourcePosition": "project:///../../../../../../private/var/folders/82/nqnqw81s1h56l5nv940f9mq00000gn/T/pulumi-stack-3879545197/node_modules/@pulumi/cmd/run/run.ts#603,38"
+                    }
+                ]
+            },
+            {
+                "urn": "urn:pulumi:pulumi-stack-3879545197::pulumi-stack-3879545197::pulumi:providers:aws::default_7_12_0",
+                "custom": true,
+                "id": "fb9c763f-171e-4263-b9aa-821e0c60b028",
+                "type": "pulumi:providers:aws",
+                "created": "2026-01-19T21:13:46.178967+02:00",
+                "modified": "2026-01-19T21:13:46.178967+02:00"
+            },
+            {
+                "urn": "urn:pulumi:pulumi-stack-3879545197::pulumi-stack-3879545197::aws:rds/instance:Instance::default",
+                "custom": true,
+                "id": "db-LDFCLNNFWME3HLLEKTN4FNHZ6A",
+                "type": "aws:rds/instance:Instance",
+                "inputs": {
+                    "__defaults": [],
+                    "allocatedStorage": 10,
+                    "autoMinorVersionUpgrade": true,
+                    "backupTarget": "region",
+                    "backupWindow": "07:46-08:16",
+                    "caCertIdentifier": "rds-ca-rsa2048-g1",
+                    "databaseInsightsMode": "standard",
+                    "dbName": "mydb",
+                    "dbSubnetGroupName": "default",
+                    "deleteAutomatedBackups": true,
+                    "engine": "mysql",
+                    "engineLifecycleSupport": "open-source-rds-extended-support",
+                    "engineVersion": "8.0",
+                    "identifier": "terraform-20260119185218512300000001",
+                    "identifierPrefix": "terraform-",
+                    "instanceClass": "db.t3.micro",
+                    "licenseModel": "general-public-license",
+                    "maintenanceWindow": "tue:13:17-tue:13:47",
+                    "networkType": "IPV4",
+                    "optionGroupName": "default:mysql-8-0",
+                    "parameterGroupName": "default.mysql8.0",
+                    "password": {
+                        "Element": {
+                            "V": "foobarbaz"
+                        }
+                    },
+                    "port": 3306,
+                    "region": "us-west-2",
+                    "skipFinalSnapshot": true,
+                    "storageType": "gp2",
+                    "username": "foo",
+                    "vpcSecurityGroupIds": [
+                        "sg-4d436f12"
+                    ]
+                },
+                "outputs": {
+                    "address": "",
+                    "allocatedStorage": 10,
+                    "allowMajorVersionUpgrade": null,
+                    "applyImmediately": false,
+                    "arn": "arn:aws:rds:us-west-2:616138583583:db:terraform-20260119185218512300000001",
+                    "autoMinorVersionUpgrade": true,
+                    "availabilityZone": "",
+                    "backupRetentionPeriod": 0,
+                    "backupTarget": "region",
+                    "backupWindow": "07:46-08:16",
+                    "blueGreenUpdate": null,
+                    "caCertIdentifier": "rds-ca-rsa2048-g1",
+                    "characterSetName": "",
+                    "copyTagsToSnapshot": false,
+                    "customIamInstanceProfile": "",
+                    "customerOwnedIpEnabled": false,
+                    "databaseInsightsMode": "standard",
+                    "dbName": "mydb",
+                    "dbSubnetGroupName": "default",
+                    "dedicatedLogVolume": false,
+                    "deleteAutomatedBackups": true,
+                    "deletionProtection": false,
+                    "domain": "",
+                    "domainAuthSecretArn": "",
+                    "domainDnsIps": [],
+                    "domainFqdn": "",
+                    "domainIamRoleName": "",
+                    "domainOu": "",
+                    "enabledCloudwatchLogsExports": [],
+                    "endpoint": null,
+                    "engine": "mysql",
+                    "engineLifecycleSupport": "open-source-rds-extended-support",
+                    "engineVersion": "8.0",
+                    "engineVersionActual": "8.0.43",
+                    "finalSnapshotIdentifier": null,
+                    "hostedZoneId": "",
+                    "iamDatabaseAuthenticationEnabled": false,
+                    "id": "db-LDFCLNNFWME3HLLEKTN4FNHZ6A",
+                    "identifier": "terraform-20260119185218512300000001",
+                    "identifierPrefix": "terraform-",
+                    "instanceClass": "db.t3.micro",
+                    "iops": 0,
+                    "kmsKeyId": "",
+                    "latestRestorableTime": "",
+                    "licenseModel": "general-public-license",
+                    "listenerEndpoints": [],
+                    "maintenanceWindow": "tue:13:17-tue:13:47",
+                    "manageMasterUserPassword": null,
+                    "masterUserSecretKmsKeyId": null,
+                    "masterUserSecrets": [],
+                    "maxAllocatedStorage": 0,
+                    "monitoringInterval": 0,
+                    "monitoringRoleArn": "",
+                    "multiAz": false,
+                    "ncharCharacterSetName": "",
+                    "networkType": "IPV4",
+                    "optionGroupName": "default:mysql-8-0",
+                    "parameterGroupName": "default.mysql8.0",
+                    "password": {
+                        "Element": {
+                            "V": "foobarbaz"
+                        }
+                    },
+                    "passwordWo": {
+                        "Element": {
+                            "V": null
+                        }
+                    },
+                    "passwordWoVersion": null,
+                    "performanceInsightsEnabled": false,
+                    "performanceInsightsKmsKeyId": "",
+                    "performanceInsightsRetentionPeriod": 0,
+                    "port": 3306,
+                    "publiclyAccessible": false,
+                    "region": "us-west-2",
+                    "replicaMode": "",
+                    "replicas": [],
+                    "replicateSourceDb": "",
+                    "resourceId": "db-LDFCLNNFWME3HLLEKTN4FNHZ6A",
+                    "restoreToPointInTime": null,
+                    "s3Import": null,
+                    "skipFinalSnapshot": true,
+                    "snapshotIdentifier": null,
+                    "status": "incompatible-network",
+                    "storageEncrypted": false,
+                    "storageThroughput": 0,
+                    "storageType": "gp2",
+                    "tags": {},
+                    "tagsAll": {},
+                    "timezone": "",
+                    "upgradeStorageConfig": null,
+                    "username": "foo",
+                    "vpcSecurityGroupIds": [
+                        "sg-4d436f12"
+                    ]
+                },
+                "parent": "urn:pulumi:pulumi-stack-3879545197::pulumi-stack-3879545197::pulumi:pulumi:Stack::pulumi-stack-3879545197-pulumi-stack-3879545197",
+                "provider": "urn:pulumi:pulumi-stack-3879545197::pulumi-stack-3879545197::pulumi:providers:aws::default_7_12_0::fb9c763f-171e-4263-b9aa-821e0c60b028",
+                "created": "2026-01-19T21:13:46.178967+02:00",
+                "modified": "2026-01-19T21:13:46.178967+02:00"
+            }
+        ],
+        "metadata": {}
+    }
+}
+`

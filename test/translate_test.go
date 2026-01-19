@@ -108,7 +108,7 @@ func TestTranslateBasic(t *testing.T) {
 
 	ctx := context.Background()
 
-	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", false)
+	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", true)
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
@@ -142,7 +142,7 @@ func TestTranslateBasicWithDependencies(t *testing.T) {
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, _ := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), filepath.Join(stackFolder, "dependencies.json"), false)
+	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), filepath.Join(stackFolder, "dependencies.json"), true)
 	require.NoError(t, err)
 
 	dependencies, err := os.ReadFile(filepath.Join(stackFolder, "dependencies.json"))
@@ -158,7 +158,7 @@ func TestTranslateBasicWithEdit(t *testing.T) {
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", false)
+	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", true)
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
@@ -217,7 +217,7 @@ func TestTranslateWithDependency(t *testing.T) {
 	statePath := setupTFStack(t, "testdata/tf_dependency_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", false)
+	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", true)
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
@@ -239,7 +239,7 @@ func TestTranslateAWSStack(t *testing.T) {
 	statePath := setupTFStack(t, "testdata/tf_aws_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", false)
+	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", true)
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
@@ -262,7 +262,7 @@ func TestTranslateAWSStackWithEdit(t *testing.T) {
 	statePath := setupTFStack(t, "testdata/tf_aws_stack")
 	stackFolder, stackName := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", false)
+	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", true)
 	require.NoError(t, err)
 
 	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
@@ -282,6 +282,24 @@ func TestTranslateAWSStackWithEdit(t *testing.T) {
 
 	output = runCommand(t, stackFolder, "pulumi", "up", "--yes")
 	autogold.ExpectFile(t, output, autogold.Name("TestTranslateAWSStackWithEdit-up2"))
+}
+
+func TestTranslateAWSDBInstance(t *testing.T) {
+	t.Parallel()
+	skipIfCI(t)
+
+	ctx := context.Background()
+
+	statePath := "testdata/aws_db_instance"
+	stackFolder, _ := createPulumiStack(t)
+
+	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", true)
+	require.NoError(t, err)
+
+	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
+	
+	state := runCommand(t, stackFolder, "pulumi", "stack", "export")
+	autogold.ExpectFile(t, state)
 }
 
 // Running many tests in parallel exposes race conditions in Pulumi plugin handling; isolate PULUMI_HOME. Note that
