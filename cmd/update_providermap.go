@@ -24,13 +24,16 @@ import (
 
 func newUpdateProvidermapCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update-providermap",
+		Use:   "update-providermap <versions.yaml>",
 		Short: "Update provider version mappings",
 		Long: `Update provider version mappings between Terraform and Pulumi providers.
 
 This is an administrative command used to maintain the provider version mapping data.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return fmt.Errorf("not implemented yet")
+			versionMapPath := args[0]
+			updateProviderMap(versionMapPath)
+			return nil
 		},
 	}
 
