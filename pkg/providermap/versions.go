@@ -55,21 +55,39 @@ func (vm *VersionMap) HasPulumiVersion(bp BridgedProvider, tag ReleaseTag) bool 
 }
 
 // AddVersion adds a version pair and maintains newest-first ordering by Pulumi version.
+// If an entry with the same Pulumi ReleaseTag already exists, it will be replaced.
 func (vm *VersionMap) AddVersion(bp BridgedProvider, pulumi, upstream ReleaseTag) {
 	if vm.Bridged == nil {
 		vm.Bridged = make(map[BridgedProvider][]VersionPair)
 	}
+	// Remove any existing entry with the same Pulumi ReleaseTag
+	vm.removeByPulumiTag(bp, pulumi)
 	vm.Bridged[bp] = append(vm.Bridged[bp], VersionPair{Pulumi: pulumi, Upstream: upstream})
 	vm.sortVersions(bp)
 }
 
 // AddError records a failed version resolution with the error message.
+// If an entry with the same Pulumi ReleaseTag already exists, it will be replaced.
 func (vm *VersionMap) AddError(bp BridgedProvider, pulumi ReleaseTag, errMsg string) {
 	if vm.Bridged == nil {
 		vm.Bridged = make(map[BridgedProvider][]VersionPair)
 	}
+	// Remove any existing entry with the same Pulumi ReleaseTag
+	vm.removeByPulumiTag(bp, pulumi)
 	vm.Bridged[bp] = append(vm.Bridged[bp], VersionPair{Pulumi: pulumi, Error: errMsg})
 	vm.sortVersions(bp)
+}
+
+// removeByPulumiTag removes any existing entry with the given Pulumi ReleaseTag.
+func (vm *VersionMap) removeByPulumiTag(bp BridgedProvider, pulumi ReleaseTag) {
+	versions := vm.Bridged[bp]
+	filtered := make([]VersionPair, 0, len(versions))
+	for _, vp := range versions {
+		if vp.Pulumi != pulumi {
+			filtered = append(filtered, vp)
+		}
+	}
+	vm.Bridged[bp] = filtered
 }
 
 // sortVersions sorts versions for a provider newest-first by Pulumi version.
