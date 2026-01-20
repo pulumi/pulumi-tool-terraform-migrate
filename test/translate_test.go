@@ -190,7 +190,7 @@ func TestTranslateBasicWithEdit(t *testing.T) {
 	upResult, err := stack.Up(ctx)
 
 	// TODO[pulumi/pulumi-random#1967] intermittent failures here.
-	if strings.Contains(upResult.StdErr+upResult.StdOut, "string field contains invalid UTF-8") {
+	if err != nil && strings.Contains(err.Error(), "string field contains invalid UTF-8") {
 		return
 	}
 
