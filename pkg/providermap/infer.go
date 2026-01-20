@@ -98,6 +98,33 @@ func InferUpstreamVersion(bp BridgedProvider, tag ReleaseTag) (ReleaseTag, error
 		}
 	}
 
+	tag, err := inferUpstreamVersionFromSubmodule(repoDir, cacheDir)
+	if err != nil {
+		// Fall back to commit message parsing.
+		return inferUpstreamVersionFromCommitMsg(repoDir)
+	}
+	return tag, nil
+}
+
+func inferUpstreamVersionFromCommitMsg(repoDir string) (ReleaseTag, error) {
+	// Get the current commit message
+	cmd := exec.Command("git", "log", "-1", "--format=%B")
+	cmd.Dir = repoDir
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get commit message: %w", err)
+	}
+
+	commitMsg := strings.TrimSpace(string(output))
+	version, err := parseVersionFromCommitMsg(commitMsg)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse version from commit message: %w", err)
+	}
+
+	return ReleaseTag(version), nil
+}
+
+func inferUpstreamVersionFromSubmodule(repoDir, cacheDir string) (ReleaseTag, error) {
 	// Get the submodule commit SHA from git ls-tree
 	lsTreeCmd := exec.Command("git", "ls-tree", "HEAD", "upstream")
 	lsTreeCmd.Dir = repoDir

@@ -23,9 +23,10 @@ import (
 func TestParseVersionFromCommitMessage(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name     string
-		message  string
-		expected string
+		name        string
+		message     string
+		expected    string
+		expectError bool
 	}{
 		{
 			name: "Standard upgrade message with v prefix",
@@ -35,59 +36,81 @@ Upgrade terraform-provider-random to v3.8.0 (#1983)
 This PR was generated via $ upgrade-provider pulumi/pulumi-random
 --kind=provider --target-bridge-version=latest --target-version=3.8.0
 --allow-missing-docs=true.`,
-			expected: "v3.8.0",
+			expected:    "v3.8.0",
+			expectError: false,
 		},
 		{
-			name:     "Version without v prefix",
-			message:  "Upgrade terraform-provider-aws to 5.70.3",
-			expected: "5.70.3",
+			name:        "Version without v prefix",
+			message:     "Upgrade terraform-provider-aws to 5.70.3",
+			expected:    "5.70.3",
+			expectError: false,
 		},
 		{
-			name:     "Version with v prefix in middle of message",
-			message:  "Update provider to use v1.2.3 for compatibility",
-			expected: "v1.2.3",
+			name:        "Version with v prefix after 'to'",
+			message:     "Update provider to v1.2.3 for compatibility",
+			expected:    "v1.2.3",
+			expectError: false,
 		},
 		{
-			name:     "Pre-release version",
-			message:  "Upgrade to v2.0.0-beta.1 for testing",
-			expected: "v2.0.0-beta.1",
+			name:        "Pre-release version",
+			message:     "Upgrade to v2.0.0-beta.1 for testing",
+			expected:    "v2.0.0-beta.1",
+			expectError: false,
 		},
 		{
-			name:     "Version with build metadata",
-			message:  "Deploy version 1.0.0+20130313144700",
-			expected: "1.0.0+20130313144700",
+			name:        "Version with build metadata",
+			message:     "Deploy to 1.0.0+20130313144700",
+			expected:    "1.0.0+20130313144700",
+			expectError: false,
 		},
 		{
-			name:     "No version in message",
-			message:  "Fix bug in provider configuration",
-			expected: "",
+			name:        "No version in message",
+			message:     "Fix bug in provider configuration",
+			expected:    "",
+			expectError: true,
 		},
 		{
-			name:     "Empty message",
-			message:  "",
-			expected: "",
+			name:        "Empty message",
+			message:     "",
+			expected:    "",
+			expectError: true,
 		},
 		{
-			name:     "Multiple versions - returns first",
-			message:  "Upgrade from v1.0.0 to v2.0.0",
-			expected: "v1.0.0",
+			name:        "Multiple versions - returns version after 'to'",
+			message:     "Upgrade from v1.0.0 to v2.0.0",
+			expected:    "v2.0.0",
+			expectError: false,
 		},
 		{
-			name:     "Version in PR number should not match",
-			message:  "Some change (#123)",
-			expected: "",
+			name:        "Version in PR number should not match",
+			message:     "Some change (#123)",
+			expected:    "",
+			expectError: true,
 		},
 		{
-			name:     "Major.minor only should not match",
-			message:  "Update to 1.2 version",
-			expected: "",
+			name:        "Major.minor only should not match",
+			message:     "Update to 1.2 version",
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "Version without 'to' prefix should not match",
+			message:     "Deploy version 1.0.0 for production",
+			expected:    "",
+			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ParseVersionFromCommitMessage(tt.message)
-			assert.Equal(t, tt.expected, result)
+			result, err := ParseVersionFromCommitMessage(tt.message)
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Equal(t, "", result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
 		})
 	}
 }

@@ -15,17 +15,22 @@
 package providermap
 
 import (
+	"fmt"
 	"regexp"
 )
 
-// versionPattern matches semantic versions with optional 'v' prefix
-// Examples: v3.8.0, 3.8.0, v1.2.3-alpha, 1.0.0-beta+build
-var versionPattern = regexp.MustCompile(`v?\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?`)
+// versionPattern matches "to" followed by a semantic version with optional 'v' prefix
+// Examples: "to v3.8.0", "to 3.8.0", "to v1.2.3-alpha", "to 1.0.0-beta+build"
+// The version is captured in group 1
+var versionPattern = regexp.MustCompile(`to\s+(v?\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?)`)
 
-// ParseVersionFromCommitMessage extracts a version string from a commit message.
+// parseVersionFromCommitMsg extracts a version string from a commit message.
 // It looks for patterns like "Upgrade terraform-provider-random to v3.8.0" and returns
-// the version string (e.g., "v3.8.0"). Returns an empty string if no version is found.
-func ParseVersionFromCommitMessage(message string) string {
-	match := versionPattern.FindString(message)
-	return match
+// the version string (e.g., "v3.8.0"). Returns an error if no version is found.
+func parseVersionFromCommitMsg(message string) (string, error) {
+	matches := versionPattern.FindStringSubmatch(message)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("no upstream version found in commit message")
+	}
+	return matches[1], nil
 }
