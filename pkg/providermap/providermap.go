@@ -15,10 +15,26 @@
 package providermap
 
 import (
+	_ "embed"
 	"strings"
 
 	"github.com/blang/semver"
+	"gopkg.in/yaml.v3"
 )
+
+//go:embed versions.yaml
+var embeddedVersionsYAML []byte
+
+var refinedVersionMap *VersionMap
+
+func init() {
+	// Load the embedded versions.yaml file
+	var vm VersionMap
+	if err := yaml.Unmarshal(embeddedVersionsYAML, &vm); err == nil {
+		refinedVersionMap = &vm
+	}
+	// If unmarshal fails, refinedVersionMap will remain nil and fallback logic will be used
+}
 
 // A full name such as "registry.terraform.io/hashicorp/aws"
 type TerraformProviderName string
@@ -1117,8 +1133,33 @@ func RecommendPulumiProvider(tf TerraformProvider) RecommendedPulumiProvider {
 	// Determine which Pulumi provider version to recommend
 	var recommendedVersion string
 
-	// Try to parse the Terraform version and find the matching Pulumi version
-	if tf.Version != "" {
+	// First, try to find a precise match in the refined version map (versions.yaml)
+	if refinedVersionMap != nil && tf.Version != "" {
+		bridgedProvider := BridgedProvider(mapping.pulumiProviderName)
+		if versionPairs, exists := refinedVersionMap.Bridged[bridgedProvider]; exists {
+			// Normalize the Terraform version
+			tfVersion := strings.TrimPrefix(tf.Version, "v")
+
+			// Search for a precise match in the version pairs
+			for _, vp := range versionPairs {
+				// Skip entries with errors
+				if vp.Error != "" {
+					continue
+				}
+
+				// Check if the upstream version matches the Terraform version
+				upstreamVersion := strings.TrimPrefix(string(vp.Upstream), "v")
+				if upstreamVersion == tfVersion {
+					// Found a precise match - use this Pulumi version
+					recommendedVersion = string(vp.Pulumi)
+					break
+				}
+			}
+		}
+	}
+
+	// If no precise match found, try to parse the Terraform version and find the matching Pulumi version
+	if recommendedVersion == "" && tf.Version != "" {
 		// Normalize the version string by removing "v" prefix if present
 		versionStr := strings.TrimPrefix(tf.Version, "v")
 

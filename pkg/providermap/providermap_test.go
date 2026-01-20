@@ -65,6 +65,26 @@ func TestRecommendPulumiProvider(t *testing.T) {
 			expectedUseTerraformProvider: false,
 		},
 		{
+			name: "AWS Terraform registry - precise match from versions.yaml",
+			input: TerraformProvider{
+				Identifier: "registry.terraform.io/hashicorp/aws",
+				Version:    "v6.28.0",
+			},
+			expectedBridgedProvider:      "aws",
+			expectedVersion:              "v7.16.0", // Precise match from versions.yaml
+			expectedUseTerraformProvider: false,
+		},
+		{
+			name: "AWS Terraform registry - precise match from versions.yaml (v6.27.0)",
+			input: TerraformProvider{
+				Identifier: "registry.terraform.io/hashicorp/aws",
+				Version:    "6.27.0", // Without v prefix
+			},
+			expectedBridgedProvider:      "aws",
+			expectedVersion:              "v7.15.0", // Precise match from versions.yaml
+			expectedUseTerraformProvider: false,
+		},
+		{
 			name: "AWS - no version specified (should use latest)",
 			input: TerraformProvider{
 				Identifier: "registry.terraform.io/hashicorp/aws",
