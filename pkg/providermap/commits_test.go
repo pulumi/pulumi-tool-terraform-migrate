@@ -103,7 +103,7 @@ This PR was generated via $ upgrade-provider pulumi/pulumi-random
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseVersionFromCommitMessage(tt.message)
+			result, err := parseVersionFromCommitMsg(tt.message)
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Equal(t, "", result)
