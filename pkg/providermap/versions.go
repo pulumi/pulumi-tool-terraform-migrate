@@ -93,7 +93,7 @@ func (vm *VersionMap) SaveToYAML(path string) error {
 }
 
 // LoadVersionMapFromYAML loads a VersionMap from a YAML file at the specified path.
-func LoadVersionmapFromYAML(path string) (*VersionMap, error) {
+func LoadVersionMapFromYAML(path string) (*VersionMap, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read YAML file: %w", err)
