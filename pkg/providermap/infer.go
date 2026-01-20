@@ -22,6 +22,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 )
 
 // Used in internal offline tooling only.
@@ -99,15 +101,15 @@ func InferUpstreamVersion(bp BridgedProvider, tag ReleaseTag) (ReleaseTag, error
 	}
 
 	// Figure out exact version from the ./upstream repository tag.
-	tag, err := inferUpstreamVersionFromSubmodule(repoDir, cacheDir)
+	result, err := inferUpstreamVersionFromSubmodule(repoDir, cacheDir)
 	if err == nil {
-		return tag, nil
+		return result, nil
 	}
 
 	// Fall back to commit message parsing.
-	tag, err = inferUpstreamVersionFromCommitMsg(repoDir)
+	result, err = inferUpstreamVersionFromCommitMsg(repoDir)
 	if err == nil {
-		return tag, nil
+		return result, nil
 	}
 
 	// Fall back to fetching release notes and parsing those.
@@ -135,6 +137,8 @@ func inferUpstreamVersionFromCommitMsg(repoDir string) (ReleaseTag, error) {
 func inferUpstreamVersionFromReleaseNotes(
 	bp BridgedProvider, tag ReleaseTag, repoDir string,
 ) (ReleaseTag, error) {
+	contract.Assertf(tag != "", "tag should not be empty")
+
 	rel, err := fetchRelease(bp, tag)
 	if err != nil {
 		return "", fmt.Errorf("no GitHub release: %w", err)
