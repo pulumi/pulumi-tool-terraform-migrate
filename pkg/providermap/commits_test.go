@@ -135,6 +135,45 @@ This PR was generated via $ upgrade-provider pulumi/pulumi-random
 			expected:    "",
 			expectError: true,
 		},
+		{
+			name: "Multiple versions - select largest (stable releases)",
+			message: `[v7]: Upgrade upstream to v6.0.0 by @corymhall in #5616
+[v7]: Upgrade upstream to v6.1.0 by @corymhall in #5642
+[v7]: Upgrade terraform-provider-aws to v6.3.0 by @corymhall in #5654`,
+			expected:    "v6.3.0",
+			expectError: false,
+		},
+		{
+			name: "Multiple versions - select largest (with pre-releases)",
+			message: `[7.0.0-alpha]: upgrade upstream to 6.0.0-beta by @corymhall in #5479
+[7.0.0-alpha]: Upgrade upstream to v6.0.0-beta1 by @corymhall in #5511
+[v7]: Upgrade upstream to v6.0.0-beta2 by @corymhall in #5571
+[v7]: Upgrade upstream to 6.0.0-beta3 by @corymhall in #5606
+[v7]: Upgrade upstream to v6.0.0 by @corymhall in #5616`,
+			expected:    "v6.0.0",
+			expectError: false,
+		},
+		{
+			name: "Multiple versions - stable beats pre-release",
+			message: `Upgrade terraform to v5.0.0-rc1
+Upgrade terraform to v4.9.0`,
+			expected:    "v5.0.0-rc1",
+			expectError: false,
+		},
+		{
+			name: "Multiple versions - largest among pre-releases",
+			message: `Update upstream to 2.0.0-alpha.1
+Update upstream to 2.0.0-beta.1
+Update upstream to 2.0.0-alpha.5`,
+			expected:    "2.0.0-beta.1",
+			expectError: false,
+		},
+		{
+			name:        "Multiple versions - some with non-terraform/upstream prefix (ignored)",
+			message:     "Update bridge to 3.47.3\nUpgrade terraform to v2.0.0\nUpgrade upstream to v2.5.0",
+			expected:    "v2.5.0",
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
