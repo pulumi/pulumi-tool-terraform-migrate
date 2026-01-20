@@ -81,6 +81,12 @@ func updateProviderMap(versionMapPath string) {
 
 			vm.AddVersion(bp, tag, upstreamVersion)
 			fmt.Printf("  %s -> %s\n", tag, upstreamVersion)
+
+			// Write the updated VersionMap to YAML
+			if err := vm.SaveToYAML(versionMapPath); err != nil {
+				fmt.Fprintf(os.Stderr, "Error saving VersionMap: %v\n", err)
+				os.Exit(1)
+			}
 		}
 	}
 
