@@ -19,10 +19,11 @@ import (
 	"regexp"
 )
 
-// versionPattern matches "to" followed by a semantic version with optional 'v' prefix
-// Examples: "to v3.8.0", "to 3.8.0", "to v1.2.3-alpha", "to 1.0.0-beta+build"
+// versionPattern matches semantic versions in commit messages that follow specific patterns.
+// Only matches when the message contains "terraform.*to" or "upstream.*to" (case-insensitive).
+// Examples: "Upgrade terraform-provider-aws to v3.8.0", "Update upstream to 1.2.3"
 // The version is captured in group 1
-var versionPattern = regexp.MustCompile(`to\s+(v?\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?)`)
+var versionPattern = regexp.MustCompile(`(?i)(?:terraform|upstream).*to\s+(v?\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?)`)
 
 // parseVersionFromCommitMsg extracts a version string from a commit message.
 // It looks for patterns like "Upgrade terraform-provider-random to v3.8.0" and returns
