@@ -23,6 +23,9 @@ import (
 	"sort"
 	"strings"
 
+	"errors"
+
+	"github.com/opentracing/opentracing-go/log"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 )
 
@@ -141,7 +144,8 @@ func inferUpstreamVersionFromReleaseNotes(
 
 	rel, err := fetchRelease(bp, tag)
 	if err != nil {
-		return "", fmt.Errorf("no GitHub release: %w", err)
+		log.Error(err)
+		return "", errors.New("no GitHub release")
 	}
 	version, err := parseVersionFromCommitMsg(rel.Body)
 	if err != nil {
