@@ -1452,433 +1452,433 @@ bridged:
         - pulumi: v6.59.0
           upstream: v4.70.0
         - pulumi: v6.58.0
-          error: no upstream submodule found
+          upstream: v4.68.0
         - pulumi: v6.57.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.56.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.55.1
-          error: no upstream submodule found
+          upstream: v4.63.1
         - pulumi: v6.55.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.54.0
-          error: no upstream submodule found
+          upstream: v4.61.0
         - pulumi: v6.53.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.52.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.51.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.50.0
-          error: no upstream submodule found
+          upstream: v4.53.1
         - pulumi: v6.49.0
-          error: no upstream submodule found
+          upstream: v4.51.0
         - pulumi: v6.48.0
-          error: no upstream submodule found
+          upstream: v4.50.0
         - pulumi: v6.47.0
-          error: no upstream submodule found
+          upstream: v4.49.0
         - pulumi: v6.46.0
-          error: no upstream submodule found
+          upstream: v4.47.0
         - pulumi: v6.45.0
-          error: no upstream submodule found
+          upstream: v4.46.0
         - pulumi: v6.44.0
-          error: no upstream submodule found
+          upstream: v4.44.1
         - pulumi: v6.43.0
-          error: no upstream submodule found
+          upstream: v4.43.0
         - pulumi: v6.42.0
-          error: no upstream submodule found
+          upstream: v4.42.1
         - pulumi: v6.41.0
-          error: no upstream submodule found
+          upstream: v4.41.0
         - pulumi: v6.40.0
-          error: no upstream submodule found
+          upstream: v4.39.0
         - pulumi: v6.39.0
-          error: no upstream submodule found
+          upstream: v4.38.0
         - pulumi: v6.38.0
-          error: no upstream submodule found
+          upstream: v4.37.0
         - pulumi: v6.37.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.36.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.35.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.34.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.33.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v6.32.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.31.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.30.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.29.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.28.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.27.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.26.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.25.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.24.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.23.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.22.0
-          error: no upstream submodule found
+          upstream: v4.20.0
         - pulumi: v6.21.0
-          error: no upstream submodule found
+          upstream: v4.19.0
         - pulumi: v6.20.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.19.0
-          error: no upstream submodule found
+          upstream: v4.17.0
         - pulumi: v6.18.0
-          error: no upstream submodule found
+          upstream: v4.16.0
         - pulumi: v6.17.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.16.0
-          error: no upstream submodule found
+          upstream: v4.14.0
         - pulumi: v6.15.1
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.15.0
-          error: no upstream submodule found
+          upstream: v4.13.0
         - pulumi: v6.14.0
-          error: no upstream submodule found
+          upstream: v4.12.0
         - pulumi: v6.13.0
-          error: no upstream submodule found
+          upstream: v3.19.1
         - pulumi: v6.12.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.11.0
-          error: no upstream submodule found
+          upstream: v4.10.0
         - pulumi: v6.10.0
-          error: no upstream submodule found
+          upstream: v3.18.0
         - pulumi: v6.9.0
-          error: no upstream submodule found
+          upstream: v4.8.0
         - pulumi: v6.8.0
-          error: no upstream submodule found
+          upstream: v4.7.0
         - pulumi: v6.7.0
-          error: no upstream submodule found
+          upstream: v4.6.0
         - pulumi: v6.6.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.5.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.4.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.3.1
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.3.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.2.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.1.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v6.0.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.26.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.25.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.24.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.23.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.22.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.21.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.20.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.19.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.18.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.17.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.16.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.15.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.14.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.13.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.12.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.11.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.10.1
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.10.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.9.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.8.1
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.8.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.7.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.6.0
-          error: no upstream submodule found
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v5.5.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v5.4.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v5.3.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v5.2.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v5.1.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v5.0.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.21.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.20.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.19.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.18.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.17.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.16.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.16.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.15.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.14.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.13.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.12.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.11.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.11.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.10.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.9.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.9.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.8.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.7.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.6.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.6.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.5.2
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.5.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.5.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.4.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.3.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.2.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.2.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.1.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v4.0.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.25.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.24.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.23.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.22.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.21.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.21.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.20.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.19.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.18.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.17.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.16.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.15.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.14.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.13.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.12.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.11.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.10.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.10.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.9.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.8.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.7.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.7.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.6.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.5.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.4.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.3.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.2.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.1.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.0.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v3.0.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.13.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.12.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.11.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.11.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.10.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.9.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.8.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.7.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.6.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.5.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.4.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.3.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.2.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.1.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v2.0.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.9.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.8.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.7.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.6.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.5.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.4.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.4.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.3.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.2.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.1.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v1.0.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.16
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.15
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.14
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.13
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.12
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.11
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.10
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.9
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.8
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.7
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.6
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.5
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.4
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.3
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.2
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.18.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.17.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.17.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.16.9
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.16.8
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.16.7
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.16.6
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.16.5
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.16.4
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.16.3
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.16.2
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.16.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.16.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.15.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.15.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.14.3
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.14.2
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.14.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.14.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.12.0
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.11.1
-          error: no upstream submodule found
+          error: no GitHub release
         - pulumi: v0.9.11
-          error: no upstream submodule found
+          error: no GitHub release
     github: []
     gitlab: []
     harness: []
