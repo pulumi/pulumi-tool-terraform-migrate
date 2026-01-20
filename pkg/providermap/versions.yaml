@@ -1,0 +1,916 @@
+bridged:
+    aws:
+        - pulumi: v7.16.0
+          upstream: v6.28.0
+        - pulumi: v7.15.0
+          upstream: v6.27.0
+        - pulumi: v7.14.0
+          upstream: v6.26.0
+        - pulumi: v7.13.0
+          upstream: v6.25.0
+        - pulumi: v7.12.0
+          upstream: v6.21.0
+        - pulumi: v7.11.1
+          upstream: v6.19.0
+        - pulumi: v7.11.0
+          upstream: v6.19.0
+        - pulumi: v7.10.0
+          upstream: v6.18.0
+        - pulumi: v7.9.1
+          upstream: v6.17.0
+        - pulumi: v7.9.0
+          upstream: v6.17.0
+        - pulumi: v7.8.0
+          upstream: v6.15.0
+        - pulumi: v7.7.0
+          upstream: v6.11.0
+        - pulumi: v7.6.0
+          upstream: v6.10.0
+        - pulumi: v7.5.0
+          upstream: v6.9.0
+        - pulumi: v7.4.0
+          upstream: v6.8.0
+        - pulumi: v7.3.1
+          upstream: v6.7.0
+        - pulumi: v7.3.0
+          upstream: v6.7.0
+        - pulumi: v7.2.0
+          upstream: v6.6.0
+        - pulumi: v7.1.0
+          error: no matching tag found for commit 399e268542130291f79d97247ad721010dd359ae
+        - pulumi: v7.0.0
+          error: no matching tag found for commit 684a6dce2c66d23889613aa0349be2181d0a7ff0
+        - pulumi: v6.83.2
+          error: no matching tag found for commit f7a3b98da589ab1d52756b0dcee0dbf2de83d635
+        - pulumi: v6.83.1
+          error: no matching tag found for commit f7a3b98da589ab1d52756b0dcee0dbf2de83d635
+        - pulumi: v6.83.0
+          error: no matching tag found for commit f7a3b98da589ab1d52756b0dcee0dbf2de83d635
+        - pulumi: v6.82.2
+          error: no matching tag found for commit c018c07b98ab9f5330bb3baf28dd95a12a23446d
+        - pulumi: v6.82.1
+          error: no matching tag found for commit c018c07b98ab9f5330bb3baf28dd95a12a23446d
+        - pulumi: v6.82.0
+          error: no matching tag found for commit c018c07b98ab9f5330bb3baf28dd95a12a23446d
+        - pulumi: v6.81.0
+          error: no matching tag found for commit 84ed2ea31bb548f0721447b37430c06b3d890311
+        - pulumi: v6.80.0
+          error: no matching tag found for commit 306993cbf9bb497c272f7890df621a53eb75e3c7
+        - pulumi: v6.79.1
+          error: no matching tag found for commit f9e1ed42dbfb0e95997a0f5d0f7e0c3ccc7a7136
+        - pulumi: v6.79.0
+          error: no matching tag found for commit f9e1ed42dbfb0e95997a0f5d0f7e0c3ccc7a7136
+        - pulumi: v6.78.0
+          error: no matching tag found for commit 5f2ca6e3dcdaf55a51161ee88672bb7ad73d4b27
+        - pulumi: v6.77.1
+          error: no matching tag found for commit ce63258f4bfb41f579196dfdb53f34d6bb84eade
+        - pulumi: v6.77.0
+          error: no matching tag found for commit ce63258f4bfb41f579196dfdb53f34d6bb84eade
+        - pulumi: v6.76.0
+          error: no matching tag found for commit ce63258f4bfb41f579196dfdb53f34d6bb84eade
+        - pulumi: v6.75.0
+          error: no matching tag found for commit f67a4016e3207e399a63d45e0d63e91e29301607
+        - pulumi: v6.74.0
+          error: no matching tag found for commit 7b608e8fdbc9aaf77291f42007d1abef47e76322
+        - pulumi: v6.73.0
+          error: no matching tag found for commit 77957c2e1e1ec30eb112051cb5515512473d2e6f
+        - pulumi: v6.72.0
+          error: no matching tag found for commit 32ce1ab8935ef67fe0f2a0fbb98b1f8da5a79dc6
+        - pulumi: v6.71.0
+          error: no matching tag found for commit cc46d8928eb84dc7e500d115ded6c5887690c48a
+        - pulumi: v6.70.1
+          error: no matching tag found for commit c2fe7d5b64e37f9091c9f2bd85275e657219721f
+        - pulumi: v6.70.0
+          error: no matching tag found for commit c2fe7d5b64e37f9091c9f2bd85275e657219721f
+        - pulumi: v6.69.0
+          error: no matching tag found for commit c35b05f0c8f4761f21a08f64db8425745051059a
+        - pulumi: v6.68.0
+          error: no matching tag found for commit 658a64579f91e53276d2a71da00aa43b854d3de7
+        - pulumi: v6.67.0
+          error: no matching tag found for commit 111488f34aee1539e1931711d744454572fd64c4
+        - pulumi: v6.66.3
+          error: no matching tag found for commit 6b0d5d2f47bd0e42ffc81bcbc0ad30314af840b9
+        - pulumi: v6.66.2
+          error: no matching tag found for commit ec6555ce8d44ce5661811b3877f10fe9e379bccd
+        - pulumi: v6.66.1
+          error: no matching tag found for commit ec6555ce8d44ce5661811b3877f10fe9e379bccd
+        - pulumi: v6.66.0
+          error: no matching tag found for commit ba4eee9c51077476f4b8986156572f758e486013
+        - pulumi: v6.65.0
+          error: no matching tag found for commit c38d7c284d0684653d53452eb1f9dd3e65b905fd
+        - pulumi: v6.64.0
+          error: no matching tag found for commit 9273b07bad89e6aa730482f3a8fc7840b38b9d68
+        - pulumi: v6.63.0
+          error: no matching tag found for commit 8dad2d3a602c8fc103a7eacb1fc9f4d3a9ac3994
+        - pulumi: v6.62.2
+          error: no matching tag found for commit ed4d7f5ef981f42ea7de09d440af3507d0cba081
+        - pulumi: v6.62.1
+          error: no matching tag found for commit ed4d7f5ef981f42ea7de09d440af3507d0cba081
+        - pulumi: v6.62.0
+          error: no matching tag found for commit ed4d7f5ef981f42ea7de09d440af3507d0cba081
+        - pulumi: v6.61.0
+          error: no matching tag found for commit 6ea8ba35a5ce809541a45b3f99076f9537c37baa
+        - pulumi: v6.60.0
+          error: no matching tag found for commit 6a499196b4e29f596106b09bb15ed33426366d0c
+        - pulumi: v6.59.2
+          error: no matching tag found for commit 7a8669e827e3fbe32f436e93ef77a4c58a199751
+        - pulumi: v6.59.1
+          error: no matching tag found for commit 7a8669e827e3fbe32f436e93ef77a4c58a199751
+        - pulumi: v6.59.0
+          error: no matching tag found for commit c8fa0fa3eb40e37c59e7b28e44659b51609e35e5
+        - pulumi: v6.58.0
+          error: no matching tag found for commit 2d8df6e0c897d90d71584735cd1f09d2a4ac7ffb
+        - pulumi: v6.57.0
+          error: no matching tag found for commit 1977363a134f59ecfe3ebbd90c97dd8fad94336d
+        - pulumi: v6.56.1
+          error: no matching tag found for commit 778f685e089339b3bf15e5c4570e8cb855da15b2
+        - pulumi: v6.56.0
+          error: no matching tag found for commit 778f685e089339b3bf15e5c4570e8cb855da15b2
+        - pulumi: v6.55.0
+          error: no matching tag found for commit 575959be1d26aba89fd5bf150d79de945066d9ed
+        - pulumi: v6.54.2
+          error: no matching tag found for commit 1f4f309d47c2a82018872728577799256dfcc633
+        - pulumi: v6.54.1
+          error: no matching tag found for commit 1f4f309d47c2a82018872728577799256dfcc633
+        - pulumi: v6.54.0
+          error: no matching tag found for commit 1f4f309d47c2a82018872728577799256dfcc633
+        - pulumi: v6.53.0
+          error: no matching tag found for commit 430fafd3c81c4ad5d92a13849f22403914bf5c06
+        - pulumi: v6.52.0
+          error: no matching tag found for commit c593821ffc1561d1ac7f2fbb61dc36d0356d30a4
+        - pulumi: v6.51.1
+          error: no matching tag found for commit 2145f88d813b890390bb7baff5834fdd3409d757
+        - pulumi: v6.51.0
+          error: no matching tag found for commit 2145f88d813b890390bb7baff5834fdd3409d757
+        - pulumi: v6.50.1
+          error: no matching tag found for commit 4a8523a51473e05ace8633b7cb7f722f6e01bb45
+        - pulumi: v6.50.0
+          error: no matching tag found for commit dd68fed26d3433a5487e2852274ef54edd2e63a1
+        - pulumi: v6.49.1
+          error: no matching tag found for commit 2b83760c87cb8ab3ee4f8c96db410bf30bf8e165
+        - pulumi: v6.49.0
+          error: no matching tag found for commit 2b83760c87cb8ab3ee4f8c96db410bf30bf8e165
+        - pulumi: v6.48.0
+          error: no matching tag found for commit 534f273aa98a0d26b59656ca677fd07d733e0a57
+        - pulumi: v6.47.0
+          error: no matching tag found for commit 2856a79ce614422b1dc21adbcec2ebc56982ffab
+        - pulumi: v6.46.0
+          error: no matching tag found for commit c4acee31757bf4c8792af16d773d6fa2b855ac4d
+        - pulumi: v6.45.2
+          error: no matching tag found for commit 5b5e52929e09bbab8bd2e23adb9b9fa2a848c49c
+        - pulumi: v6.45.1
+          error: no matching tag found for commit 5b5e52929e09bbab8bd2e23adb9b9fa2a848c49c
+        - pulumi: v6.45.0
+          error: no matching tag found for commit 5b5e52929e09bbab8bd2e23adb9b9fa2a848c49c
+        - pulumi: v6.44.0
+          error: no matching tag found for commit 3b6772b0864505f9232f737e3d72d80f14043609
+        - pulumi: v6.43.0
+          error: no matching tag found for commit 5fbe3cadd65eb86ebbe1137ebdffeb04c1416207
+        - pulumi: v6.42.1
+          error: no matching tag found for commit 7f011bde8a0843786eb68ac3a4848243c1eca99f
+        - pulumi: v6.42.0
+          error: no matching tag found for commit 7f011bde8a0843786eb68ac3a4848243c1eca99f
+        - pulumi: v6.41.0
+          error: no matching tag found for commit 4c52b0c1a9abf53acadf23f30c35f8b81215ef4b
+        - pulumi: v6.40.0
+          error: no matching tag found for commit 14866e31ef916bebb0988bba524c846b05855191
+        - pulumi: v6.39.1
+          error: no matching tag found for commit 008c8a10089c5730f6244a0acc95b22447bcfac4
+        - pulumi: v6.39.0
+          error: no matching tag found for commit 008c8a10089c5730f6244a0acc95b22447bcfac4
+        - pulumi: v6.38.1
+          error: no matching tag found for commit 8889457f4cb7c68b20af8a224fe798ee91e4b590
+        - pulumi: v6.38.0
+          error: no matching tag found for commit 8889457f4cb7c68b20af8a224fe798ee91e4b590
+        - pulumi: v6.37.1
+          error: no matching tag found for commit f00a84434b4c03d3a26d11c35bd94c78f2978c5e
+        - pulumi: v6.37.0
+          error: no matching tag found for commit f00a84434b4c03d3a26d11c35bd94c78f2978c5e
+        - pulumi: v6.36.0
+          error: no matching tag found for commit 5547244bd442dfe407ed988802b25234c27720ad
+        - pulumi: v6.35.0
+          error: no matching tag found for commit a30704e58a4df006a91cf375e259fe5981b5b556
+        - pulumi: v6.34.1
+          error: no matching tag found for commit a30704e58a4df006a91cf375e259fe5981b5b556
+        - pulumi: v6.34.0
+          error: no matching tag found for commit a30704e58a4df006a91cf375e259fe5981b5b556
+        - pulumi: v6.33.1
+          error: no matching tag found for commit 68dd57960739ef6f85322085463ffa51fd87a57f
+        - pulumi: v6.33.0
+          error: no matching tag found for commit 68dd57960739ef6f85322085463ffa51fd87a57f
+        - pulumi: v6.32.0
+          error: no matching tag found for commit 83da35124745114253464cb974e6e257b4322011
+        - pulumi: v6.31.1
+          error: no matching tag found for commit 7769ba5ef892ca70f95d20b82f28b92c6645d35d
+        - pulumi: v6.31.0
+          error: no matching tag found for commit 7769ba5ef892ca70f95d20b82f28b92c6645d35d
+        - pulumi: v6.30.0
+          error: no matching tag found for commit b5ba61c6a53983449c4721ca6b8a904a8b33e6ea
+        - pulumi: v6.29.1
+          error: no matching tag found for commit 797d38d66c80e23b37e2034b57b64aff2dbdd38a
+        - pulumi: v6.29.0
+          error: no matching tag found for commit 797d38d66c80e23b37e2034b57b64aff2dbdd38a
+        - pulumi: v6.28.2
+          error: no matching tag found for commit 898c9b5a1d8958366b293dad02daa44e24e360ef
+        - pulumi: v6.28.1
+          error: no matching tag found for commit 898c9b5a1d8958366b293dad02daa44e24e360ef
+        - pulumi: v6.28.0
+          error: no matching tag found for commit 898c9b5a1d8958366b293dad02daa44e24e360ef
+        - pulumi: v6.27.0
+          error: no matching tag found for commit 16ba1d313e525cbe4f0c5f842b821f236fac1e1a
+        - pulumi: v6.26.0
+          error: no matching tag found for commit e3b903a12acba8e16aafeba2a18cb813cd234f75
+        - pulumi: v6.25.1
+          error: no matching tag found for commit c7c1bc3e6d88d3d47979ba38c7a44c56e6763449
+        - pulumi: v6.25.0
+          error: no matching tag found for commit c7c1bc3e6d88d3d47979ba38c7a44c56e6763449
+        - pulumi: v6.24.2
+          error: no matching tag found for commit 712c4c2c08ac343ff0d7a21f0bc92f0bea4240e1
+        - pulumi: v6.24.1
+          error: no matching tag found for commit 712c4c2c08ac343ff0d7a21f0bc92f0bea4240e1
+        - pulumi: v6.24.0
+          error: no matching tag found for commit 4492c0765e88289710541f50e026753c9095d281
+        - pulumi: v6.23.0
+          error: no matching tag found for commit 4492c0765e88289710541f50e026753c9095d281
+        - pulumi: v6.22.2
+          error: no matching tag found for commit acff092b0397902d37a1f6d5a81321f3907f0573
+        - pulumi: v6.22.1
+          error: no matching tag found for commit acff092b0397902d37a1f6d5a81321f3907f0573
+        - pulumi: v6.22.0
+          error: no matching tag found for commit acff092b0397902d37a1f6d5a81321f3907f0573
+        - pulumi: v6.21.0
+          error: no matching tag found for commit a316669d19e3bad7dad38b2caacba60d63fb9eb6
+        - pulumi: v6.20.1
+          error: no matching tag found for commit a06bcc94ed019a4e6af46f9a739e724c0031388f
+        - pulumi: v6.20.0
+          error: no matching tag found for commit a06bcc94ed019a4e6af46f9a739e724c0031388f
+        - pulumi: v6.19.0
+          error: no matching tag found for commit a06bcc94ed019a4e6af46f9a739e724c0031388f
+        - pulumi: v6.18.2
+          error: no matching tag found for commit a98686fb98f9c0511531f8711f20d41355d5f090
+        - pulumi: v6.18.1
+          error: no matching tag found for commit 399ec5d623675592ac4924d733c198d4a65f82e3
+        - pulumi: v6.18.0
+          error: no matching tag found for commit 399ec5d623675592ac4924d733c198d4a65f82e3
+        - pulumi: v6.17.0
+          error: no matching tag found for commit 399ec5d623675592ac4924d733c198d4a65f82e3
+        - pulumi: v6.16.0
+          error: no matching tag found for commit 399ec5d623675592ac4924d733c198d4a65f82e3
+        - pulumi: v6.15.0
+          error: no matching tag found for commit 399ec5d623675592ac4924d733c198d4a65f82e3
+        - pulumi: v6.14.0
+          error: no matching tag found for commit c42a57e4901afb50360ac092684f5e13738901ac
+        - pulumi: v6.13.3
+          error: no matching tag found for commit a5b0cc994860d6d3242552c71dfa128428f30642
+        - pulumi: v6.13.2
+          error: no matching tag found for commit a5b0cc994860d6d3242552c71dfa128428f30642
+        - pulumi: v6.13.1
+          error: no matching tag found for commit a5b0cc994860d6d3242552c71dfa128428f30642
+        - pulumi: v6.13.0
+          error: no matching tag found for commit a5b0cc994860d6d3242552c71dfa128428f30642
+        - pulumi: v6.12.3
+          error: no matching tag found for commit 54bb15fc56de4a43633a44bb7ad51739ea3bd18c
+        - pulumi: v6.12.2
+          error: no matching tag found for commit 54bb15fc56de4a43633a44bb7ad51739ea3bd18c
+        - pulumi: v6.12.1
+          error: no matching tag found for commit 54bb15fc56de4a43633a44bb7ad51739ea3bd18c
+        - pulumi: v6.12.0
+          error: no matching tag found for commit 54bb15fc56de4a43633a44bb7ad51739ea3bd18c
+        - pulumi: v6.11.0
+          error: no matching tag found for commit 2f22e6ca78084d2623b287aa23e91bd44478d01b
+        - pulumi: v6.10.0
+          error: no matching tag found for commit 4b389cd97e084992727d76e83cbd75ef2210484f
+        - pulumi: v6.9.0
+          error: no matching tag found for commit 8ad6f763ee2af8c81bd3029c1eccfe83873b9ae2
+        - pulumi: v6.8.0
+          error: no matching tag found for commit e4526080946e63dd40ef99d6b22459cbdebb33fe
+        - pulumi: v6.7.0
+          error: no matching tag found for commit 6a07ee66cc380340e2f2c0e73852364866247b49
+        - pulumi: v6.6.1
+          error: no matching tag found for commit 445605f7431531a0b9697bfcc96061cb9490b2d7
+        - pulumi: v6.6.0
+          error: no matching tag found for commit 445605f7431531a0b9697bfcc96061cb9490b2d7
+        - pulumi: v6.5.0
+          error: no matching tag found for commit 1e981db3da826d98364f778a0a8c57fcd73713a7
+        - pulumi: v6.4.1
+          error: no matching tag found for commit dbf42d7e261ffdc553982b11c3f765c6469f9d70
+        - pulumi: v6.4.0
+          error: no matching tag found for commit dbf42d7e261ffdc553982b11c3f765c6469f9d70
+        - pulumi: v6.3.0
+          error: no matching tag found for commit 522a58443aa503714444e5333641300a6af34621
+        - pulumi: v6.2.1
+          error: no matching tag found for commit 73a8fec0016e086ea69d4823197f036a70ea5a05
+        - pulumi: v6.2.0
+          error: no matching tag found for commit 73a8fec0016e086ea69d4823197f036a70ea5a05
+        - pulumi: v6.1.0
+          error: no matching tag found for commit 73a8fec0016e086ea69d4823197f036a70ea5a05
+        - pulumi: v6.0.4
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v6.0.3
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v6.0.2
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.43.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.42.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.41.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.40.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.39.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.38.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.37.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.36.1
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.36.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.35.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.34.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.33.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.32.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.31.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.30.1
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.30.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.29.1
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.29.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.28.0
+          error: could not find upstream submodule URL in .gitmodules
+        - pulumi: v5.27.0
+          error: no upstream submodule found
+        - pulumi: v5.26.0
+          error: no upstream submodule found
+        - pulumi: v5.25.0
+          error: no upstream submodule found
+        - pulumi: v5.24.0
+          error: no upstream submodule found
+        - pulumi: v5.23.0
+          error: no upstream submodule found
+        - pulumi: v5.22.0
+          error: no upstream submodule found
+        - pulumi: v5.21.1
+          error: no upstream submodule found
+        - pulumi: v5.21.0
+          error: no upstream submodule found
+        - pulumi: v5.20.0
+          error: no upstream submodule found
+        - pulumi: v5.19.0
+          error: no upstream submodule found
+        - pulumi: v5.18.0
+          error: no upstream submodule found
+        - pulumi: v5.17.0
+          error: no upstream submodule found
+        - pulumi: v5.16.2
+          error: no upstream submodule found
+        - pulumi: v5.16.1
+          error: no upstream submodule found
+        - pulumi: v5.16.0
+          error: no upstream submodule found
+        - pulumi: v5.15.0
+          error: no upstream submodule found
+        - pulumi: v5.14.0
+          error: no upstream submodule found
+        - pulumi: v5.13.0
+          error: no upstream submodule found
+        - pulumi: v5.12.1
+          error: no upstream submodule found
+        - pulumi: v5.12.0
+          error: no upstream submodule found
+        - pulumi: v5.11.0
+          error: no upstream submodule found
+        - pulumi: v5.10.0
+          error: no upstream submodule found
+        - pulumi: v5.9.2
+          error: no upstream submodule found
+        - pulumi: v5.9.1
+          error: no upstream submodule found
+        - pulumi: v5.9.0
+          error: no upstream submodule found
+        - pulumi: v5.8.0
+          error: no upstream submodule found
+        - pulumi: v5.7.2
+          error: no upstream submodule found
+        - pulumi: v5.7.1
+          error: no upstream submodule found
+        - pulumi: v5.7.0
+          error: no upstream submodule found
+        - pulumi: v5.6.0
+          error: no upstream submodule found
+        - pulumi: v5.5.0
+          error: no upstream submodule found
+        - pulumi: v5.4.0
+          error: no upstream submodule found
+        - pulumi: v5.3.0
+          error: no upstream submodule found
+        - pulumi: v5.2.0
+          error: no upstream submodule found
+        - pulumi: v5.1.4
+          error: no upstream submodule found
+        - pulumi: v5.1.3
+          error: no upstream submodule found
+        - pulumi: v5.1.2
+          error: no upstream submodule found
+        - pulumi: v5.1.1
+          error: no upstream submodule found
+        - pulumi: v5.1.0
+          error: no upstream submodule found
+        - pulumi: v5.0.0
+          error: no upstream submodule found
+        - pulumi: v4.38.1
+          error: no upstream submodule found
+        - pulumi: v4.38.0
+          error: no upstream submodule found
+        - pulumi: v4.37.5
+          error: no upstream submodule found
+        - pulumi: v4.37.4
+          error: no upstream submodule found
+        - pulumi: v4.37.3
+          error: no upstream submodule found
+        - pulumi: v4.37.2
+          error: no upstream submodule found
+        - pulumi: v4.37.1
+          error: no upstream submodule found
+        - pulumi: v4.37.0
+          error: no upstream submodule found
+        - pulumi: v4.36.0
+          error: no upstream submodule found
+        - pulumi: v4.35.0
+          error: no upstream submodule found
+        - pulumi: v4.34.0
+          error: no upstream submodule found
+        - pulumi: v4.33.1
+          error: no upstream submodule found
+        - pulumi: v4.33.0
+          error: no upstream submodule found
+        - pulumi: v4.32.0
+          error: no upstream submodule found
+        - pulumi: v4.31.0
+          error: no upstream submodule found
+        - pulumi: v4.30.0
+          error: no upstream submodule found
+        - pulumi: v4.29.0
+          error: no upstream submodule found
+        - pulumi: v4.28.0
+          error: no upstream submodule found
+        - pulumi: v4.27.2
+          error: no upstream submodule found
+        - pulumi: v4.27.1
+          error: no upstream submodule found
+        - pulumi: v4.27.0
+          error: no upstream submodule found
+        - pulumi: v4.26.0
+          error: no upstream submodule found
+        - pulumi: v4.25.0
+          error: no upstream submodule found
+        - pulumi: v4.24.1
+          error: no upstream submodule found
+        - pulumi: v4.24.0
+          error: no upstream submodule found
+        - pulumi: v4.23.0
+          error: no upstream submodule found
+        - pulumi: v4.22.1
+          error: no upstream submodule found
+        - pulumi: v4.22.0
+          error: no upstream submodule found
+        - pulumi: v4.21.2
+          error: no upstream submodule found
+        - pulumi: v4.21.1
+          error: no upstream submodule found
+        - pulumi: v4.21.0
+          error: no upstream submodule found
+        - pulumi: v4.20.0
+          error: no upstream submodule found
+        - pulumi: v4.19.0
+          error: no upstream submodule found
+        - pulumi: v4.18.0
+          error: no upstream submodule found
+        - pulumi: v4.17.0
+          error: no upstream submodule found
+        - pulumi: v4.16.0
+          error: no upstream submodule found
+        - pulumi: v4.15.0
+          error: no upstream submodule found
+        - pulumi: v4.14.0
+          error: no upstream submodule found
+        - pulumi: v4.13.0
+          error: no upstream submodule found
+        - pulumi: v4.12.0
+          error: no upstream submodule found
+        - pulumi: v4.11.0
+          error: no upstream submodule found
+        - pulumi: v4.10.0
+          error: no upstream submodule found
+        - pulumi: v4.9.1
+          error: no upstream submodule found
+        - pulumi: v4.9.0
+          error: no upstream submodule found
+        - pulumi: v4.8.0
+          error: no upstream submodule found
+        - pulumi: v4.7.0
+          error: no upstream submodule found
+        - pulumi: v4.6.0
+          error: no upstream submodule found
+        - pulumi: v4.5.1
+          error: no upstream submodule found
+        - pulumi: v4.5.0
+          error: no upstream submodule found
+        - pulumi: v4.4.1
+          error: no upstream submodule found
+        - pulumi: v4.4.0
+          error: no upstream submodule found
+        - pulumi: v4.3.1
+          error: no upstream submodule found
+        - pulumi: v4.3.0
+          error: no upstream submodule found
+        - pulumi: v4.2.0
+          error: no upstream submodule found
+        - pulumi: v4.1.0
+          error: no upstream submodule found
+        - pulumi: v4.0.0
+          error: no upstream submodule found
+        - pulumi: v3.38.1
+          error: no upstream submodule found
+        - pulumi: v3.38.0
+          error: no upstream submodule found
+        - pulumi: v3.37.0
+          error: no upstream submodule found
+        - pulumi: v3.36.0
+          error: no upstream submodule found
+        - pulumi: v3.35.0
+          error: no upstream submodule found
+        - pulumi: v3.34.2
+          error: no upstream submodule found
+        - pulumi: v3.34.1
+          error: no upstream submodule found
+        - pulumi: v3.34.0
+          error: no upstream submodule found
+        - pulumi: v3.33.0
+          error: no upstream submodule found
+        - pulumi: v3.32.2
+          error: no upstream submodule found
+        - pulumi: v3.32.1
+          error: no upstream submodule found
+        - pulumi: v3.32.0
+          error: no upstream submodule found
+        - pulumi: v3.31.0
+          error: no upstream submodule found
+        - pulumi: v3.30.1
+          error: no upstream submodule found
+        - pulumi: v3.30.0
+          error: no upstream submodule found
+        - pulumi: v3.29.1
+          error: no upstream submodule found
+        - pulumi: v3.29.0
+          error: no upstream submodule found
+        - pulumi: v3.28.1
+          error: no upstream submodule found
+        - pulumi: v3.28.0
+          error: no upstream submodule found
+        - pulumi: v3.27.0
+          error: no upstream submodule found
+        - pulumi: v3.26.1
+          error: no upstream submodule found
+        - pulumi: v3.26.0
+          error: no upstream submodule found
+        - pulumi: v3.25.1
+          error: no upstream submodule found
+        - pulumi: v3.25.0
+          error: no upstream submodule found
+        - pulumi: v3.24.0
+          error: no upstream submodule found
+        - pulumi: v3.23.0
+          error: no upstream submodule found
+        - pulumi: v3.22.1
+          error: no upstream submodule found
+        - pulumi: v3.22.0
+          error: no upstream submodule found
+        - pulumi: v3.21.0
+          error: no upstream submodule found
+        - pulumi: v3.20.0
+          error: no upstream submodule found
+        - pulumi: v3.19.3
+          error: no upstream submodule found
+        - pulumi: v3.19.2
+          error: no upstream submodule found
+        - pulumi: v3.19.1
+          error: no upstream submodule found
+        - pulumi: v3.19.0
+          error: no upstream submodule found
+        - pulumi: v3.18.0
+          error: no upstream submodule found
+        - pulumi: v3.17.0
+          error: no upstream submodule found
+        - pulumi: v3.16.0
+          error: no upstream submodule found
+        - pulumi: v3.15.0
+          error: no upstream submodule found
+        - pulumi: v3.14.0
+          error: no upstream submodule found
+        - pulumi: v3.13.0
+          error: no upstream submodule found
+        - pulumi: v3.12.2
+          error: no upstream submodule found
+        - pulumi: v3.12.1
+          error: no upstream submodule found
+        - pulumi: v3.12.0
+          error: no upstream submodule found
+        - pulumi: v3.11.1
+          error: no upstream submodule found
+        - pulumi: v3.11.0
+          error: no upstream submodule found
+        - pulumi: v3.10.1
+          error: no upstream submodule found
+        - pulumi: v3.10.0
+          error: no upstream submodule found
+        - pulumi: v3.9.0
+          error: no upstream submodule found
+        - pulumi: v3.8.0
+          error: no upstream submodule found
+        - pulumi: v3.7.0
+          error: no upstream submodule found
+        - pulumi: v3.6.1
+          error: no upstream submodule found
+        - pulumi: v3.6.0
+          error: no upstream submodule found
+        - pulumi: v3.5.0
+          error: no upstream submodule found
+        - pulumi: v3.4.0
+          error: no upstream submodule found
+        - pulumi: v3.3.0
+          error: no upstream submodule found
+        - pulumi: v3.2.1
+          error: no upstream submodule found
+        - pulumi: v3.2.0
+          error: no upstream submodule found
+        - pulumi: v3.1.0
+          error: no upstream submodule found
+        - pulumi: v3.0.0
+          error: no upstream submodule found
+        - pulumi: v2.37.0
+          error: no upstream submodule found
+        - pulumi: v2.13.1
+          error: no upstream submodule found
+        - pulumi: v2.13.0
+          error: no upstream submodule found
+        - pulumi: v2.12.0
+          error: no upstream submodule found
+        - pulumi: v2.11.0
+          error: no upstream submodule found
+        - pulumi: v2.10.1
+          error: no upstream submodule found
+        - pulumi: v2.10.0
+          error: no upstream submodule found
+        - pulumi: v2.9.1
+          error: no upstream submodule found
+        - pulumi: v2.9.0
+          error: no upstream submodule found
+        - pulumi: v2.8.0
+          error: no upstream submodule found
+        - pulumi: v2.7.0
+          error: no upstream submodule found
+        - pulumi: v2.6.1
+          error: no upstream submodule found
+        - pulumi: v2.6.0
+          error: no upstream submodule found
+        - pulumi: v2.5.0
+          error: no upstream submodule found
+        - pulumi: v2.4.0
+          error: no upstream submodule found
+        - pulumi: v2.3.0
+          error: no upstream submodule found
+        - pulumi: v2.2.0
+          error: no upstream submodule found
+        - pulumi: v2.1.0
+          error: no upstream submodule found
+        - pulumi: v2.0.0
+          error: no upstream submodule found
+        - pulumi: v1.31.0
+          error: no upstream submodule found
+        - pulumi: v1.30.0
+          error: no upstream submodule found
+        - pulumi: v1.29.0
+          error: no upstream submodule found
+        - pulumi: v1.28.0
+          error: no upstream submodule found
+        - pulumi: v1.27.0
+          error: no upstream submodule found
+        - pulumi: v1.26.0
+          error: no upstream submodule found
+        - pulumi: v1.25.0
+          error: no upstream submodule found
+        - pulumi: v1.24.0
+          error: no upstream submodule found
+        - pulumi: v1.23.0
+          error: no upstream submodule found
+        - pulumi: v1.22.0
+          error: no upstream submodule found
+        - pulumi: v1.21.0
+          error: no upstream submodule found
+        - pulumi: v1.20.0
+          error: no upstream submodule found
+        - pulumi: v1.19.0
+          error: no upstream submodule found
+        - pulumi: v1.18.0
+          error: no upstream submodule found
+        - pulumi: v1.17.0
+          error: no upstream submodule found
+        - pulumi: v1.16.0
+          error: no upstream submodule found
+        - pulumi: v1.15.0
+          error: no upstream submodule found
+        - pulumi: v1.14.1
+          error: no upstream submodule found
+        - pulumi: v1.14.0
+          error: no upstream submodule found
+        - pulumi: v1.13.0
+          error: no upstream submodule found
+        - pulumi: v1.12.0
+          error: no upstream submodule found
+        - pulumi: v1.11.0
+          error: no upstream submodule found
+        - pulumi: v1.10.0
+          error: no upstream submodule found
+        - pulumi: v1.9.0
+          error: no upstream submodule found
+        - pulumi: v1.8.0
+          error: no upstream submodule found
+        - pulumi: v1.7.0
+          error: no upstream submodule found
+        - pulumi: v1.6.0
+          error: no upstream submodule found
+        - pulumi: v1.5.0
+          error: no upstream submodule found
+        - pulumi: v1.4.0
+          error: no upstream submodule found
+        - pulumi: v1.3.0
+          error: no upstream submodule found
+        - pulumi: v1.2.1
+          error: no upstream submodule found
+        - pulumi: v1.2.0
+          error: no upstream submodule found
+        - pulumi: v1.1.0
+          error: no upstream submodule found
+        - pulumi: v1.0.0
+          error: no upstream submodule found
+        - pulumi: v0.18.27
+          error: no upstream submodule found
+        - pulumi: v0.18.26
+          error: no upstream submodule found
+        - pulumi: v0.18.25
+          error: no upstream submodule found
+        - pulumi: v0.18.24
+          error: no upstream submodule found
+        - pulumi: v0.18.23
+          error: no upstream submodule found
+        - pulumi: v0.18.22
+          error: no upstream submodule found
+        - pulumi: v0.18.21
+          error: no upstream submodule found
+        - pulumi: v0.18.20
+          error: no upstream submodule found
+        - pulumi: v0.18.18
+          error: no upstream submodule found
+        - pulumi: v0.18.17
+          error: no upstream submodule found
+        - pulumi: v0.18.16
+          error: no upstream submodule found
+        - pulumi: v0.18.15
+          error: no upstream submodule found
+        - pulumi: v0.18.14
+          error: no upstream submodule found
+        - pulumi: v0.18.13
+          error: no upstream submodule found
+        - pulumi: v0.18.12
+          error: no upstream submodule found
+        - pulumi: v0.18.11
+          error: no upstream submodule found
+        - pulumi: v0.18.10
+          error: no upstream submodule found
+        - pulumi: v0.18.9
+          error: no upstream submodule found
+        - pulumi: v0.18.8
+          error: no upstream submodule found
+        - pulumi: v0.18.7
+          error: no upstream submodule found
+        - pulumi: v0.18.6
+          error: no upstream submodule found
+        - pulumi: v0.18.5
+          error: no upstream submodule found
+        - pulumi: v0.18.4
+          error: no upstream submodule found
+        - pulumi: v0.18.3
+          error: no upstream submodule found
+        - pulumi: v0.18.2
+          error: no upstream submodule found
+        - pulumi: v0.18.1
+          error: no upstream submodule found
+        - pulumi: v0.18.0
+          error: no upstream submodule found
+        - pulumi: v0.17.1
+          error: no upstream submodule found
+        - pulumi: v0.17.0
+          error: no upstream submodule found
+        - pulumi: v0.16.10
+          error: no upstream submodule found
+        - pulumi: v0.16.9
+          error: no upstream submodule found
+        - pulumi: v0.16.8
+          error: no upstream submodule found
+        - pulumi: v0.16.7
+          error: no upstream submodule found
+        - pulumi: v0.16.6
+          error: no upstream submodule found
+        - pulumi: v0.16.5
+          error: no upstream submodule found
+        - pulumi: v0.16.4
+          error: no upstream submodule found
+        - pulumi: v0.16.3
+          error: no upstream submodule found
+        - pulumi: v0.16.2
+          error: no upstream submodule found
+        - pulumi: v0.16.1
+          error: no upstream submodule found
+        - pulumi: v0.16.0
+          error: no upstream submodule found
+        - pulumi: v0.15.1
+          error: no upstream submodule found
+        - pulumi: v0.15.0
+          error: no upstream submodule found
+        - pulumi: v0.14.5
+          error: no upstream submodule found
+        - pulumi: v0.14.4
+          error: no upstream submodule found
+        - pulumi: v0.14.3
+          error: no upstream submodule found
+        - pulumi: v0.14.2
+          error: no upstream submodule found
+        - pulumi: v0.14.1
+          error: no upstream submodule found
+        - pulumi: v0.14.0
+          error: no upstream submodule found
+        - pulumi: v0.13.1
+          error: no upstream submodule found
+        - pulumi: v0.13.0
+          error: no upstream submodule found
+        - pulumi: v0.12.2
+          error: no upstream submodule found
+        - pulumi: v0.12.1
+          error: no upstream submodule found
+        - pulumi: v0.12.0
+          error: no upstream submodule found
+        - pulumi: v0.11.3
+          error: no upstream submodule found
+        - pulumi: v0.11.2
+          error: no upstream submodule found
+        - pulumi: v0.11.1
+          error: no upstream submodule found
+        - pulumi: v0.11.0
+          error: no upstream submodule found
+        - pulumi: v0.10.0
+          error: no upstream submodule found
+        - pulumi: v0.9.13
+          error: no upstream submodule found
+        - pulumi: v0.9.12
+          error: no upstream submodule found
+        - pulumi: v0.9.11
+          error: no upstream submodule found
+        - pulumi: v0.9.10
+          error: no upstream submodule found
+        - pulumi: v0.9.9
+          error: no upstream submodule found
+        - pulumi: v0.9.8
+          error: no upstream submodule found
+        - pulumi: v0.9.7
+          error: no upstream submodule found
+        - pulumi: v0.9.6
+          error: no upstream submodule found
+        - pulumi: v0.9.5
+          error: no upstream submodule found
+        - pulumi: v0.9.4
+          error: no upstream submodule found
+        - pulumi: v0.9.3
+          error: no upstream submodule found
+        - pulumi: v0.9.2
+          error: no upstream submodule found
+        - pulumi: v0.9.1
+          error: no upstream submodule found
+        - pulumi: v0.9.0
+          error: no upstream submodule found
+        - pulumi: v0.8.3
+          error: no upstream submodule found
+        - pulumi: v0.8.2
+          error: no upstream submodule found
+        - pulumi: v0.8.1
+          error: no upstream submodule found
