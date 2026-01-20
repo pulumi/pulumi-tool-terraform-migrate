@@ -1,6 +1,5 @@
 bridged:
     azure: []
-    azuread: []
     consul: []
     vault: []
     nomad: []
