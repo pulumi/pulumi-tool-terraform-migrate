@@ -23,6 +23,8 @@ import (
 )
 
 func newUpdateProvidermapCmd() *cobra.Command {
+	var provider string
+
 	cmd := &cobra.Command{
 		Use:   "update-providermap <versions.yaml>",
 		Short: "Update provider version mappings",
@@ -32,10 +34,12 @@ This is an administrative command used to maintain the provider version mapping 
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			versionMapPath := args[0]
-			updateProviderMap(versionMapPath)
+			updateProviderMap(versionMapPath, provider)
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&provider, "provider", "", "Only update the specified provider (e.g., 'random')")
 
 	return cmd
 }
@@ -47,7 +51,7 @@ func init() {
 	}
 }
 
-func updateProviderMap(versionMapPath string) {
+func updateProviderMap(versionMapPath string, provider string) {
 	// Load the VersionMap from YAML
 	vm, err := providermap.LoadVersionMapFromYAML(versionMapPath)
 	if err != nil {
@@ -55,8 +59,20 @@ func updateProviderMap(versionMapPath string) {
 		os.Exit(1)
 	}
 
-	// Iterate over every bridged provider
-	for bp := range vm.Bridged {
+	// Determine which providers to process
+	var providersToProcess []providermap.BridgedProvider
+	if provider != "" {
+		// If a specific provider is requested, process only that one
+		providersToProcess = []providermap.BridgedProvider{providermap.BridgedProvider(provider)}
+	} else {
+		// Otherwise, process all providers in vm.Bridged
+		for bp := range vm.Bridged {
+			providersToProcess = append(providersToProcess, bp)
+		}
+	}
+
+	// Iterate over the providers to process
+	for _, bp := range providersToProcess {
 		fmt.Printf("Processing provider: %s\n", bp)
 
 		// Fetch actual tags for the provider
