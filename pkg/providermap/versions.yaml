@@ -1907,7 +1907,7 @@ bridged:
     rancher2: []
     random:
         - pulumi: v4.19.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          upstream: v3.8.0
         - pulumi: v4.18.5
           upstream: v3.119.0
         - pulumi: v4.18.4
@@ -1915,17 +1915,17 @@ bridged:
         - pulumi: v4.18.3
           upstream: v3.111.0
         - pulumi: v4.18.2
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          upstream: v3.107.0
         - pulumi: v4.18.1
           upstream: v3.7.2
         - pulumi: v4.18.0
           upstream: v3.7.1
         - pulumi: v4.17.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          upstream: v3.99.0
         - pulumi: v4.16.8
           upstream: v3.98.0
         - pulumi: v4.16.7
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          upstream: v3.92.0
         - pulumi: v4.16.6
           upstream: v3.91.1
         - pulumi: v4.16.5
@@ -1933,23 +1933,23 @@ bridged:
         - pulumi: v4.16.4
           upstream: v3.90.0
         - pulumi: v4.16.3
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.16.2
           upstream: v3.6.2
         - pulumi: v4.16.1
           upstream: v3.6.1
         - pulumi: v4.16.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          upstream: 3.76.0
         - pulumi: v4.15.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          upstream: v3.69.0
         - pulumi: v4.15.0
           upstream: v3.6.0
         - pulumi: v4.14.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.13.4
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          upstream: v4.13.2
         - pulumi: v4.13.3
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          upstream: v0.13.0
         - pulumi: v4.13.2
           upstream: v0.9.2
         - pulumi: v4.13.1
@@ -1959,17 +1959,17 @@ bridged:
         - pulumi: v4.12.1
           upstream: v0.6.0
         - pulumi: v4.12.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.11.3
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          upstream: v0.4.0
         - pulumi: v4.11.2
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.11.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.10.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          upstream: 4.8.0
         - pulumi: v4.9.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.8.2
           upstream: v3.28.0
         - pulumi: v4.8.1
@@ -1989,105 +1989,105 @@ bridged:
         - pulumi: v4.4.0
           upstream: v3.19.1
         - pulumi: v4.3.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.3.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.2.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.1.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.1.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v4.0.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v3.2.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v3.1.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v3.1.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v3.0.3
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v3.0.2
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v3.0.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v3.0.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.5.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.4.4
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.4.3
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.4.2
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.4.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.4.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.3.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.3.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.2.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.1.4
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.1.3
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v2.1.2
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v2.1.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v2.1.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v2.0.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v1.7.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v1.6.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
         - pulumi: v1.5.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v1.4.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v1.3.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v1.2.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v1.1.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v1.0.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.5.8
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.5.7
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.5.6
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.5.5
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.5.4
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.5.3
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.5.2
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.5.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.5.0
           upstream: 0.17.0
         - pulumi: v0.4.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.3.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.2.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.1.0
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
         - pulumi: v0.0.1
-          error: 'failed to parse version from commit message: no upstream version found in commit message'
+          error: no GitHub release
     sdwan: []
     signalfx: []
     slack: []
