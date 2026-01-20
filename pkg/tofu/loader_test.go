@@ -65,7 +65,7 @@ func Test_LoadTerraformState(t *testing.T) {
 			opts: LoadTerraformStateOptions{
 				StateFilePath: "testdata/tf-project-with-lockfile/terraform.tfstate",
 			},
-			expectResources:          1,
+			expectResources:         1,
 			verifyLockfilePreserved: true,
 		},
 	}
@@ -102,6 +102,26 @@ func Test_LoadTerraformState(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_GetProviderVersions(t *testing.T) {
+	skipIfTofuNotAvailable(t)
+
+	ctx := context.Background()
+	projectDir := "testdata/tf-project-with-lockfile"
+
+	versionOutput, err := GetProviderVersions(ctx, projectDir)
+	require.NoError(t, err, "GetProviderVersions should not fail")
+
+	require.NotNil(t, versionOutput.ProviderSelections, "ProviderSelections should not be nil")
+	require.Equal(t, 1, len(versionOutput.ProviderSelections), "Expected 1 provider")
+
+	version, exists := versionOutput.ProviderSelections["registry.terraform.io/hashicorp/random"]
+	require.True(t, exists, "Expected registry.terraform.io/hashicorp/random to exist in ProviderSelections")
+	require.Equal(t, "3.7.2", version, "Expected provider version to match lock file")
+
+	require.NotEmpty(t, versionOutput.TerraformVersion, "TerraformVersion should be populated")
+	require.NotEmpty(t, versionOutput.Platform, "Platform should be populated")
 }
 
 // skipIfTofuNotAvailable skips the test if tofu is not in PATH

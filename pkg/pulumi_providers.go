@@ -45,12 +45,22 @@ func getTerraformProvidersForTerraformState(tfState *tfjson.State) ([]providerma
 	return providers, nil
 }
 
-func pulumiProvidersForTerraformProviders(terraformProviders []providermap.TerraformProviderName) (map[providermap.TerraformProviderName]*info.Provider, error) {
+func pulumiProvidersForTerraformProviders(
+	terraformProviders []providermap.TerraformProviderName,
+	providerVersions map[string]string,
+) (map[providermap.TerraformProviderName]*info.Provider, error) {
 	pulumiProviders := make(map[providermap.TerraformProviderName]*info.Provider)
 
 	for _, providerName := range terraformProviders {
+		// Get the version for this provider from the version map
+		version := ""
+		if providerVersions != nil {
+			version = providerVersions[string(providerName)]
+		}
+
 		pulumiProvider := providermap.RecommendPulumiProvider(providermap.TerraformProvider{
 			Identifier: providermap.TerraformProviderName(providerName),
+			Version:    version,
 		})
 
 		// TODO[pulumi/pulumi-service#35437]: make this work for Any TF
@@ -82,13 +92,13 @@ func pulumiProvidersForTerraformProviders(terraformProviders []providermap.Terra
 	return pulumiProviders, nil
 }
 
-func GetPulumiProvidersForTerraformState(tfState *tfjson.State) (map[providermap.TerraformProviderName]*info.Provider, error) {
+func GetPulumiProvidersForTerraformState(tfState *tfjson.State, providerVersions map[string]string) (map[providermap.TerraformProviderName]*info.Provider, error) {
 	// TODO[pulumi/pulumi-service#35512]: This assumes one Pulumi provider per Terraform provider. This means that provider aliases are not supported.
 	terraformProviders, err := getTerraformProvidersForTerraformState(tfState)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get terraform providers: %w", err)
 	}
-	return pulumiProvidersForTerraformProviders(terraformProviders)
+	return pulumiProvidersForTerraformProviders(terraformProviders, providerVersions)
 }
 
 func GetProviderInputs(providerName string) (resource.PropertyMap, error) {

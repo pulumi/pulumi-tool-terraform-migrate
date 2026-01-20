@@ -62,7 +62,15 @@ func TranslateAndWriteState(
 	if err != nil {
 		return err
 	}
-	res, err := TranslateState(ctx, tfState, pulumiProgramDir)
+
+	providerVersions, err := tofu.GetProviderVersions(ctx, tfDir)
+	if err != nil {
+		// Log the error but don't fail - provider versions are optional
+		fmt.Fprintf(os.Stderr, "Warning: failed to extract provider versions: %v\n", err)
+		providerVersions = tofu.TofuVersionOutput{}
+	}
+
+	res, err := TranslateState(ctx, tfState, providerVersions.ProviderSelections, pulumiProgramDir)
 	if err != nil {
 		return err
 	}
@@ -106,12 +114,11 @@ type TranslateStateResult struct {
 	ErrorMessages     []ErroredResource
 }
 
-func TranslateState(ctx context.Context, tfState *tfjson.State, pulumiProgramDir string) (*TranslateStateResult, error) {
-	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState)
+func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions map[string]string, pulumiProgramDir string) (*TranslateStateResult, error) {
+	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, providerVersions)
 	if err != nil {
 		return nil, err
 	}
-
 
 	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
 	if err != nil {
@@ -141,10 +148,10 @@ func TranslateState(ctx context.Context, tfState *tfjson.State, pulumiProgramDir
 }
 
 type ErroredResource struct {
-	ResourceName string `json:"resource_name"`
-	ResourceType string `json:"resource_type"`
+	ResourceName     string `json:"resource_name"`
+	ResourceType     string `json:"resource_type"`
 	ResourceProvider string `json:"resource_provider"`
-	ErrorMessage string `json:"error_message"`
+	ErrorMessage     string `json:"error_message"`
 }
 
 func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*info.Provider) (*PulumiState, []ErroredResource, error) {
@@ -180,10 +187,10 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 		pulumiResource, err := convertResourceStateExceptProviderLink(resource, pulumiProviders)
 		if err != nil {
 			errorMessages = append(errorMessages, ErroredResource{
-				ResourceName: resource.Name,
-				ResourceType: resource.Type,
+				ResourceName:     resource.Name,
+				ResourceType:     resource.Type,
 				ResourceProvider: resource.ProviderName,
-				ErrorMessage: err.Error(),
+				ErrorMessage:     err.Error(),
 			})
 			return nil
 		}
