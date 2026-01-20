@@ -72,6 +72,44 @@ func TestConvertInvolved(t *testing.T) {
 	autogold.ExpectFile(t, data.Export)
 }
 
+func TestConvertTwoModules(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	stackFolder := createPulumiStack(t)
+	data, err := translateStateFromJson(ctx, "testdata/tofu_state_two_buckets.json", stackFolder)
+	if err != nil {
+		t.Fatalf("failed to convert Terraform state: %v", err)
+	}
+
+	bucketURNs := make(map[string]bool)
+	for _, resource := range data.Export.Deployment.Resources {
+		if resource.Type == "aws:s3/bucket:Bucket" {
+			require.False(t, bucketURNs[string(resource.URN)], "URN %s is not unique", resource.URN)
+			bucketURNs[string(resource.URN)] = true
+		}
+	}
+	require.Equal(t, 2, len(bucketURNs), "expected 2 unique URNs for buckets")
+}
+
+func TestConvertNestedModules(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	stackFolder := createPulumiStack(t)
+	data, err := translateStateFromJson(ctx, "testdata/tofu_state_nested_modules.json", stackFolder)
+	if err != nil {
+		t.Fatalf("failed to convert Terraform state: %v", err)
+	}
+
+	bucketURNs := make(map[string]bool)
+	for _, resource := range data.Export.Deployment.Resources {
+		if resource.Type == "aws:s3/bucket:Bucket" {
+			require.False(t, bucketURNs[string(resource.URN)], "URN %s is not unique", resource.URN)
+			bucketURNs[string(resource.URN)] = true
+		}
+	}
+	require.Equal(t, 4, len(bucketURNs), "expected 4 unique URNs for buckets")
+}
+
 func TestConvertWithSensitiveValues(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -198,6 +236,54 @@ func Test_convertState_corrupted_state(t *testing.T) {
 	require.Equal(t, "random_password", errorMessages[0].ResourceType)
 	require.Equal(t, "registry.opentofu.org/hashicorp/random", errorMessages[0].ResourceProvider)
 	require.Contains(t, errorMessages[0].ErrorMessage, "unsupported attribute \"corrupted\"")
+}
+
+func Test_pulumiNameFromTerraformAddress(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		address      string
+		resourceType string
+		expected     string
+	}{
+		{
+			name:         "root module resource",
+			address:      "aws_s3_bucket.example",
+			resourceType: "aws_s3_bucket",
+			expected:     "example",
+		},
+		{
+			name:         "single module resource",
+			address:      "module.s3_bucket.aws_s3_bucket.this",
+			resourceType: "aws_s3_bucket",
+			expected:     "s3_bucket_this",
+		},
+		{
+			name:         "nested module resource",
+			address:      "module.outer.module.inner.aws_s3_bucket.mybucket",
+			resourceType: "aws_s3_bucket",
+			expected:     "outer_inner_mybucket",
+		},
+		{
+			name:         "module with same name as resource",
+			address:      "module.bucket.aws_s3_bucket.bucket",
+			resourceType: "aws_s3_bucket",
+			expected:     "bucket_bucket",
+		},
+		{
+			name:         "module with module name",
+			address:      "module.module.aws_s3_bucket.bucket",
+			resourceType: "aws_s3_bucket",
+			expected:     "module_bucket",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := pulumiNameFromTerraformAddress(tc.address, tc.resourceType)
+			require.Equal(t, tc.expected, result)
+		})
+	}
 }
 
 func createPulumiStack(t *testing.T) string {
