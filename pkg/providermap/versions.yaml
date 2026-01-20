@@ -1,66 +1,10 @@
 bridged:
-    azure: []
-    consul: []
-    vault: []
-    nomad: []
-    vsphere: []
-    archive: []
-    tls: []
-    external: []
-    http: []
-    null: []
-    cloudinit: []
     aiven: []
     akamai: []
     alicloud: []
+    archive: []
     artifactory: []
     auth0: []
-    azuredevops: []
-    cloudamqp: []
-    cloudflare: []
-    confluentcloud: []
-    databricks: []
-    datadog: []
-    dbtcloud: []
-    digitalocean: []
-    dnsimple: []
-    docker: []
-    ec: []
-    f5bigip: []
-    fastly: []
-    github: []
-    gitlab: []
-    harness: []
-    hcloud: []
-    ise: []
-    junipermist: []
-    kafka: []
-    keycloak: []
-    kong: []
-    linode: []
-    mailgun: []
-    meraki: []
-    minio: []
-    mongodbatlas: []
-    newrelic: []
-    ns1: []
-    oci: []
-    okta: []
-    openstack: []
-    opsgenie: []
-    pagerduty: []
-    postgresql: []
-    rabbitmq: []
-    rancher2: []
-    sdwan: []
-    signalfx: []
-    slack: []
-    snowflake: []
-    splunk: []
-    spotinst: []
-    tailscale: []
-    venafi: []
-    wavefront: []
     aws:
         - pulumi: v7.16.0
           upstream: v6.28.0
@@ -976,6 +920,7 @@ bridged:
           error: no upstream submodule found
         - pulumi: v0.8.1
           error: no upstream submodule found
+    azure: []
     azuread:
         - pulumi: v6.8.0
           error: no upstream submodule found
@@ -1221,6 +1166,22 @@ bridged:
           error: no upstream submodule found
         - pulumi: v0.18.0
           error: no upstream submodule found
+    azuredevops: []
+    cloudamqp: []
+    cloudflare: []
+    cloudinit: []
+    confluentcloud: []
+    consul: []
+    databricks: []
+    datadog: []
+    dbtcloud: []
+    digitalocean: []
+    dnsimple: []
+    docker: []
+    ec: []
+    external: []
+    f5bigip: []
+    fastly: []
     gcp:
         - pulumi: v9.10.0
           upstream: v7.16.0
@@ -1918,6 +1879,32 @@ bridged:
           error: no upstream submodule found
         - pulumi: v0.9.11
           error: no upstream submodule found
+    github: []
+    gitlab: []
+    harness: []
+    hcloud: []
+    http: []
+    ise: []
+    junipermist: []
+    kafka: []
+    keycloak: []
+    kong: []
+    linode: []
+    mailgun: []
+    meraki: []
+    minio: []
+    mongodbatlas: []
+    newrelic: []
+    nomad: []
+    ns1: []
+    oci: []
+    okta: []
+    openstack: []
+    opsgenie: []
+    pagerduty: []
+    postgresql: []
+    rabbitmq: []
+    rancher2: []
     random:
         - pulumi: v4.19.0
           error: 'failed to parse version from commit message: no upstream version found in commit message'
@@ -2101,3 +2088,15 @@ bridged:
           error: 'failed to parse version from commit message: no upstream version found in commit message'
         - pulumi: v0.0.1
           error: 'failed to parse version from commit message: no upstream version found in commit message'
+    sdwan: []
+    signalfx: []
+    slack: []
+    snowflake: []
+    splunk: []
+    spotinst: []
+    tailscale: []
+    tls: []
+    vault: []
+    venafi: []
+    vsphere: []
+    wavefront: []
