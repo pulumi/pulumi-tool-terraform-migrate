@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 )
 
 // gitHubRelease represents a GitHub release API response.
@@ -38,7 +39,18 @@ func fetchRelease(bp BridgedProvider, tag ReleaseTag) (*gitHubRelease, error) {
 	repo := fmt.Sprintf("pulumi-%s", bp)
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/tags/%s", owner, repo, tag)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Add authorization header if GITHUB_TOKEN is set
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch release: %w", err)
 	}
