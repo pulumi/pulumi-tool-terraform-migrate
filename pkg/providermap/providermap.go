@@ -1158,7 +1158,7 @@ func RecommendPulumiProvider(tf TerraformProvider) RecommendedPulumiProvider {
 		}
 	}
 
-	// If no precise match found, try to parse the Terraform version and find the matching Pulumi version
+	// If no precise match found, use approximate matching based on major versions.
 	if recommendedVersion == "" && tf.Version != "" {
 		// Normalize the version string by removing "v" prefix if present
 		versionStr := strings.TrimPrefix(tf.Version, "v")
@@ -1173,7 +1173,7 @@ func RecommendPulumiProvider(tf TerraformProvider) RecommendedPulumiProvider {
 		}
 	}
 
-	// If we couldn't determine a version from the TF version, use the latest/maximum
+	// If approximate matching failed, determine a version from the TF version, use the latest/maximum.
 	if recommendedVersion == "" {
 		recommendedVersion = getLatestVersion(mapping.latestVersionByTerraformMajor)
 	}
