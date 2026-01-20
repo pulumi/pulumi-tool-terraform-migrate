@@ -61,7 +61,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "v6.20.0",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.12.0",
+			expectedVersion:              "v7.16.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -71,7 +71,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.12.0", // Latest version for highest major (6)
+			expectedVersion:              "v7.16.0", // Latest version for highest major (6)
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -81,7 +81,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "invalid-version",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.12.0", // Latest version for highest major (6)
+			expectedVersion:              "v7.16.0", // Latest version for highest major (6)
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -101,7 +101,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "v4.15.0",
 			},
 			expectedBridgedProvider:      "azure",
-			expectedVersion:              "v6.30.0",
+			expectedVersion:              "v6.31.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -121,7 +121,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "7.0.0",
 			},
 			expectedBridgedProvider:      "gcp",
-			expectedVersion:              "v9.6.0",
+			expectedVersion:              "v9.10.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
