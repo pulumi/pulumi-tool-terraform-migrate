@@ -64,7 +64,7 @@ var providerMapping = map[TerraformProviderName]providerMappingDetail{
 		terraformProviderName: "aws",
 		latestVersionByTerraformMajor: map[int]string{
 			5: "v6.83.2",
-			6: "v7.12.0",
+			6: "v7.16.0",
 		},
 	},
 	"registry.opentofu.org/hashicorp/aws": {
@@ -72,7 +72,7 @@ var providerMapping = map[TerraformProviderName]providerMappingDetail{
 		terraformProviderName: "aws",
 		latestVersionByTerraformMajor: map[int]string{
 			5: "v6.83.2",
-			6: "v7.12.0",
+			6: "v7.16.0",
 		},
 	},
 	"registry.terraform.io/hashicorp/azurerm": {
@@ -80,7 +80,7 @@ var providerMapping = map[TerraformProviderName]providerMappingDetail{
 		terraformProviderName: "azurerm",
 		latestVersionByTerraformMajor: map[int]string{
 			3: "v5.89.0",
-			4: "v6.30.0",
+			4: "v6.31.0",
 		},
 	},
 	"registry.opentofu.org/hashicorp/azurerm": {
@@ -88,7 +88,7 @@ var providerMapping = map[TerraformProviderName]providerMappingDetail{
 		terraformProviderName: "azurerm",
 		latestVersionByTerraformMajor: map[int]string{
 			3: "v5.89.0",
-			4: "v6.30.0",
+			4: "v6.31.0",
 		},
 	},
 	"registry.terraform.io/hashicorp/azuread": {
@@ -96,7 +96,7 @@ var providerMapping = map[TerraformProviderName]providerMappingDetail{
 		terraformProviderName: "azuread",
 		latestVersionByTerraformMajor: map[int]string{
 			2: "v5.53.1",
-			3: "v6.7.0",
+			3: "v6.8.0",
 		},
 	},
 	"registry.opentofu.org/hashicorp/azuread": {
@@ -104,7 +104,7 @@ var providerMapping = map[TerraformProviderName]providerMappingDetail{
 		terraformProviderName: "azuread",
 		latestVersionByTerraformMajor: map[int]string{
 			2: "v5.53.1",
-			3: "v6.7.0",
+			3: "v6.8.0",
 		},
 	},
 	"registry.terraform.io/hashicorp/google": {
@@ -112,7 +112,7 @@ var providerMapping = map[TerraformProviderName]providerMappingDetail{
 		terraformProviderName: "google",
 		latestVersionByTerraformMajor: map[int]string{
 			6: "v8.41.1",
-			7: "v9.6.0",
+			7: "v9.10.0",
 		},
 	},
 	"registry.opentofu.org/hashicorp/google": {
@@ -120,7 +120,23 @@ var providerMapping = map[TerraformProviderName]providerMappingDetail{
 		terraformProviderName: "google",
 		latestVersionByTerraformMajor: map[int]string{
 			6: "v8.41.1",
-			7: "v9.6.0",
+			7: "v9.10.0",
+		},
+	},
+	"registry.terraform.io/hashicorp/google-beta": {
+		pulumiProviderName:    "gcp",
+		terraformProviderName: "google",
+		latestVersionByTerraformMajor: map[int]string{
+			6: "v8.41.1",
+			7: "v9.10.0",
+		},
+	},
+	"registry.opentofu.org/hashicorp/google-beta": {
+		pulumiProviderName:    "gcp",
+		terraformProviderName: "google",
+		latestVersionByTerraformMajor: map[int]string{
+			6: "v8.41.1",
+			7: "v9.10.0",
 		},
 	},
 	"registry.terraform.io/hashicorp/consul": {
