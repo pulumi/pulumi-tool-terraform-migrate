@@ -24,6 +24,7 @@ import (
 
 func newUpdateProvidermapCmd() *cobra.Command {
 	var provider string
+	var recompute bool
 
 	cmd := &cobra.Command{
 		Use:   "update-providermap <versions.yaml>",
@@ -34,12 +35,13 @@ This is an administrative command used to maintain the provider version mapping 
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			versionMapPath := args[0]
-			updateProviderMap(versionMapPath, provider)
+			updateProviderMap(versionMapPath, provider, recompute)
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&provider, "provider", "", "Only update the specified provider (e.g., 'random')")
+	cmd.Flags().BoolVar(&recompute, "recompute", false, "Recompute the suggested versions")
 
 	return cmd
 }
@@ -51,7 +53,7 @@ func init() {
 	}
 }
 
-func updateProviderMap(versionMapPath string, provider string) {
+func updateProviderMap(versionMapPath string, provider string, recompute bool) {
 	// Load the VersionMap from YAML
 	vm, err := providermap.LoadVersionMapFromYAML(versionMapPath)
 	if err != nil {
@@ -84,7 +86,7 @@ func updateProviderMap(versionMapPath string, provider string) {
 
 		// For every tag not yet in the VersionMap, try to infer upstream version
 		for _, tag := range tags {
-			if vm.HasPulumiVersion(bp, tag) {
+			if vm.HasPulumiVersion(bp, tag) && !recompute {
 				continue
 			}
 
