@@ -1,3 +1,6 @@
+# See ./scripts/update_providermap.sh for automatically maintaining this file.
+#
+# The script relies on release notes parsing heuristics and not an official feed. Errors are possible.
 bridged:
     aiven:
         - pulumi: v6.47.0
