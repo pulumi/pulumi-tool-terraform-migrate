@@ -32,10 +32,8 @@ var refinedVersionMap *VersionMap
 func init() {
 	// Load the embedded versions.yaml file
 	var vm VersionMap
-	if err := yaml.Unmarshal(embeddedVersionsYAML, &vm); err == nil {
-		refinedVersionMap = &vm
-	}
-	// If unmarshal fails, refinedVersionMap will remain nil and fallback logic will be used
+	err := yaml.Unmarshal(embeddedVersionsYAML, &vm)
+	contract.AssertNoErrorf(err, "versions.yaml does not unmarshal")
 }
 
 // A full name such as "registry.terraform.io/hashicorp/aws"
