@@ -1817,7 +1817,183 @@ bridged:
     dbtcloud: []
     digitalocean: []
     dnsimple: []
-    docker: []
+    docker:
+        - pulumi: v4.11.0
+          upstream: v3.9.0
+        - pulumi: v4.10.0
+          upstream: v3.8.0
+        - pulumi: v4.9.0
+          upstream: v3.7.0
+        - pulumi: v4.8.2
+          error: no GitHub release
+        - pulumi: v4.8.1
+          upstream: v3.112.0
+        - pulumi: v4.8.0
+          upstream: v3.6.2
+        - pulumi: v4.7.0
+          error: no GitHub release
+        - pulumi: v4.6.2
+          upstream: v3.105.0
+        - pulumi: v4.6.1
+          error: no GitHub release
+        - pulumi: v4.6.0
+          error: no GitHub release
+        - pulumi: v4.5.8
+          upstream: v3.98.0
+        - pulumi: v4.5.7
+          upstream: v3.92.0
+        - pulumi: v4.5.6
+          upstream: v3.91.1
+        - pulumi: v4.5.5
+          upstream: v3.88.0
+        - pulumi: v4.5.4
+          upstream: v3.83.0
+        - pulumi: v4.5.3
+          error: no GitHub release
+        - pulumi: v4.5.2
+          upstream: v3.78.0
+        - pulumi: v4.5.1
+          upstream: v3.71.0
+        - pulumi: v4.5.0
+          error: no GitHub release
+        - pulumi: v4.4.5
+          error: no GitHub release
+        - pulumi: v4.4.4
+          error: no GitHub release
+        - pulumi: v4.4.3
+          error: no GitHub release
+        - pulumi: v4.4.2
+          error: no GitHub release
+        - pulumi: v4.4.1
+          error: no GitHub release
+        - pulumi: v4.4.0
+          error: no GitHub release
+        - pulumi: v4.3.2
+          error: no GitHub release
+        - pulumi: v4.3.1
+          error: no GitHub release
+        - pulumi: v4.3.0
+          error: no GitHub release
+        - pulumi: v4.2.4
+          error: no GitHub release
+        - pulumi: v4.2.3
+          error: no GitHub release
+        - pulumi: v4.2.2
+          error: no GitHub release
+        - pulumi: v4.2.1
+          error: no GitHub release
+        - pulumi: v4.2.0
+          error: no GitHub release
+        - pulumi: v4.1.2
+          error: no GitHub release
+        - pulumi: v4.1.1
+          error: no GitHub release
+        - pulumi: v4.1.0
+          upstream: v3.0.2
+        - pulumi: v4.0.1
+          error: no GitHub release
+        - pulumi: v4.0.0
+          error: no GitHub release
+        - pulumi: v3.6.1
+          error: no GitHub release
+        - pulumi: v3.6.0
+          error: no GitHub release
+        - pulumi: v3.5.0
+          error: no GitHub release
+        - pulumi: v3.4.1
+          error: no GitHub release
+        - pulumi: v3.4.0
+          error: no GitHub release
+        - pulumi: v3.3.0
+          error: no GitHub release
+        - pulumi: v3.2.0
+          upstream: v2.16.0
+        - pulumi: v3.1.0
+          error: no GitHub release
+        - pulumi: v3.0.0
+          error: no GitHub release
+        - pulumi: v2.10.0
+          error: no GitHub release
+        - pulumi: v2.9.1
+          error: no GitHub release
+        - pulumi: v2.9.0
+          error: no GitHub release
+        - pulumi: v2.8.1
+          error: no GitHub release
+        - pulumi: v2.8.0
+          error: no GitHub release
+        - pulumi: v2.7.0
+          error: no GitHub release
+        - pulumi: v2.6.1
+          error: no GitHub release
+        - pulumi: v2.6.0
+          error: no GitHub release
+        - pulumi: v2.5.0
+          error: no GitHub release
+        - pulumi: v2.4.1
+          error: no GitHub release
+        - pulumi: v2.4.0
+          error: no GitHub release
+        - pulumi: v2.3.1
+          error: no GitHub release
+        - pulumi: v2.3.0
+          error: no GitHub release
+        - pulumi: v2.2.3
+          error: no GitHub release
+        - pulumi: v2.2.2
+          error: no GitHub release
+        - pulumi: v2.2.1
+          error: no GitHub release
+        - pulumi: v2.2.0
+          error: no GitHub release
+        - pulumi: v2.1.1
+          error: no GitHub release
+        - pulumi: v2.1.0
+          error: no GitHub release
+        - pulumi: v2.0.0
+          error: no GitHub release
+        - pulumi: v1.5.0
+          error: no GitHub release
+        - pulumi: v1.4.0
+          error: no GitHub release
+        - pulumi: v1.3.0
+          error: no GitHub release
+        - pulumi: v1.2.0
+          error: no GitHub release
+        - pulumi: v1.1.0
+          error: no GitHub release
+        - pulumi: v1.0.1
+          error: no GitHub release
+        - pulumi: v1.0.0
+          error: no GitHub release
+        - pulumi: v0.17.4
+          error: no GitHub release
+        - pulumi: v0.17.3
+          error: no GitHub release
+        - pulumi: v0.17.2
+          error: no GitHub release
+        - pulumi: v0.17.1
+          error: no GitHub release
+        - pulumi: v0.17.0
+          error: no GitHub release
+        - pulumi: v0.16.4
+          error: no GitHub release
+        - pulumi: v0.16.3
+          error: no GitHub release
+        - pulumi: v0.16.2
+          error: no GitHub release
+        - pulumi: v0.16.1
+          error: no GitHub release
+        - pulumi: v0.16.0
+          error: no GitHub release
+        - pulumi: v0.15.2
+          error: no GitHub release
+        - pulumi: v0.15.1
+          error: no GitHub release
+        - pulumi: v0.15.0
+          error: no GitHub release
+        - pulumi: v0.14.0
+          error: no GitHub release
     ec: []
     external: []
     f5bigip: []
