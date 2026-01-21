@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,7 +31,8 @@ type ReleaseTag string
 
 // Semver parses the ReleaseTag as a semver.Version.
 func (t ReleaseTag) Semver() semver.Version {
-	v, _ := semver.Parse(strings.TrimPrefix(string(t), "v"))
+	v, err := semver.Parse(strings.TrimPrefix(string(t), "v"))
+	contract.AssertNoErrorf(err, "ReleaseTag should parse as a semver.Version")
 	return v
 }
 

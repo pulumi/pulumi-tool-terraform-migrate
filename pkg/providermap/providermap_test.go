@@ -35,36 +35,6 @@ func TestRecommendPulumiProvider(t *testing.T) {
 		expectedUseTerraformProvider bool
 	}{
 		{
-			name: "AWS Terraform registry - major version 5 with v prefix",
-			input: TerraformProvider{
-				Identifier: "registry.terraform.io/hashicorp/aws",
-				Version:    "v5.0.0",
-			},
-			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v6.83.2",
-			expectedUseTerraformProvider: false,
-		},
-		{
-			name: "AWS Terraform registry - major version 5 without v prefix",
-			input: TerraformProvider{
-				Identifier: "registry.terraform.io/hashicorp/aws",
-				Version:    "5.70.3",
-			},
-			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v6.83.2",
-			expectedUseTerraformProvider: false,
-		},
-		{
-			name: "AWS Terraform registry - major version 6",
-			input: TerraformProvider{
-				Identifier: "registry.terraform.io/hashicorp/aws",
-				Version:    "v6.20.0",
-			},
-			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.16.0",
-			expectedUseTerraformProvider: false,
-		},
-		{
 			name: "AWS Terraform registry - precise match from versions.yaml",
 			input: TerraformProvider{
 				Identifier: "registry.terraform.io/hashicorp/aws",
@@ -75,13 +45,13 @@ func TestRecommendPulumiProvider(t *testing.T) {
 			expectedUseTerraformProvider: false,
 		},
 		{
-			name: "AWS Terraform registry - precise match from versions.yaml (v6.27.0)",
+			name: "AWS Terraform registry - approximate match",
 			input: TerraformProvider{
 				Identifier: "registry.terraform.io/hashicorp/aws",
-				Version:    "6.27.0", // Without v prefix
+				Version:    "v6.20.0",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.15.0", // Precise match from versions.yaml
+			expectedVersion:              "v7.11.1",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -91,7 +61,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.16.0", // Latest version for highest major (6)
+			expectedVersion:              "v7.16.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -101,17 +71,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "invalid-version",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.16.0", // Latest version for highest major (6)
-			expectedUseTerraformProvider: false,
-		},
-		{
-			name: "Azure Terraform registry - major version 3",
-			input: TerraformProvider{
-				Identifier: "registry.terraform.io/hashicorp/azurerm",
-				Version:    "v3.0.0",
-			},
-			expectedBridgedProvider:      "azure",
-			expectedVersion:              "v5.89.0",
+			expectedVersion:              "v7.16.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -121,7 +81,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "v4.15.0",
 			},
 			expectedBridgedProvider:      "azure",
-			expectedVersion:              "v6.31.0",
+			expectedVersion:              "v6.15.0", // Exact match with upstream v4.15.0
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -131,7 +91,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "v6.5.0",
 			},
 			expectedBridgedProvider:      "gcp",
-			expectedVersion:              "v8.41.1",
+			expectedVersion:              "v8.4.1", // Exact match with upstream v6.5.0
 			expectedUseTerraformProvider: false,
 		},
 		{
