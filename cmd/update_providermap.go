@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
 	"github.com/spf13/cobra"
@@ -25,6 +26,7 @@ import (
 func newUpdateProvidermapCmd() *cobra.Command {
 	var provider string
 	var recompute bool
+	var parallel int
 
 	cmd := &cobra.Command{
 		Use:   "update-providermap <versions.yaml>",
@@ -35,13 +37,14 @@ This is an administrative command used to maintain the provider version mapping 
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			versionMapPath := args[0]
-			updateProviderMap(versionMapPath, provider, recompute)
+			updateProviderMap(versionMapPath, provider, recompute, parallel)
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&provider, "provider", "", "Only update the specified provider (e.g., 'random')")
 	cmd.Flags().BoolVar(&recompute, "recompute", false, "Recompute the suggested versions")
+	cmd.Flags().IntVar(&parallel, "flags", 1, "Process providers in parallel")
 
 	return cmd
 }
@@ -53,7 +56,7 @@ func init() {
 	}
 }
 
-func updateProviderMap(versionMapPath string, provider string, recompute bool) {
+func updateProviderMap(versionMapPath string, provider string, recompute bool, parallel int) {
 	// Load the VersionMap from YAML
 	vm, err := providermap.LoadVersionMapFromYAML(versionMapPath)
 	if err != nil {
@@ -73,38 +76,94 @@ func updateProviderMap(versionMapPath string, provider string, recompute bool) {
 		}
 	}
 
-	// Iterate over the providers to process
-	for _, bp := range providersToProcess {
+	// Helper function to process a single provider
+	processProvider := func(bp providermap.BridgedProvider, mu *sync.Mutex) {
 		fmt.Printf("Processing provider: %s\n", bp)
 
 		// Fetch actual tags for the provider
 		tags := providermap.FetchReleaseVersions(bp)
 		if tags == nil {
 			fmt.Fprintf(os.Stderr, "  Warning: failed to fetch tags for %s\n", bp)
-			continue
+			return
 		}
 
 		// For every tag not yet in the VersionMap, try to infer upstream version
 		for _, tag := range tags {
-			if vm.HasPulumiVersion(bp, tag) && !recompute {
+			var hasVersion bool
+			if mu != nil {
+				mu.Lock()
+				hasVersion = vm.HasPulumiVersion(bp, tag)
+				mu.Unlock()
+			} else {
+				hasVersion = vm.HasPulumiVersion(bp, tag)
+			}
+
+			if hasVersion && !recompute {
 				continue
 			}
 
 			upstreamVersion, err := providermap.InferUpstreamVersion(bp, tag)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "  %s: %v\n", tag, err)
-				vm.AddError(bp, tag, err.Error())
+				if mu != nil {
+					mu.Lock()
+					vm.AddError(bp, tag, err.Error())
+					mu.Unlock()
+				} else {
+					vm.AddError(bp, tag, err.Error())
+				}
 				continue
 			}
 
-			vm.AddVersion(bp, tag, upstreamVersion)
+			if mu != nil {
+				mu.Lock()
+				vm.AddVersion(bp, tag, upstreamVersion)
+				mu.Unlock()
+			} else {
+				vm.AddVersion(bp, tag, upstreamVersion)
+			}
 			fmt.Printf("  %s -> %s\n", tag, upstreamVersion)
 
-			// Write the updated VersionMap to YAML
-			if err := vm.SaveToYAML(versionMapPath); err != nil {
-				fmt.Fprintf(os.Stderr, "Error saving VersionMap: %v\n", err)
-				os.Exit(1)
+			// Write the updated VersionMap to YAML after each version (sequential only)
+			if parallel <= 1 {
+				if err := vm.SaveToYAML(versionMapPath); err != nil {
+					fmt.Fprintf(os.Stderr, "Error saving VersionMap: %v\n", err)
+					os.Exit(1)
+				}
 			}
+		}
+	}
+
+	// Iterate over the providers to process
+	if parallel > 1 {
+		// Parallel processing with worker pool
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		providerChan := make(chan providermap.BridgedProvider, len(providersToProcess))
+
+		// Start N workers
+		for i := 0; i < parallel; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for bp := range providerChan {
+					processProvider(bp, &mu)
+				}
+			}()
+		}
+
+		// Send providers to workers
+		for _, bp := range providersToProcess {
+			providerChan <- bp
+		}
+		close(providerChan)
+
+		// Wait for all workers to finish
+		wg.Wait()
+	} else {
+		// Sequential processing
+		for _, bp := range providersToProcess {
+			processProvider(bp, nil)
 		}
 	}
 
