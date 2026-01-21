@@ -34,6 +34,7 @@ func init() {
 	var vm VersionMap
 	err := yaml.Unmarshal(embeddedVersionsYAML, &vm)
 	contract.AssertNoErrorf(err, "versions.yaml does not unmarshal")
+	refinedVersionMap = &vm
 }
 
 // A full name such as "registry.terraform.io/hashicorp/aws"
