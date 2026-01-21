@@ -920,7 +920,647 @@ bridged:
           error: no GitHub release
         - pulumi: v0.8.1
           error: no GitHub release
-    azure: []
+    azure:
+        - pulumi: v6.31.0
+          upstream: v4.57.0
+        - pulumi: v6.30.0
+          upstream: v4.53.0
+        - pulumi: v6.29.0
+          upstream: v4.47.0
+        - pulumi: v6.28.0
+          upstream: v4.46.0
+        - pulumi: v6.27.2
+          upstream: v4.46.0
+        - pulumi: v6.27.1
+          upstream: v4.46.0
+        - pulumi: v6.27.0
+          upstream: v4.46.0
+        - pulumi: v6.26.0
+          upstream: v4.39.0
+        - pulumi: v6.25.0
+          upstream: v4.39.0
+        - pulumi: v6.24.0
+          upstream: v4.33.0
+        - pulumi: v6.23.0
+          upstream: v4.30.0
+        - pulumi: v6.22.1
+          upstream: v4.25.0
+        - pulumi: v6.22.0
+          upstream: v4.25.0
+        - pulumi: v6.21.0
+          upstream: v4.21.1
+        - pulumi: v6.20.0
+          upstream: v4.19.0
+        - pulumi: v6.19.0
+          upstream: v4.18.0
+        - pulumi: v6.18.0
+          upstream: v4.17.0
+        - pulumi: v6.17.0
+          upstream: v4.16.0
+        - pulumi: v6.16.0
+          upstream: v4.16.0
+        - pulumi: v6.15.0
+          upstream: v4.15.0
+        - pulumi: v6.14.0
+          upstream: v4.14.0
+        - pulumi: v6.13.0
+          upstream: v4.13.0
+        - pulumi: v6.12.0
+          upstream: v4.12.0
+        - pulumi: v6.11.0
+          upstream: v4.11.0
+        - pulumi: v6.10.0
+          upstream: v4.10.0
+        - pulumi: v6.9.0
+          upstream: v4.9.0
+        - pulumi: v6.8.0
+          upstream: v4.8.0
+        - pulumi: v6.7.0
+          upstream: v4.7.0
+        - pulumi: v6.6.0
+          upstream: v4.6.0
+        - pulumi: v6.5.0
+          upstream: v4.5.0
+        - pulumi: v6.4.0
+          upstream: v4.4.0
+        - pulumi: v6.3.1
+          upstream: v4.3.0
+        - pulumi: v6.3.0
+          upstream: v4.3.0
+        - pulumi: v6.2.0
+          upstream: v4.2.0
+        - pulumi: v6.1.0
+          upstream: v4.1.0
+        - pulumi: v6.0.0
+          upstream: v4.0.0
+        - pulumi: v5.89.1
+          upstream: v3.116.0
+        - pulumi: v5.89.0
+          upstream: v3.116.0
+        - pulumi: v5.88.0
+          upstream: v3.115.0
+        - pulumi: v5.87.0
+          upstream: v3.115.0
+        - pulumi: v5.86.0
+          upstream: v3.114.0
+        - pulumi: v5.85.0
+          upstream: v3.113.0
+        - pulumi: v5.84.0
+          upstream: v3.112.0
+        - pulumi: v5.83.0
+          upstream: v3.111.0
+        - pulumi: v5.82.0
+          upstream: v3.110.0
+        - pulumi: v5.81.0
+          upstream: v3.109.0
+        - pulumi: v5.80.0
+          upstream: v3.107.0
+        - pulumi: v5.79.0
+          upstream: v3.105.0
+        - pulumi: v5.78.0
+          upstream: v3.104.2
+        - pulumi: v5.77.1
+          upstream: v3.103.1
+        - pulumi: v5.77.0
+          upstream: v3.103.0
+        - pulumi: v5.76.0
+          upstream: v3.103.0
+        - pulumi: v5.75.1
+          upstream: v3.102.0
+        - pulumi: v5.75.0
+          upstream: v3.102.0
+        - pulumi: v5.74.0
+          upstream: v3.101.0
+        - pulumi: v5.73.0
+          upstream: v3.100.0
+        - pulumi: v5.72.0
+          upstream: v3.99.0
+        - pulumi: v5.71.0
+          upstream: v3.98.0
+        - pulumi: v5.70.0
+          upstream: v3.97.1
+        - pulumi: v5.69.0
+          upstream: v3.95.0
+        - pulumi: v5.68.0
+          upstream: v3.94.0
+        - pulumi: v5.67.1
+          upstream: v3.92.0
+        - pulumi: v5.67.0
+          upstream: v3.92.0
+        - pulumi: v5.66.1
+          upstream: v3.91.0
+        - pulumi: v5.66.0
+          upstream: v3.91.0
+        - pulumi: v5.65.0
+          upstream: v3.90.0
+        - pulumi: v5.64.1
+          upstream: v3.89.0
+        - pulumi: v5.64.0
+          upstream: v3.89.0
+        - pulumi: v5.63.0
+          upstream: v3.88.0
+        - pulumi: v5.62.1
+          upstream: v3.87.0
+        - pulumi: v5.62.0
+          upstream: v3.87.0
+        - pulumi: v5.61.0
+          upstream: v3.86.0
+        - pulumi: v5.60.0
+          upstream: v3.85.0
+        - pulumi: v5.59.0
+          upstream: v3.84.0
+        - pulumi: v5.58.0
+          upstream: v3.83.0
+        - pulumi: v5.57.0
+          upstream: v3.82.0
+        - pulumi: v5.56.0
+          upstream: v3.81.0
+        - pulumi: v5.55.0
+          upstream: v3.79.0
+        - pulumi: v5.54.0
+          upstream: v3.78.0
+        - pulumi: v5.53.0
+          upstream: v3.77.0
+        - pulumi: v5.52.0
+          upstream: v3.75.0
+        - pulumi: v5.51.0
+          upstream: v3.74.0
+        - pulumi: v5.50.0
+          upstream: v3.72.0
+        - pulumi: v5.49.0
+          upstream: v3.71.0
+        - pulumi: v5.48.1
+          upstream: v3.68.0
+        - pulumi: v5.48.0
+          upstream: v3.68.0
+        - pulumi: v5.47.0
+          upstream: v3.67.0
+        - pulumi: v5.46.0
+          upstream: v3.66.0
+        - pulumi: v5.45.0
+          upstream: v3.64.0
+        - pulumi: v5.44.1
+          upstream: v3.61.0
+        - pulumi: v5.44.0
+          upstream: v3.61.0
+        - pulumi: v5.43.0
+          upstream: v3.55.0
+        - pulumi: v5.42.0
+          upstream: v3.53.0
+        - pulumi: v5.41.0
+          upstream: v3.52.0
+        - pulumi: v5.40.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.39.0
+          upstream: v3.50.0
+        - pulumi: v5.38.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.37.0
+          upstream: v3.47.0
+        - pulumi: v5.36.0
+          upstream: v3.45.0
+        - pulumi: v5.35.0
+          upstream: v3.43.0
+        - pulumi: v5.34.0
+          upstream: v3.42.0
+        - pulumi: v5.33.0
+          upstream: v3.40.0
+        - pulumi: v5.32.0
+          upstream: v3.40.0
+        - pulumi: v5.31.0
+          upstream: v3.39.1
+        - pulumi: v5.30.0
+          upstream: v3.38.0
+        - pulumi: v5.29.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.28.0
+          upstream: v3.36.0
+        - pulumi: v5.27.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.26.1
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.26.0
+          upstream: v3.34.0
+        - pulumi: v5.25.0
+          upstream: v3.32.0
+        - pulumi: v5.24.0
+          upstream: 3.30.0
+        - pulumi: v5.23.0
+          upstream: v3.28.0
+        - pulumi: v5.22.0
+          upstream: 3.27.0
+        - pulumi: v5.21.0
+          upstream: 3.25.0
+        - pulumi: v5.20.0
+          upstream: v3.24.0
+        - pulumi: v5.19.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.18.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.17.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.16.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.15.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.14.0
+          upstream: v3.26.0
+        - pulumi: v5.13.0
+          upstream: v3.14.0
+        - pulumi: v5.12.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.11.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.10.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.9.0
+          upstream: v3.24.1
+        - pulumi: v5.8.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.7.0
+          upstream: v3.7.0
+        - pulumi: v5.6.0
+          upstream: v3.6.0
+        - pulumi: v5.5.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.4.0
+          upstream: v3.4.0
+        - pulumi: v5.3.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.2.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v5.1.0
+          upstream: v3.1.0
+        - pulumi: v5.0.0
+          upstream: v3.20.0
+        - pulumi: v4.42.0
+          upstream: v2.99.0
+        - pulumi: v4.41.1
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.41.0
+          upstream: v3.19.1
+        - pulumi: v4.40.0
+          upstream: v2.98.0
+        - pulumi: v4.39.0
+          upstream: v2.97.0
+        - pulumi: v4.38.0
+          upstream: v2.96.0
+        - pulumi: v4.37.0
+          upstream: v3.18.0
+        - pulumi: v4.36.0
+          upstream: v2.94.0
+        - pulumi: v4.35.0
+          upstream: v2.93.1
+        - pulumi: v4.34.0
+          upstream: v2.92.0
+        - pulumi: v4.33.0
+          upstream: v2.91.0
+        - pulumi: v4.32.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.31.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.30.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.29.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.28.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.27.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.26.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.25.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.24.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.23.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.22.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.21.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.20.1
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.20.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.19.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.18.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.17.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.16.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.15.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.14.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.13.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.12.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.11.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.10.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.9.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.8.0
+          error: no GitHub release
+        - pulumi: v4.7.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.6.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.5.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.4.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.3.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.2.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.1.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.0.1
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v4.0.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v3.56.0
+          error: 'failed to parse version from release notes: no upstream version found in commit message'
+        - pulumi: v3.55.0
+          error: no GitHub release
+        - pulumi: v3.54.0
+          error: no GitHub release
+        - pulumi: v3.53.0
+          error: no GitHub release
+        - pulumi: v3.52.1
+          error: no GitHub release
+        - pulumi: v3.52.0
+          error: no GitHub release
+        - pulumi: v3.51.0
+          error: no GitHub release
+        - pulumi: v3.50.0
+          error: no GitHub release
+        - pulumi: v3.49.0
+          error: no GitHub release
+        - pulumi: v3.48.0
+          error: no GitHub release
+        - pulumi: v3.47.1
+          error: no GitHub release
+        - pulumi: v3.47.0
+          error: no GitHub release
+        - pulumi: v3.46.0
+          error: no GitHub release
+        - pulumi: v3.45.0
+          error: no GitHub release
+        - pulumi: v3.44.0
+          error: no GitHub release
+        - pulumi: v3.43.0
+          error: no GitHub release
+        - pulumi: v3.42.0
+          error: no GitHub release
+        - pulumi: v3.41.1
+          error: no GitHub release
+        - pulumi: v3.41.0
+          error: no GitHub release
+        - pulumi: v3.40.0
+          error: no GitHub release
+        - pulumi: v3.33.2
+          error: no GitHub release
+        - pulumi: v3.33.1
+          error: no GitHub release
+        - pulumi: v3.33.0
+          error: no GitHub release
+        - pulumi: v3.32.0
+          error: no GitHub release
+        - pulumi: v3.31.1
+          error: no GitHub release
+        - pulumi: v3.31.0
+          error: no GitHub release
+        - pulumi: v3.30.1
+          error: no GitHub release
+        - pulumi: v3.30.0
+          error: no GitHub release
+        - pulumi: v3.29.1
+          error: no GitHub release
+        - pulumi: v3.29.0
+          error: no GitHub release
+        - pulumi: v3.28.0
+          error: no GitHub release
+        - pulumi: v3.27.0
+          error: no GitHub release
+        - pulumi: v3.26.0
+          error: no GitHub release
+        - pulumi: v3.25.0
+          error: no GitHub release
+        - pulumi: v3.24.1
+          error: no GitHub release
+        - pulumi: v3.24.0
+          error: no GitHub release
+        - pulumi: v3.23.0
+          error: no GitHub release
+        - pulumi: v3.22.0
+          error: no GitHub release
+        - pulumi: v3.21.0
+          error: no GitHub release
+        - pulumi: v3.20.1
+          error: no GitHub release
+        - pulumi: v3.20.0
+          error: no GitHub release
+        - pulumi: v3.19.0
+          error: no GitHub release
+        - pulumi: v3.18.1
+          error: no GitHub release
+        - pulumi: v3.18.0
+          error: no GitHub release
+        - pulumi: v3.17.0
+          error: no GitHub release
+        - pulumi: v3.16.0
+          error: no GitHub release
+        - pulumi: v3.15.0
+          error: no GitHub release
+        - pulumi: v3.14.0
+          error: no GitHub release
+        - pulumi: v3.13.1
+          error: no GitHub release
+        - pulumi: v3.13.0
+          error: no GitHub release
+        - pulumi: v3.12.1
+          error: no GitHub release
+        - pulumi: v3.12.0
+          error: no GitHub release
+        - pulumi: v3.11.0
+          error: no GitHub release
+        - pulumi: v3.10.0
+          error: no GitHub release
+        - pulumi: v3.9.3
+          error: no GitHub release
+        - pulumi: v3.9.2
+          error: no GitHub release
+        - pulumi: v3.9.1
+          error: no GitHub release
+        - pulumi: v3.9.0
+          error: no GitHub release
+        - pulumi: v3.8.0
+          error: no GitHub release
+        - pulumi: v3.7.0
+          error: no GitHub release
+        - pulumi: v3.6.1
+          error: no GitHub release
+        - pulumi: v3.6.0
+          error: no GitHub release
+        - pulumi: v3.5.1
+          error: no GitHub release
+        - pulumi: v3.5.0
+          error: no GitHub release
+        - pulumi: v3.4.0
+          error: no GitHub release
+        - pulumi: v3.3.0
+          error: no GitHub release
+        - pulumi: v3.2.0
+          error: no GitHub release
+        - pulumi: v3.1.0
+          error: no GitHub release
+        - pulumi: v3.0.0
+          error: no GitHub release
+        - pulumi: v2.5.0
+          error: no GitHub release
+        - pulumi: v2.4.1
+          error: no GitHub release
+        - pulumi: v2.4.0
+          error: no GitHub release
+        - pulumi: v2.3.1
+          error: no GitHub release
+        - pulumi: v2.3.0
+          error: no GitHub release
+        - pulumi: v2.2.0
+          error: no GitHub release
+        - pulumi: v2.1.0
+          error: no GitHub release
+        - pulumi: v2.0.0
+          error: no GitHub release
+        - pulumi: v1.14.0
+          error: no GitHub release
+        - pulumi: v1.13.0
+          error: no GitHub release
+        - pulumi: v1.12.0
+          error: no GitHub release
+        - pulumi: v1.11.0
+          error: no GitHub release
+        - pulumi: v1.10.0
+          error: no GitHub release
+        - pulumi: v1.9.0
+          error: no GitHub release
+        - pulumi: v1.8.0
+          error: no GitHub release
+        - pulumi: v1.7.0
+          error: no GitHub release
+        - pulumi: v1.6.0
+          error: no GitHub release
+        - pulumi: v1.5.0
+          error: no GitHub release
+        - pulumi: v1.4.0
+          error: no GitHub release
+        - pulumi: v1.3.1
+          error: no GitHub release
+        - pulumi: v1.3.0
+          error: no GitHub release
+        - pulumi: v1.2.0
+          error: no GitHub release
+        - pulumi: v1.1.0
+          error: no GitHub release
+        - pulumi: v1.0.0
+          error: no GitHub release
+        - pulumi: v0.19.5
+          error: no GitHub release
+        - pulumi: v0.19.4
+          error: no GitHub release
+        - pulumi: v0.19.3
+          error: no GitHub release
+        - pulumi: v0.19.2
+          error: no GitHub release
+        - pulumi: v0.19.1
+          error: no GitHub release
+        - pulumi: v0.19.0
+          error: no GitHub release
+        - pulumi: v0.18.8
+          error: no GitHub release
+        - pulumi: v0.18.7
+          error: no GitHub release
+        - pulumi: v0.18.6
+          error: no GitHub release
+        - pulumi: v0.18.5
+          error: no GitHub release
+        - pulumi: v0.18.4
+          error: no GitHub release
+        - pulumi: v0.18.3
+          error: no GitHub release
+        - pulumi: v0.18.2
+          error: no GitHub release
+        - pulumi: v0.18.1
+          error: no GitHub release
+        - pulumi: v0.18.0
+          error: no GitHub release
+        - pulumi: v0.17.4
+          error: no GitHub release
+        - pulumi: v0.17.3
+          error: no GitHub release
+        - pulumi: v0.17.2
+          error: no GitHub release
+        - pulumi: v0.17.1
+          error: no GitHub release
+        - pulumi: v0.17.0
+          error: no GitHub release
+        - pulumi: v0.16.9
+          error: no GitHub release
+        - pulumi: v0.16.8
+          error: no GitHub release
+        - pulumi: v0.16.7
+          error: no GitHub release
+        - pulumi: v0.16.6
+          error: no GitHub release
+        - pulumi: v0.16.5
+          error: no GitHub release
+        - pulumi: v0.16.4
+          error: no GitHub release
+        - pulumi: v0.16.3
+          error: no GitHub release
+        - pulumi: v0.16.2
+          error: no GitHub release
+        - pulumi: v0.16.1
+          error: no GitHub release
+        - pulumi: v0.16.0
+          error: no GitHub release
+        - pulumi: v0.15.2
+          error: no GitHub release
+        - pulumi: v0.15.1
+          error: no GitHub release
+        - pulumi: v0.15.0
+          error: no GitHub release
+        - pulumi: v0.14.2
+          error: no GitHub release
+        - pulumi: v0.14.1
+          error: no GitHub release
+        - pulumi: v0.14.0
+          error: no GitHub release
+        - pulumi: v0.12.3
+          error: no GitHub release
+        - pulumi: v0.12.2
+          error: no GitHub release
+        - pulumi: v0.12.1
+          error: no GitHub release
+        - pulumi: v0.12.0
+          error: no GitHub release
+        - pulumi: v0.11.3
+          error: no GitHub release
+        - pulumi: v0.11.1
+          error: no GitHub release
+        - pulumi: v0.11.0
+          error: no GitHub release
+        - pulumi: v0.9.11
+          error: no GitHub release
+        - pulumi: v0.0.0
+          error: no GitHub release
     azuread:
         - pulumi: v6.8.0
           error: no upstream submodule found
