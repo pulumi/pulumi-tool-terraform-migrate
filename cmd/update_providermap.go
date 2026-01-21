@@ -44,7 +44,7 @@ This is an administrative command used to maintain the provider version mapping 
 
 	cmd.Flags().StringVar(&provider, "provider", "", "Only update the specified provider (e.g., 'random')")
 	cmd.Flags().BoolVar(&recompute, "recompute", false, "Recompute the suggested versions")
-	cmd.Flags().IntVar(&parallel, "flags", 1, "Process providers in parallel")
+	cmd.Flags().IntVar(&parallel, "parallel", 1, "Process providers in parallel")
 
 	return cmd
 }
