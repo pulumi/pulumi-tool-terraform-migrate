@@ -40,6 +40,7 @@ This is an administrative command used to maintain the provider version mapping 
 			updateProviderMap(versionMapPath, provider, recompute, parallel)
 			return nil
 		},
+		Hidden: true, // admin command, not intended for general usage
 	}
 
 	cmd.Flags().StringVar(&provider, "provider", "", "Only update the specified provider (e.g., 'random')")
@@ -50,10 +51,7 @@ This is an administrative command used to maintain the provider version mapping 
 }
 
 func init() {
-	// Only register this command if PULUMI_ADMIN_COMMANDS=true
-	if os.Getenv("PULUMI_ADMIN_COMMANDS") == "true" {
-		rootCmd.AddCommand(newUpdateProvidermapCmd())
-	}
+	rootCmd.AddCommand(newUpdateProvidermapCmd())
 }
 
 func updateProviderMap(versionMapPath string, provider string, recompute bool, parallel int) {
