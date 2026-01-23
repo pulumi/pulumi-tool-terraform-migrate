@@ -147,7 +147,7 @@ func TestTranslateBasicWithDependencies(t *testing.T) {
 
 	dependencies, err := os.ReadFile(filepath.Join(stackFolder, "dependencies.json"))
 	require.NoError(t, err)
-	autogold.Expect(`[{"name":"random","version":"4.18.1"}]`).Equal(t, string(dependencies))
+	autogold.Expect(`[{"name":"random","version":"4.19.0"}]`).Equal(t, string(dependencies))
 }
 
 func TestTranslateBasicWithEdit(t *testing.T) {
