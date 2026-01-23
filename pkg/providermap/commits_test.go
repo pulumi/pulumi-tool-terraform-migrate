@@ -42,7 +42,7 @@ This PR was generated via $ upgrade-provider pulumi/pulumi-random
 		{
 			name:        "Version without v prefix",
 			message:     "Upgrade terraform-provider-aws to 5.70.3",
-			expected:    "5.70.3",
+			expected:    "v5.70.3",
 			expectError: false,
 		},
 		{
@@ -54,7 +54,7 @@ This PR was generated via $ upgrade-provider pulumi/pulumi-random
 		{
 			name:        "Version with build metadata and terraform prefix",
 			message:     "Deploy terraform to 1.0.0+20130313144700",
-			expected:    "1.0.0+20130313144700",
+			expected:    "v1.0.0+20130313144700",
 			expectError: false,
 		},
 		{
@@ -72,7 +72,7 @@ This PR was generated via $ upgrade-provider pulumi/pulumi-random
 		{
 			name:        "Mixed case upstream prefix",
 			message:     "Update UpStream to 2.1.0",
-			expected:    "2.1.0",
+			expected:    "v2.1.0",
 			expectError: false,
 		},
 		{
@@ -165,7 +165,7 @@ Upgrade terraform to v4.9.0`,
 			message: `Update upstream to 2.0.0-alpha.1
 Update upstream to 2.0.0-beta.1
 Update upstream to 2.0.0-alpha.5`,
-			expected:    "2.0.0-beta.1",
+			expected:    "v2.0.0-beta.1",
 			expectError: false,
 		},
 		{
@@ -181,10 +181,10 @@ Update upstream to 2.0.0-alpha.5`,
 			result, err := parseVersionFromCommitMsg(tt.message)
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Equal(t, "", result)
+				assert.Equal(t, "", string(result))
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
+				assert.Equal(t, tt.expected, string(result))
 			}
 		})
 	}

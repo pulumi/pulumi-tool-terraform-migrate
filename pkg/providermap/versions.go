@@ -36,6 +36,10 @@ func (t ReleaseTag) Semver() semver.Version {
 	return v
 }
 
+func normalizeReleaseTag(tag string) ReleaseTag {
+	return ReleaseTag("v" + strings.TrimPrefix(tag, "v"))
+}
+
 type VersionPair struct {
 	Pulumi   ReleaseTag `yaml:"pulumi"`
 	Upstream ReleaseTag `yaml:"upstream,omitempty"`

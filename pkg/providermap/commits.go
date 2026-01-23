@@ -32,7 +32,7 @@ var versionPattern = regexp.MustCompile(`(?i)(?:terraform|upstream).*to\s+(v?\d+
 // It looks for patterns like "Upgrade terraform-provider-random to v3.8.0" and returns
 // the version string (e.g., "v3.8.0"). If multiple versions are found, it returns the
 // largest version by semantic versioning rules. Returns an error if no version is found.
-func parseVersionFromCommitMsg(message string) (string, error) {
+func parseVersionFromCommitMsg(message string) (ReleaseTag, error) {
 	allMatches := versionPattern.FindAllStringSubmatch(message, -1)
 	if len(allMatches) == 0 {
 		return "", fmt.Errorf("no upstream version found in commit message")
@@ -40,7 +40,7 @@ func parseVersionFromCommitMsg(message string) (string, error) {
 
 	// If only one match, return it directly
 	if len(allMatches) == 1 {
-		return allMatches[0][1], nil
+		return normalizeReleaseTag(allMatches[0][1]), nil
 	}
 
 	// Multiple matches - find the largest version
@@ -69,5 +69,5 @@ func parseVersionFromCommitMsg(message string) (string, error) {
 		return "", fmt.Errorf("no valid semantic versions found in commit message")
 	}
 
-	return maxVersionStr, nil
+	return normalizeReleaseTag(maxVersionStr), nil
 }
