@@ -1,0 +1,48 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.10.6",
+  "values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "unknown_resource.example",
+          "mode": "managed",
+          "type": "unknown_resource",
+          "name": "example",
+          "provider_name": "registry.opentofu.org/hashicorp/unknown",
+          "schema_version": 0,
+          "values": {
+            "id": "12345",
+            "triggers": null
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "random_string.example",
+          "mode": "managed",
+          "type": "random_string",
+          "name": "example",
+          "provider_name": "registry.opentofu.org/hashicorp/random",
+          "schema_version": 2,
+          "values": {
+            "id": "B*pc@KN!P5*2Cu<O",
+            "keepers": null,
+            "length": 16,
+            "lower": true,
+            "min_lower": 0,
+            "min_numeric": 0,
+            "min_special": 0,
+            "min_upper": 0,
+            "number": true,
+            "numeric": true,
+            "override_special": null,
+            "result": "B*pc@KN!P5*2Cu<O",
+            "special": true,
+            "upper": true
+          },
+          "sensitive_values": {}
+        }
+      ]
+    }
+  }
+}
