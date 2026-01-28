@@ -184,6 +184,18 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 	errorMessages := []ErroredResource{}
 
 	err := tofu.VisitResources(tfState, func(resource *tfjson.StateResource) error {
+		// Check if we have a Pulumi provider for this Terraform provider.
+		// If not, skip the resource and add it to the error messages.
+		providerLink, ok := providerTable[providermap.TerraformProviderName(resource.ProviderName)]
+		if !ok {
+			errorMessages = append(errorMessages, ErroredResource{
+				ResourceName:     resource.Name,
+				ResourceType:     resource.Type,
+				ResourceProvider: resource.ProviderName,
+				ErrorMessage:     fmt.Sprintf("no bridged Pulumi provider found for Terraform provider %s", resource.ProviderName),
+			})
+			return nil
+		}
 		pulumiResource, err := convertResourceStateExceptProviderLink(resource, pulumiProviders)
 		if err != nil {
 			errorMessages = append(errorMessages, ErroredResource{
@@ -193,10 +205,6 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 				ErrorMessage:     err.Error(),
 			})
 			return nil
-		}
-		providerLink, ok := providerTable[providermap.TerraformProviderName(resource.ProviderName)]
-		if !ok {
-			return fmt.Errorf("failed resolving provider for Terraform resource at %q", resource.Address)
 		}
 		pulumiResource.Provider = &providerLink
 		pulumiState.Resources = append(pulumiState.Resources, pulumiResource)

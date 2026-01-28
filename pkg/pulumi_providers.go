@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"os"
 	"slices"
 
 	tfjson "github.com/hashicorp/terraform-json"
@@ -26,7 +27,6 @@ import (
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 )
 
 func getTerraformProvidersForTerraformState(tfState *tfjson.State) ([]providermap.TerraformProviderName, error) {
@@ -64,7 +64,10 @@ func pulumiProvidersForTerraformProviders(
 		})
 
 		// TODO[pulumi/pulumi-service#35437]: make this work for Any TF
-		contract.Assertf(pulumiProvider.BridgedPulumiProvider != nil, "no bridged pulumi provider found for %s", providerName)
+		if pulumiProvider.BridgedPulumiProvider == nil {
+			fmt.Fprintf(os.Stderr, "Warning: no bridged Pulumi provider found for %s, resources using this provider will be skipped\n", providerName)
+			continue
+		}
 
 		result, err := bridgedproviders.EnsureProviderInstalled(context.Background(), bridgedproviders.InstallProviderOptions{
 			Name:    pulumiProvider.BridgedPulumiProvider.Identifier,

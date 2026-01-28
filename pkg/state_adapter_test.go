@@ -239,6 +239,35 @@ func Test_convertState_corrupted_state(t *testing.T) {
 	require.Contains(t, errorMessages[0].ErrorMessage, "unsupported attribute \"corrupted\"")
 }
 
+func Test_convertState_unknown_provider(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: "testdata/unknown_provider_state.json",
+	})
+	require.NoError(t, err, "failed to load Terraform state")
+
+	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
+	require.NoError(t, err, "failed to get Pulumi providers")
+
+	require.Len(t, pulumiProviders, 1, "should only have 1 provider (random)")
+
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
+	require.NoError(t, err, "failed to convert state")
+
+	require.Len(t, errorMessages, 1, "expected 1 error message for unknown_resource")
+	require.Equal(t, "example", errorMessages[0].ResourceName)
+	require.Equal(t, "unknown_resource", errorMessages[0].ResourceType)
+	require.Equal(t, "registry.opentofu.org/hashicorp/unknown", errorMessages[0].ResourceProvider)
+	require.Contains(t, errorMessages[0].ErrorMessage, "no bridged Pulumi provider found")
+
+	require.Len(t, pulumiState.Providers, 1, "expected 1 provider")
+	require.Len(t, pulumiState.Resources, 1, "expected 1 resource (unknown_resource should be skipped)")
+
+	require.Equal(t, "random:index/randomString:RandomString", pulumiState.Resources[0].PulumiResourceID.Type)
+}
+
 func Test_pulumiNameFromTerraformAddress(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
