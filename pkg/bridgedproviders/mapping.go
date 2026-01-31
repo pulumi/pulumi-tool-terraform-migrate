@@ -79,7 +79,8 @@ func GetMappingFromBinary(ctx context.Context, binaryPath string, opts GetMappin
 	}()
 
 	// Load the provider from the binary path
-	provider, err := plugin.NewProviderFromPath(host, pctx, binaryPath)
+	// Use an empty package name since we only need GetMapping, not actual resource operations
+	provider, err := plugin.NewProviderFromPath(host, pctx, "", binaryPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load provider from %s: %w", binaryPath, err)
 	}
@@ -159,7 +160,7 @@ func (h *minimalHost) ListAnalyzers() []plugin.Analyzer {
 	return nil
 }
 
-func (h *minimalHost) Provider(descriptor workspace.PackageDescriptor) (plugin.Provider, error) {
+func (h *minimalHost) Provider(descriptor workspace.PluginDescriptor) (plugin.Provider, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 

@@ -1,0 +1,33 @@
+[]pkg.PulumiResource{{
+	PulumiResourceID: pkg.PulumiResourceID{
+		ID:   "f6g?W_Yx$=+qEh?M",
+		Name: "legacy",
+		Type: "random:index/randomString:RandomString",
+	},
+	Inputs: resource.PropertyMap{
+		resource.PropertyKey("__defaults"): resource.PropertyValue{
+			V: []resource.PropertyValue{},
+		},
+		resource.PropertyKey("length"):  resource.PropertyValue{V: 16},
+		resource.PropertyKey("lower"):   resource.PropertyValue{V: true},
+		resource.PropertyKey("number"):  resource.PropertyValue{V: true},
+		resource.PropertyKey("special"): resource.PropertyValue{V: true},
+		resource.PropertyKey("upper"):   resource.PropertyValue{V: true},
+	},
+	Outputs: resource.PropertyMap{
+		resource.PropertyKey("id"):              resource.PropertyValue{V: "f6g?W_Yx$=+qEh?M"},
+		resource.PropertyKey("keepers"):         resource.PropertyValue{},
+		resource.PropertyKey("length"):          resource.PropertyValue{V: 16},
+		resource.PropertyKey("lower"):           resource.PropertyValue{V: true},
+		resource.PropertyKey("minLower"):        resource.PropertyValue{V: 0},
+		resource.PropertyKey("minNumeric"):      resource.PropertyValue{V: 0},
+		resource.PropertyKey("minSpecial"):      resource.PropertyValue{V: 0},
+		resource.PropertyKey("minUpper"):        resource.PropertyValue{V: 0},
+		resource.PropertyKey("number"):          resource.PropertyValue{V: true},
+		resource.PropertyKey("numeric"):         resource.PropertyValue{},
+		resource.PropertyKey("overrideSpecial"): resource.PropertyValue{},
+		resource.PropertyKey("result"):          resource.PropertyValue{V: "f6g?W_Yx$=+qEh?M"},
+		resource.PropertyKey("special"):         resource.PropertyValue{V: true},
+		resource.PropertyKey("upper"):           resource.PropertyValue{V: true},
+	},
+}}

@@ -268,7 +268,7 @@ func Test_convertState_unknown_provider(t *testing.T) {
 	require.Equal(t, "random:index/randomString:RandomString", pulumiState.Resources[0].PulumiResourceID.Type)
 }
 
-func Test_pulumiNameFromTerraformAddress(t *testing.T) {
+func TestPulumiNameFromTerraformAddress(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name         string
@@ -310,7 +310,7 @@ func Test_pulumiNameFromTerraformAddress(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := pulumiNameFromTerraformAddress(tc.address, tc.resourceType)
+			result := PulumiNameFromTerraformAddress(tc.address, tc.resourceType)
 			require.Equal(t, tc.expected, result)
 		})
 	}
