@@ -45,7 +45,7 @@ func getTerraformProvidersForTerraformState(tfState *tfjson.State) ([]providerma
 	return providers, nil
 }
 
-func pulumiProvidersForTerraformProviders(
+func PulumiProvidersForTerraformProviders(
 	terraformProviders []providermap.TerraformProviderName,
 	providerVersions map[string]string,
 ) (map[providermap.TerraformProviderName]*info.Provider, error) {
@@ -101,7 +101,7 @@ func GetPulumiProvidersForTerraformState(tfState *tfjson.State, providerVersions
 	if err != nil {
 		return nil, fmt.Errorf("failed to get terraform providers: %w", err)
 	}
-	return pulumiProvidersForTerraformProviders(terraformProviders, providerVersions)
+	return PulumiProvidersForTerraformProviders(terraformProviders, providerVersions)
 }
 
 func GetProviderInputs(providerName string) (resource.PropertyMap, error) {

@@ -469,7 +469,7 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			props, err := convertTFValueToPulumiValue(test.val, test.res, test.pulumiResource, test.sensitivePaths)
+			props, err := ConvertTFValueToPulumiValue(test.val, test.res, test.pulumiResource, test.sensitivePaths)
 			if err != nil {
 				t.Fatalf("failed to convert cty.Value to map[string]interface{}: %v", err)
 			}
