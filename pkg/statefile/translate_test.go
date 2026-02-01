@@ -68,20 +68,13 @@ func TestTranslateResource(t *testing.T) {
 			providers, err := tfmigrate.PulumiProvidersForTerraformProviders(slices.Collect(maps.Keys(providerNames)), nil)
 			require.NoError(t, err, "failed to get provider mappings")
 
-			// Translate each resource and collect results
-			var results []tfmigrate.PulumiResource
-			for _, module := range sf.State.Modules {
-				for _, tfResource := range module.Resources {
-					for key := range tfResource.Instances {
-						res, err := TranslateResource(tfResource, key, providers)
-						require.NoError(t, err, "failed to translate resource")
-						results = append(results, res)
-					}
-				}
-			}
+			// Translate the entire statefile
+			result, err := TranslateStateFile(t.Context(), sf.State, providers)
+			require.NoError(t, err, "failed to translate statefile")
+			require.Empty(t, result.Skipped, "some resources were skipped: %v", result.Skipped)
 
 			// Compare against golden file
-			autogold.ExpectFile(t, results)
+			autogold.ExpectFile(t, result.Resources)
 		})
 	}
 }
