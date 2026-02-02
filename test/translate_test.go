@@ -30,13 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func skipIfCI(t *testing.T) {
-	t.Helper()
-	if os.Getenv("CI") == "true" {
-		t.Skip("Skipping test in CI: TODO: set up pulumi credentials in CI")
-	}
-}
-
 func runCommand(t *testing.T, dir string, command string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command(command, args...)
@@ -210,7 +203,6 @@ func TestTranslateBasicWithEdit(t *testing.T) {
 
 func TestTranslateWithDependency(t *testing.T) {
 	t.Parallel()
-	skipIfCI(t)
 
 	ctx := context.Background()
 
@@ -232,7 +224,6 @@ func TestTranslateWithDependency(t *testing.T) {
 
 func TestTranslateAWSStack(t *testing.T) {
 	t.Parallel()
-	skipIfCI(t)
 
 	ctx := context.Background()
 
@@ -255,7 +246,6 @@ func TestTranslateAWSStack(t *testing.T) {
 
 func TestTranslateAWSStackWithEdit(t *testing.T) {
 	t.Parallel()
-	skipIfCI(t)
 
 	ctx := context.Background()
 
