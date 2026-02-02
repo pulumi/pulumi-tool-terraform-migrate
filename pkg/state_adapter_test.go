@@ -33,7 +33,7 @@ func TestConvertSimple(t *testing.T) {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
 
-	require.Len(t, data.Export.Deployment.Resources, 2)
+	require.Len(t, data.Export.Deployment.Resources, 3)
 }
 
 func TestConvertWithDependencies(t *testing.T) {
