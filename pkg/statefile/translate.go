@@ -145,6 +145,19 @@ func TranslateStateFile(
 			providerName := res.ProviderConfig.Provider.String()
 			resourceType := res.Addr.Resource.Type
 
+			// Skip data sources - not yet supported
+			if res.Addr.Resource.Mode == addrs.DataResourceMode {
+				for key := range res.Instances {
+					result.Skipped = append(result.Skipped, SkippedResource{
+						Address:      res.Addr.Instance(key).String(),
+						ResourceType: resourceType,
+						Provider:     providerName,
+						Reason:       "data sources are not yet supported",
+					})
+				}
+				continue
+			}
+
 			provider, ok := providers[providermap.TerraformProviderName(providerName)]
 			if !ok {
 				// Skip resources without a matching Pulumi provider
