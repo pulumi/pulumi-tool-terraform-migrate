@@ -222,59 +222,6 @@ func TestTranslateWithDependency(t *testing.T) {
 	require.Contains(t, output, "5 unchanged")
 }
 
-func TestTranslateAWSStack(t *testing.T) {
-	t.Parallel()
-	t.Skip("TODO: Fix resource clashes")
-
-	ctx := context.Background()
-
-	statePath := setupTFStack(t, "testdata/tf_aws_stack")
-	stackFolder, stackName := createPulumiStack(t)
-
-	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", false)
-	require.NoError(t, err)
-
-	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
-
-	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_aws_stack", "package.json"))
-	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_aws_stack", "index.ts"))
-	_ = runCommand(t, stackFolder, "pulumi", "install")
-	// TODO: Why do BucketLifecycleConfiguration and RolePolicy produce diffs.
-	output := runCommand(t, stackFolder, "pulumi", "preview", "--diff")
-
-	autogold.ExpectFile(t, output)
-}
-
-func TestTranslateAWSStackWithEdit(t *testing.T) {
-	t.Parallel()
-	t.Skip("TODO: Fix resource clashes")
-
-	ctx := context.Background()
-
-	statePath := setupTFStack(t, "testdata/tf_aws_stack")
-	stackFolder, stackName := createPulumiStack(t)
-
-	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), "", false)
-	require.NoError(t, err)
-
-	_ = runCommand(t, stackFolder, "pulumi", "stack", "import", "--file", filepath.Join(stackFolder, "state.json"))
-
-	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_aws_stack", "package.json"))
-	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_aws_stack", "index.ts"))
-	_ = runCommand(t, stackFolder, "pulumi", "install")
-	output := runCommand(t, stackFolder, "pulumi", "preview", "--diff")
-
-	autogold.ExpectFile(t, output, autogold.Name("TestTranslateAWSStackWithEdit-preview"))
-
-	output = runCommand(t, stackFolder, "pulumi", "up", "--yes")
-	autogold.ExpectFile(t, output, autogold.Name("TestTranslateAWSStackWithEdit-up1"))
-
-	replacePackageJson(t, stackFolder, stackName, filepath.Join("testdata/pulumi_aws_stack2", "package.json"))
-	replaceIndexTs(t, stackFolder, filepath.Join("testdata/pulumi_aws_stack2", "index.ts"))
-
-	output = runCommand(t, stackFolder, "pulumi", "up", "--yes")
-	autogold.ExpectFile(t, output, autogold.Name("TestTranslateAWSStackWithEdit-up2"))
-}
 
 // Running many tests in parallel exposes race conditions in Pulumi plugin handling; isolate PULUMI_HOME. Note that
 // this helper conflicts with `t.Parallel()`.
