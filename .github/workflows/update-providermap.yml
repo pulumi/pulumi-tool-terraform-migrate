@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 jobs:
   update-providermap:
@@ -17,6 +18,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Fetch secrets from ESC
+        id: esc-secrets
+        uses: pulumi/esc-action@9eb774255b1a4afb7855678ae8d4a77359da0d9b
+        env:
+          ESC_ACTION_ENVIRONMENT: github-secrets/${{ github.repository_owner }}-${{ github.event.repository.name }}
+          ESC_ACTION_EXPORT_ENVIRONMENT_VARIABLES: "false"
+          ESC_ACTION_OIDC_AUTH: "true"
+          ESC_ACTION_OIDC_ORGANIZATION: pulumi
+          ESC_ACTION_OIDC_REQUESTED_TOKEN_TYPE: urn:pulumi:token-type:access_token:organization
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -30,7 +43,9 @@ jobs:
         id: create-pr
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.esc-secrets.outputs.PULUMI_PROVIDER_AUTOMATION_TOKEN || steps.esc-secrets.outputs.PULUMI_BOT_TOKEN || secrets.GITHUB_TOKEN }}
+          committer: pulumi-bot <bot@pulumi.com>
+          author: pulumi-bot <bot@pulumi.com>
           commit-message: "chore: update provider map versions"
           title: "chore: update provider map versions"
           body: |
@@ -45,4 +60,4 @@ jobs:
         if: steps.create-pr.outputs.pull-request-number
         run: gh pr merge --auto --squash "${{ steps.create-pr.outputs.pull-request-number }}"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.esc-secrets.outputs.PULUMI_PROVIDER_AUTOMATION_TOKEN || steps.esc-secrets.outputs.PULUMI_BOT_TOKEN || secrets.GITHUB_TOKEN }}
