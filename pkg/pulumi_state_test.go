@@ -239,13 +239,6 @@ func runCommand(t *testing.T, dir string, command string, args ...string) string
 	return string(output)
 }
 
-func skipIfCI(t *testing.T) {
-	t.Helper()
-	if os.Getenv("CI") == "true" {
-		t.Skip("Skipping test in CI: TODO: set up pulumi credentials in CI")
-	}
-}
-
 func TestInsertResourcesIntoDeployment_ZeroResources(t *testing.T) {
 	t.Parallel()
 	_, err := InsertResourcesIntoDeployment(&PulumiState{
@@ -299,7 +292,6 @@ func TestInsertResourcesIntoDeployment_MultipleResources(t *testing.T) {
 }
 
 func TestGetDeployment(t *testing.T) {
-	skipIfCI(t)
 	testDir, err := os.MkdirTemp("", "test-deployment-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(testDir)

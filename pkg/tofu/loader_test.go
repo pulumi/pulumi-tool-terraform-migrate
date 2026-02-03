@@ -17,7 +17,6 @@ package tofu
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -26,7 +25,6 @@ import (
 
 func Test_LoadTerraformState(t *testing.T) {
 	t.Parallel()
-	skipIfTofuNotAvailable(t)
 
 	ctx := context.Background()
 
@@ -105,7 +103,6 @@ func Test_LoadTerraformState(t *testing.T) {
 }
 
 func Test_GetProviderVersions(t *testing.T) {
-	skipIfTofuNotAvailable(t)
 
 	ctx := context.Background()
 	projectDir := "testdata/tf-project-with-lockfile"
@@ -122,12 +119,4 @@ func Test_GetProviderVersions(t *testing.T) {
 
 	require.NotEmpty(t, versionOutput.TerraformVersion, "TerraformVersion should be populated")
 	require.NotEmpty(t, versionOutput.Platform, "Platform should be populated")
-}
-
-// skipIfTofuNotAvailable skips the test if tofu is not in PATH
-func skipIfTofuNotAvailable(t *testing.T) {
-	t.Helper()
-	if _, err := exec.LookPath("tofu"); err != nil {
-		t.Skip("tofu binary not found in PATH, skipping test")
-	}
 }
