@@ -21,6 +21,13 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Generate Pulumi Access Token
+        id: generate_pulumi_token
+        uses: pulumi/auth-actions@1c89817aab0c66407723cdef72b05266e7376640 # v1.0.1
+        with:
+          organization: pulumi
+          requested-token-type: urn:pulumi:token-type:access_token:organization
+          export-environment-variables: false
       - name: Fetch secrets from ESC
         id: esc-secrets
         uses: pulumi/esc-action@9eb774255b1a4afb7855678ae8d4a77359da0d9b
