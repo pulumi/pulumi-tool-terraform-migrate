@@ -251,7 +251,7 @@ func convertResourceStateExceptProviderLink(
 		return PulumiResource{}, fmt.Errorf("failed to get Pulumi type token: %w", err)
 	}
 	resourceInfo := prov.Resources[res.Type]
-	props, err := convertTFValueToPulumiValue(ctyValue, shimResource, resourceInfo, sensitivePaths)
+	props, err := ConvertTFValueToPulumiValue(ctyValue, shimResource, resourceInfo, sensitivePaths)
 	if err != nil {
 		return PulumiResource{}, fmt.Errorf("failed to convert value to Pulumi value: %w", err)
 	}
@@ -264,7 +264,7 @@ func convertResourceStateExceptProviderLink(
 	return PulumiResource{
 		PulumiResourceID: PulumiResourceID{
 			ID:   props["id"].StringValue(),
-			Name: pulumiNameFromTerraformAddress(res.Address, res.Type),
+			Name: PulumiNameFromTerraformAddress(res.Address, res.Type),
 			Type: string(pulumiTypeToken),
 		},
 		Inputs:  inputs,
@@ -272,14 +272,14 @@ func convertResourceStateExceptProviderLink(
 	}, nil
 }
 
-// pulumiNameFromTerraformAddress extracts a unique Pulumi resource name from a Terraform address.
+// PulumiNameFromTerraformAddress extracts a unique Pulumi resource name from a Terraform address.
 // Terraform addresses have the format:
 //   - Root module: <resource_type>.<name> e.g., "aws_s3_bucket.this"
 //   - Submodule: module.<module_name>.<resource_type>.<name> e.g., "module.s3_bucket.aws_s3_bucket.this"
 //   - Nested: module.<mod1>.module.<mod2>.<resource_type>.<name>
 //
 // We extract the module path and resource name (excluding the type) and join them with underscores.
-func pulumiNameFromTerraformAddress(address, resourceType string) string {
+func PulumiNameFromTerraformAddress(address, resourceType string) string {
 	parts := strings.Split(address, ".")
 
 	var nameParts []string

@@ -717,3 +717,36 @@ func latestVersionMatchingMajor(versionPairs []VersionPair, v semver.Version) (R
 	}
 	return "", false
 }
+
+// GetUpstreamVersion returns the TF provider version for the given TF provider address
+// and Pulumi provider version. If pulumiVersion is empty, returns the latest version.
+// This is useful for loading the TF provider binary for state upgrades.
+func GetUpstreamVersion(addr TerraformProviderName, pulumiVersion string) (string, bool) {
+	mapping, ok := providerMapping[addr]
+	if !ok {
+		return "", false
+	}
+
+	versionPairs := refinedVersionMap.Bridged[BridgedProvider(mapping.pulumiProviderName)]
+	if len(versionPairs) == 0 {
+		return "", false
+	}
+
+	// Normalize version format
+	pulumiVersion = strings.TrimPrefix(pulumiVersion, "v")
+
+	for _, vp := range versionPairs {
+		if vp.Error != "" {
+			continue
+		}
+		// If no version specified, return latest (first valid entry)
+		if pulumiVersion == "" {
+			return strings.TrimPrefix(string(vp.Upstream), "v"), true
+		}
+		// Match specific version
+		if strings.TrimPrefix(string(vp.Pulumi), "v") == pulumiVersion {
+			return strings.TrimPrefix(string(vp.Upstream), "v"), true
+		}
+	}
+	return "", false
+}

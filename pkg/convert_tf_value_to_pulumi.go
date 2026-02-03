@@ -57,7 +57,10 @@ func (s setChecker) IsSet(ctx context.Context, v interface{}) ([]interface{}, bo
 	return nil, false
 }
 
-func convertTFValueToPulumiValue(
+// ConvertTFValueToPulumiValue converts a Terraform cty.Value to a Pulumi PropertyMap
+// using the bridge's MakeTerraformResult function. This handles property name conversion,
+// type coercion, and sensitive value marking.
+func ConvertTFValueToPulumiValue(
 	tfValue cty.Value, res shim.Resource, pulumiResource *info.Resource, sensitivePaths []cty.Path,
 ) (resource.PropertyMap, error) {
 	instanceState := terraformState{
