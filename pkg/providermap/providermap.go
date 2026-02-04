@@ -48,6 +48,9 @@ type TerraformProvider struct {
 	Version string
 }
 
+// BridgedPulumiProvider represents a statically bridged Pulumi provider.
+// Statically bridged providers have their own dedicated repository (e.g., pulumi/pulumi-aws)
+// and are pre-built with schema information embedded.
 type BridgedPulumiProvider struct {
 	// Identifier such as "aws"
 	Identifier string
@@ -56,14 +59,20 @@ type BridgedPulumiProvider struct {
 	Version string
 }
 
-// The recommendation only sets one of the two fields.
+// RecommendedPulumiProvider represents the recommended way to use a Terraform provider with Pulumi.
+// It will recommend either:
+//   - A statically bridged provider
+//   - Dynamic bridging via the terraform-provider package
 type RecommendedPulumiProvider struct {
-	// Use `pulumi package add terraform-provider ...`
-	// See https://www.pulumi.com/blog/any-terraform-provider/
-	UseTerraformProviderPackage bool
+	// UseDynamicBridging indicates that the terraform-provider package should be used
+	// to dynamically bridge this Terraform provider. This is for providers that don't
+	// have a dedicated statically bridged Pulumi provider.
+	// See https://www.pulumi.com/registry/packages/terraform-provider/
+	UseDynamicBridging bool
 
-	// Use a Pulumi bridged provider.
-	BridgedPulumiProvider *BridgedPulumiProvider
+	// StaticallyBridgedProvider contains information about the statically bridged provider
+	// to use, if one exists.
+	StaticallyBridgedProvider *BridgedPulumiProvider
 }
 
 type providerMappingDetail struct {
@@ -616,12 +625,12 @@ func RecommendPulumiProvider(tf TerraformProvider) RecommendedPulumiProvider {
 	mapping, ok := providerMapping[tf.Identifier]
 	if !ok {
 		// Default to using terraform-provider package if no bridged provider exists
-		return RecommendedPulumiProvider{UseTerraformProviderPackage: true}
+		return RecommendedPulumiProvider{UseDynamicBridging: true}
 	}
 	bridgedProvider := BridgedProvider(mapping.pulumiProviderName)
 	originalVersionPairs, exists := refinedVersionMap.Bridged[bridgedProvider]
 	if !exists {
-		return RecommendedPulumiProvider{UseTerraformProviderPackage: true}
+		return RecommendedPulumiProvider{UseDynamicBridging: true}
 	}
 	versionPairs := []VersionPair{}
 	for _, vp := range originalVersionPairs {
@@ -684,7 +693,7 @@ func RecommendPulumiProvider(tf TerraformProvider) RecommendedPulumiProvider {
 	}
 
 	return RecommendedPulumiProvider{
-		BridgedPulumiProvider: &BridgedPulumiProvider{
+		StaticallyBridgedProvider: &BridgedPulumiProvider{
 			Identifier: mapping.pulumiProviderName,
 			Version:    string(recommendedVersion),
 		},
