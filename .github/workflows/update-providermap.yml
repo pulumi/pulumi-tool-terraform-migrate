@@ -43,6 +43,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      - name: Run compare script
+        run: ./scripts/compare_provider_list.sh
+
       - name: Run update script
         run: ./scripts/update_providermap.sh
 
