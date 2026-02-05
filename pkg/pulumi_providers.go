@@ -45,11 +45,25 @@ func getTerraformProvidersForTerraformState(tfState *tfjson.State) ([]providerma
 	return providers, nil
 }
 
+// ProviderWithMetadata wraps a Pulumi provider info with additional metadata
+// about how the provider was bridged.
+type ProviderWithMetadata struct {
+	// Provider is the Pulumi provider info from the bridge.
+	*info.Provider
+	// IsDynamic is true if this provider was dynamically bridged using the
+	// terraform-provider package, rather than a statically bridged provider.
+	IsDynamic bool
+	// TerraformAddress is the full Terraform provider address (e.g., "registry.terraform.io/hashicorp/time").
+	// This is set for all providers, but is primarily useful for dynamic providers
+	// to construct the proper package name.
+	TerraformAddress string
+}
+
 func PulumiProvidersForTerraformProviders(
 	terraformProviders []providermap.TerraformProviderName,
 	providerVersions map[string]string,
-) (map[providermap.TerraformProviderName]*info.Provider, error) {
-	pulumiProviders := make(map[providermap.TerraformProviderName]*info.Provider)
+) (map[providermap.TerraformProviderName]*ProviderWithMetadata, error) {
+	pulumiProviders := make(map[providermap.TerraformProviderName]*ProviderWithMetadata)
 
 	for _, providerName := range terraformProviders {
 		// Get the version for this provider from the version map
@@ -63,39 +77,68 @@ func PulumiProvidersForTerraformProviders(
 			Version:    version,
 		})
 
-		// TODO[pulumi/pulumi-service#35437]: make this work for Any TF
-		if pulumiProvider.BridgedPulumiProvider == nil {
-			fmt.Fprintf(os.Stderr, "Warning: no bridged Pulumi provider found for %s, resources using this provider will be skipped\n", providerName)
-			continue
+		var providerInfo *info.Provider
+		var isDynamic bool
+		var err error
+
+		if pulumiProvider.StaticallyBridgedProvider != nil {
+			providerInfo, err = getMappingFromStaticallyBridgedProvider(pulumiProvider.StaticallyBridgedProvider, providerName)
+			if err != nil {
+				return nil, err
+			}
+			isDynamic = false
+		} else {
+			providerInfo, err = bridgedproviders.GetMappingForTerraformProvider(
+				context.Background(),
+				string(providerName),
+				version,
+			)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to dynamically bridge provider %s: %v\n", providerName, err)
+				fmt.Fprintf(os.Stderr, "Warning: resources using provider %s will be skipped\n", providerName)
+				continue
+			}
+			isDynamic = true
 		}
 
-		result, err := bridgedproviders.EnsureProviderInstalled(context.Background(), bridgedproviders.InstallProviderOptions{
-			Name:    pulumiProvider.BridgedPulumiProvider.Identifier,
-			Version: pulumiProvider.BridgedPulumiProvider.Version,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to install provider %s: %w", providerName, err)
+		pulumiProviders[providerName] = &ProviderWithMetadata{
+			Provider:         providerInfo,
+			IsDynamic:        isDynamic,
+			TerraformAddress: string(providerName),
 		}
-
-		mapping, err := bridgedproviders.GetMappingFromBinary(context.Background(), result.BinaryPath, bridgedproviders.GetMappingOptions{
-			Key:      "terraform",
-			Provider: pulumiProvider.BridgedPulumiProvider.Identifier,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to get mapping for provider %s: %w", providerName, err)
-		}
-
-		providerInfo, err := bridgedproviders.UnmarshalMappingData(mapping)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal mapping for provider %s: %w", providerName, err)
-		}
-
-		pulumiProviders[providerName] = providerInfo
 	}
 	return pulumiProviders, nil
 }
 
-func GetPulumiProvidersForTerraformState(tfState *tfjson.State, providerVersions map[string]string) (map[providermap.TerraformProviderName]*info.Provider, error) {
+func getMappingFromStaticallyBridgedProvider(
+	staticProvider *providermap.BridgedPulumiProvider,
+	tfProviderName providermap.TerraformProviderName,
+) (*info.Provider, error) {
+	result, err := bridgedproviders.EnsureProviderInstalled(context.Background(), bridgedproviders.InstallProviderOptions{
+		Name:    staticProvider.Identifier,
+		Version: staticProvider.Version,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to install provider %s: %w", tfProviderName, err)
+	}
+
+	mapping, err := bridgedproviders.GetMappingFromBinary(context.Background(), result.BinaryPath, bridgedproviders.GetMappingOptions{
+		Key:      "terraform",
+		Provider: staticProvider.Identifier,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get mapping for provider %s: %w", tfProviderName, err)
+	}
+
+	providerInfo, err := bridgedproviders.UnmarshalMappingData(mapping)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal mapping for provider %s: %w", tfProviderName, err)
+	}
+
+	return providerInfo, nil
+}
+
+func GetPulumiProvidersForTerraformState(tfState *tfjson.State, providerVersions map[string]string) (map[providermap.TerraformProviderName]*ProviderWithMetadata, error) {
 	// TODO[pulumi/pulumi-service#35512]: This assumes one Pulumi provider per Terraform provider. This means that provider aliases are not supported.
 	terraformProviders, err := getTerraformProvidersForTerraformState(tfState)
 	if err != nil {

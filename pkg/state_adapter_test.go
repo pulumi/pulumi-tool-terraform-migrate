@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 func TestConvertSimple(t *testing.T) {
-	t.Parallel()
 	ctx := context.Background()
 	stackFolder := createPulumiStack(t)
 	data, err := translateStateFromJson(ctx, "testdata/bucket_state.json", stackFolder)
@@ -49,7 +48,6 @@ func TestConvertWithDependencies(t *testing.T) {
 }
 
 func TestConvertInvolved(t *testing.T) {
-	t.Parallel()
 	ctx := context.Background()
 	stackFolder := createPulumiStack(t)
 	data, err := translateStateFromJson(ctx, "testdata/tofu_state.json", stackFolder)
@@ -61,7 +59,6 @@ func TestConvertInvolved(t *testing.T) {
 }
 
 func TestConvertTwoModules(t *testing.T) {
-	t.Parallel()
 	ctx := context.Background()
 	stackFolder := createPulumiStack(t)
 	data, err := translateStateFromJson(ctx, "testdata/tofu_state_two_buckets.json", stackFolder)
@@ -80,7 +77,6 @@ func TestConvertTwoModules(t *testing.T) {
 }
 
 func TestConvertNestedModules(t *testing.T) {
-	t.Parallel()
 	ctx := context.Background()
 	stackFolder := createPulumiStack(t)
 	data, err := translateStateFromJson(ctx, "testdata/tofu_state_nested_modules.json", stackFolder)
@@ -248,12 +244,49 @@ func Test_convertState_unknown_provider(t *testing.T) {
 	require.Equal(t, "example", errorMessages[0].ResourceName)
 	require.Equal(t, "unknown_resource", errorMessages[0].ResourceType)
 	require.Equal(t, "registry.opentofu.org/hashicorp/unknown", errorMessages[0].ResourceProvider)
-	require.Contains(t, errorMessages[0].ErrorMessage, "no bridged Pulumi provider found")
+	require.Contains(t, errorMessages[0].ErrorMessage, "no Pulumi provider available")
 
 	require.Len(t, pulumiState.Providers, 1, "expected 1 provider")
 	require.Len(t, pulumiState.Resources, 1, "expected 1 resource (unknown_resource should be skipped)")
 
 	require.Equal(t, "random:index/randomString:RandomString", pulumiState.Resources[0].PulumiResourceID.Type)
+}
+
+func TestFormatDynamicProviderName(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		tfAddr   string
+		expected string
+	}{
+		{
+			name:     "terraform registry hashicorp provider",
+			tfAddr:   "registry.terraform.io/hashicorp/time",
+			expected: "terraform-provider hashicorp/time",
+		},
+		{
+			name:     "opentofu registry hashicorp provider",
+			tfAddr:   "registry.opentofu.org/hashicorp/time",
+			expected: "terraform-provider hashicorp/time",
+		},
+		{
+			name:     "third party provider",
+			tfAddr:   "registry.terraform.io/custom-org/custom-provider",
+			expected: "terraform-provider custom-org/custom-provider",
+		},
+		{
+			name:     "simple name fallback",
+			tfAddr:   "simple",
+			expected: "terraform-provider simple",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := formatDynamicProviderName(tc.tfAddr)
+			require.Equal(t, tc.expected, result)
+		})
+	}
 }
 
 func TestPulumiNameFromTerraformAddress(t *testing.T) {

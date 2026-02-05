@@ -121,26 +121,26 @@ func TestRecommendPulumiProvider(t *testing.T) {
 			result := RecommendPulumiProvider(tt.input)
 
 			if tt.expectedUseTerraformProvider {
-				if !result.UseTerraformProviderPackage {
-					t.Errorf("Expected UseTerraformProviderPackage to be true, got false")
+				if !result.UseDynamicBridging {
+					t.Errorf("Expected UseDynamicBridging to be true, got false")
 				}
-				if result.BridgedPulumiProvider != nil {
-					t.Errorf("Expected BridgedPulumiProvider to be nil, got %v", result.BridgedPulumiProvider)
+				if result.StaticallyBridgedProvider != nil {
+					t.Errorf("Expected StaticallyBridgedProvider to be nil, got %v", result.StaticallyBridgedProvider)
 				}
 			} else {
-				if result.UseTerraformProviderPackage {
-					t.Errorf("Expected UseTerraformProviderPackage to be false, got true")
+				if result.UseDynamicBridging {
+					t.Errorf("Expected UseDynamicBridging to be false, got true")
 				}
-				if result.BridgedPulumiProvider == nil {
-					t.Errorf("Expected BridgedPulumiProvider to be non-nil, got nil")
+				if result.StaticallyBridgedProvider == nil {
+					t.Errorf("Expected StaticallyBridgedProvider to be non-nil, got nil")
 				} else {
-					if result.BridgedPulumiProvider.Identifier != tt.expectedBridgedProvider {
-						t.Errorf("Expected BridgedPulumiProvider.Identifier to be %q, got %q",
-							tt.expectedBridgedProvider, result.BridgedPulumiProvider.Identifier)
+					if result.StaticallyBridgedProvider.Identifier != tt.expectedBridgedProvider {
+						t.Errorf("Expected StaticallyBridgedProvider.Identifier to be %q, got %q",
+							tt.expectedBridgedProvider, result.StaticallyBridgedProvider.Identifier)
 					}
-					if result.BridgedPulumiProvider.Version != tt.expectedVersion {
-						t.Errorf("Expected BridgedPulumiProvider.Version to be %q, got %q",
-							tt.expectedVersion, result.BridgedPulumiProvider.Version)
+					if result.StaticallyBridgedProvider.Version != tt.expectedVersion {
+						t.Errorf("Expected StaticallyBridgedProvider.Version to be %q, got %q",
+							tt.expectedVersion, result.StaticallyBridgedProvider.Version)
 					}
 				}
 			}
