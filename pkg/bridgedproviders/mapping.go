@@ -22,6 +22,7 @@ import (
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/env"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/plugin"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
@@ -160,7 +161,7 @@ func (h *minimalHost) ListAnalyzers() []plugin.Analyzer {
 	return nil
 }
 
-func (h *minimalHost) Provider(descriptor workspace.PluginDescriptor) (plugin.Provider, error) {
+func (h *minimalHost) Provider(descriptor workspace.PluginDescriptor, e env.Env) (plugin.Provider, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
