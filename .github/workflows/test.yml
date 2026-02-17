@@ -39,7 +39,7 @@ jobs:
         run: echo "PULUMI_ACCESS_TOKEN=" >> $GITHUB_ENV
 
       - name: Set up Pulumi
-        uses: pulumi/actions@a3f382e1242b69ab33854c253c3b580f1226348e # v4
+        uses: pulumi/actions@8582a9e8cc630786854029b4e09281acd6794b58 # v6
 
       - name: Set up Go
         uses: actions/setup-go@v5
