@@ -61,7 +61,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.16.0",
+			expectedVersion:              "v7.19.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -71,7 +71,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "invalid-version",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.16.0",
+			expectedVersion:              "v7.19.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -101,7 +101,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "7.0.0",
 			},
 			expectedBridgedProvider:      "gcp",
-			expectedVersion:              "v9.10.0",
+			expectedVersion:              "v9.12.0",
 			expectedUseTerraformProvider: false,
 		},
 		{

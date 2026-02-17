@@ -24,6 +24,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/stretchr/testify/require"
 )
+
 func TestConvertSimple(t *testing.T) {
 	ctx := context.Background()
 	stackFolder := createPulumiStack(t)

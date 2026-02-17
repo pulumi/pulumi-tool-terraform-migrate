@@ -133,7 +133,7 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 			res: (&schemashim.Resource{
 				Schema: schemashim.SchemaMap{
 					"prop": (&schemashim.Schema{
-						Type: shim.TypeString,
+						Type:      shim.TypeString,
 						Sensitive: true,
 					}).Shim(),
 				},
@@ -179,7 +179,7 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 		},
 		{
 			name: "nested sensitive value with list",
-			val:  cty.ObjectVal(map[string]cty.Value{"prop": cty.ListVal([]cty.Value{
+			val: cty.ObjectVal(map[string]cty.Value{"prop": cty.ListVal([]cty.Value{
 				cty.ObjectVal(map[string]cty.Value{"subprop": cty.StringVal("y")}),
 				cty.ObjectVal(map[string]cty.Value{"subprop": cty.StringVal("z")}),
 			})}),
@@ -190,7 +190,7 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 						Elem: (&schemashim.Resource{
 							Schema: schemashim.SchemaMap{
 								"subprop": (&schemashim.Schema{
-									Type:      shim.TypeString,
+									Type: shim.TypeString,
 								}).Shim(),
 							},
 						}).Shim(),
@@ -212,7 +212,7 @@ func TestConvertTFValueToPulumiValue(t *testing.T) {
 						Elem: (&schemashim.Resource{
 							Schema: schemashim.SchemaMap{
 								"subprop": (&schemashim.Schema{
-									Type:      shim.TypeString,
+									Type: shim.TypeString,
 								}).Shim(),
 							},
 						}).Shim(),

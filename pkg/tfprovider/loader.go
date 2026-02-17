@@ -23,7 +23,6 @@ package tfprovider
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -31,8 +30,8 @@ import (
 
 	"github.com/apparentlymart/go-versions/versions"
 	plugin "github.com/hashicorp/go-plugin"
-	disco "github.com/hashicorp/terraform-svchost/disco"
-	tfaddr "github.com/opentofu/registry-address"
+	disco "github.com/opentofu/svchost/disco"
+	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/vendored/opentofu/addrs"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/vendored/opentofu/getproviders"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/vendored/opentofu/logging"
 	tfplugin "github.com/pulumi/pulumi-terraform-bridge/v3/pkg/vendored/opentofu/plugin"
@@ -55,7 +54,6 @@ const envPluginCache = "PULUMI_DYNAMIC_TF_PLUGIN_CACHE_DIR"
 // You must call Close on any Provider that has been created.
 type Provider interface {
 	providers.Interface
-	io.Closer
 
 	Name() string
 	Version() string
@@ -65,9 +63,9 @@ type Provider interface {
 // The providerAddr is the provider source address (e.g., "hashicorp/aws" or "registry.terraform.io/hashicorp/aws").
 // The version must be an exact version (e.g., "5.0.0").
 func LoadProvider(ctx context.Context, providerAddr, version string) (Provider, error) {
-	addr, err := tfaddr.ParseProviderSource(providerAddr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid provider name %q: %w", providerAddr, err)
+	addr, diags := addrs.ParseProviderSourceString(providerAddr)
+	if diags.HasErrors() {
+		return nil, fmt.Errorf("invalid provider name %q: %s", providerAddr, diags.Err())
 	}
 
 	v, err := getproviders.ParseVersion(version)
@@ -86,9 +84,9 @@ type provider struct {
 	close   func() error
 }
 
-func (p *provider) Name() string    { return p.name }
-func (p *provider) Version() string { return p.version }
-func (p *provider) Close() error    { return p.close() }
+func (p *provider) Name() string                  { return p.name }
+func (p *provider) Version() string               { return p.version }
+func (p *provider) Close(_ context.Context) error { return p.close() }
 
 func getPluginCache() (string, error) {
 	if dir := os.Getenv(envPluginCache); dir != "" {
@@ -98,8 +96,8 @@ func getPluginCache() (string, error) {
 }
 
 func getProviderServer(
-	ctx context.Context, addr tfaddr.Provider, version versions.Version,
-	registrySource *disco.Disco,
+	ctx context.Context, addr addrs.Provider, version versions.Version,
+	registryDisco *disco.Disco,
 ) (Provider, error) {
 	cacheDir, err := getPluginCache()
 	if err != nil {
@@ -117,7 +115,7 @@ func getProviderServer(
 	}
 
 	// Download the provider
-	source := getproviders.NewRegistrySource(registrySource)
+	source := getproviders.NewRegistrySource(ctx, registryDisco, nil, getproviders.LocationConfig{})
 
 	meta, err := source.PackageMeta(ctx, addr, version, getproviders.CurrentPlatform)
 	if err != nil {
@@ -128,7 +126,7 @@ func getProviderServer(
 		slog.Any("addr", addr.String()),
 		slog.Any("version", version.String()))
 
-	_, err = systemCache.InstallPackage(ctx, meta, nil)
+	_, err = systemCache.InstallPackage(ctx, meta, nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to install provider %s %s: %w", addr, version, err)
 	}

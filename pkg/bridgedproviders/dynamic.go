@@ -25,7 +25,6 @@ import (
 
 const TerraformProviderPluginVersion = "v1.1.0"
 
-
 // GetMappingForTerraformProvider performs dynamic bridging for an arbitrary Terraform provider
 // using the terraform-provider Pulumi plugin.
 //

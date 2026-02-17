@@ -54,7 +54,7 @@ func (p *StateUpgrader) Close() error {
 
 	var errs []error
 	for addr, prov := range p.providers {
-		if err := prov.Close(); err != nil {
+		if err := prov.Close(context.Background()); err != nil {
 			slog.Warn("Failed to close provider", "addr", addr, "error", err)
 			errs = append(errs, fmt.Errorf("close provider %s: %w", addr, err))
 		}
@@ -113,7 +113,7 @@ func (s *StateUpgrader) UpgradeInstance(
 	}
 
 	// Get current schema version from provider
-	schema := provider.GetProviderSchema()
+	schema := provider.GetProviderSchema(ctx)
 	if schema.Diagnostics.HasErrors() {
 		return nil, fmt.Errorf("failed to get provider schema: %s", schema.Diagnostics.Err())
 	}
@@ -131,7 +131,7 @@ func (s *StateUpgrader) UpgradeInstance(
 	}
 
 	// Call UpgradeResourceState RPC
-	resp := provider.UpgradeResourceState(providers.UpgradeResourceStateRequest{
+	resp := provider.UpgradeResourceState(ctx, providers.UpgradeResourceStateRequest{
 		TypeName:     resourceType,
 		Version:      int64(instance.SchemaVersion),
 		RawStateJSON: instance.AttrsJSON,
