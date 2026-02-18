@@ -71,7 +71,7 @@ func GetMappingFromBinary(ctx context.Context, binaryPath string, opts GetMappin
 	host := &minimalHost{}
 
 	// Create a plugin context for the provider
-	pctx, err := plugin.NewContext(ctx, nil, nil, nil, nil, "", nil, false, nil)
+	pctx, err := plugin.NewContext(ctx, nil, nil, nil, nil, "", nil, false, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create plugin context: %w", err)
 	}
@@ -195,6 +195,10 @@ func (h *minimalHost) StartDebugging(info plugin.DebuggingInfo) error {
 
 func (h *minimalHost) AttachDebugger(spec plugin.DebugSpec) bool {
 	return false
+}
+
+func (h *minimalHost) LoaderAddr() string {
+	return ""
 }
 
 func (h *minimalHost) Close() error {

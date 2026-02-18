@@ -55,7 +55,7 @@ func GetMappingForTerraformProvider(
 	}
 
 	host := &minimalHost{}
-	pctx, err := plugin.NewContext(ctx, nil, nil, nil, nil, "", nil, false, nil)
+	pctx, err := plugin.NewContext(ctx, nil, nil, nil, nil, "", nil, false, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create plugin context: %w", err)
 	}
