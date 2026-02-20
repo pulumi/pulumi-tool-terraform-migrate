@@ -17,7 +17,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pulumi/opentofu v0.0.0-20250808205121-cc4a35131222
 	github.com/pulumi/pulumi-terraform-bridge/v3 v3.121.0
-	github.com/pulumi/pulumi/sdk/v3 v3.221.0
+	github.com/pulumi/pulumi/sdk/v3 v3.222.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/zclconf/go-cty v1.17.0
@@ -175,7 +175,7 @@ require (
 	github.com/pulumi/appdash v0.0.0-20231130102222-75f619a67231 // indirect
 	github.com/pulumi/esc v0.22.0 // indirect
 	github.com/pulumi/inflector v0.2.1 // indirect
-	github.com/pulumi/pulumi/pkg/v3 v3.221.0 // indirect
+	github.com/pulumi/pulumi/pkg/v3 v3.222.0 // indirect
 	github.com/pulumi/terraform-diff-reader v0.0.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
