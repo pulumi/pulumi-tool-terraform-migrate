@@ -392,6 +392,8 @@ bridged:
         - pulumi: v0.0.1
           error: no GitHub release
     alicloud:
+        - pulumi: v3.97.0
+          upstream: v1.273.0
         - pulumi: v3.96.0
           upstream: v1.272.1
         - pulumi: v3.95.0
@@ -1286,6 +1288,10 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     aws:
+        - pulumi: v7.23.0
+          upstream: v6.36.0
+        - pulumi: v7.22.0
+          upstream: v6.35.1
         - pulumi: v7.21.0
           upstream: v6.34.0
         - pulumi: v7.20.0
@@ -3103,6 +3109,8 @@ bridged:
         - pulumi: v0.18.0
           error: no GitHub release
     azuredevops:
+        - pulumi: v3.13.0
+          upstream: v1.14.0
         - pulumi: v3.12.0
           upstream: v1.13.0
         - pulumi: v3.11.0
@@ -3208,6 +3216,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     cloudamqp:
+        - pulumi: v3.27.0
+          upstream: v1.43.0
         - pulumi: v3.26.1
           upstream: v1.42.1
         - pulumi: v3.26.0
@@ -4111,6 +4121,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     databricks:
+        - pulumi: v1.89.0
+          upstream: v1.111.0
         - pulumi: v1.88.0
           upstream: v1.110.0
         - pulumi: v1.87.0
@@ -5104,6 +5116,8 @@ bridged:
         - pulumi: v0.18.0
           error: no GitHub release
     docker:
+        - pulumi: v4.11.1
+          upstream: v3.123.0
         - pulumi: v4.11.0
           upstream: v3.9.0
         - pulumi: v4.10.0
@@ -5761,6 +5775,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     gcp:
+        - pulumi: v9.15.0
+          upstream: v7.23.0
         - pulumi: v9.14.0
           upstream: v7.21.0
         - pulumi: v9.13.0
@@ -6701,6 +6717,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     gitlab:
+        - pulumi: v9.10.0
+          upstream: v18.9.0
         - pulumi: v9.9.0
           upstream: v18.9.0
         - pulumi: v9.8.2
@@ -6908,6 +6926,8 @@ bridged:
         - pulumi: v0.18.0
           error: no GitHub release
     harness:
+        - pulumi: v0.11.6
+          upstream: v0.41.6
         - pulumi: v0.11.5
           upstream: v0.41.5
         - pulumi: v0.11.4
@@ -7744,6 +7764,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     linode:
+        - pulumi: v5.9.0
+          upstream: v3.10.0
         - pulumi: v5.8.0
           upstream: v3.9.0
         - pulumi: v5.7.0
@@ -8218,6 +8240,8 @@ bridged:
         - pulumi: v0.0.1
           error: no GitHub release
     mongodbatlas:
+        - pulumi: v4.5.0
+          upstream: v2.8.0
         - pulumi: v4.4.0
           upstream: v2.7.0
         - pulumi: v4.3.0
@@ -8425,6 +8449,10 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     newrelic:
+        - pulumi: v5.62.0
+          upstream: v3.81.0
+        - pulumi: v5.61.3
+          upstream: v3.80.3
         - pulumi: v5.61.2
           upstream: v3.80.2
         - pulumi: v5.61.1
@@ -9274,6 +9302,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     okta:
+        - pulumi: v6.3.1
+          upstream: v6.6.1
         - pulumi: v6.3.0
           upstream: v6.6.0
         - pulumi: v6.2.3
@@ -9817,6 +9847,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     pagerduty:
+        - pulumi: v4.30.4
+          upstream: v3.31.4
         - pulumi: v4.30.3
           upstream: v3.31.3
         - pulumi: v4.30.2
@@ -10681,6 +10713,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     signalfx:
+        - pulumi: v7.23.0
+          upstream: v9.26.0
         - pulumi: v7.22.0
           upstream: v9.25.0
         - pulumi: v7.21.0
@@ -11182,6 +11216,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     splunk:
+        - pulumi: v1.2.25
+          upstream: v1.4.35
         - pulumi: v1.2.24
           upstream: v1.4.34
         - pulumi: v1.2.23
