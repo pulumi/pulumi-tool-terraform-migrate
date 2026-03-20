@@ -16,6 +16,7 @@ package tofu
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -100,6 +101,75 @@ func Test_LoadTerraformState(t *testing.T) {
 			}
 		})
 	}
+}
+
+// copyTestdata copies a testdata directory to a temp dir to avoid .terraform side effects in the source tree.
+func copyTestdata(t *testing.T, srcDir string) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	err := filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return err
+		}
+		destPath := filepath.Join(tmpDir, relPath)
+		if d.IsDir() {
+			return os.MkdirAll(destPath, 0o755)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(destPath, data, 0o644)
+	})
+	require.NoError(t, err)
+	return tmpDir
+}
+
+func Test_LoadTerraformState_SingleWorkspace_StateFilePath(t *testing.T) {
+	token := os.Getenv("PULUMI_ACCESS_TOKEN")
+	if token == "" {
+		t.Skip("PULUMI_ACCESS_TOKEN not set")
+	}
+	t.Setenv("TF_TOKEN_api_pulumi_com", token)
+
+	// Copy testdata to temp dir to avoid .terraform side effects
+	dir := copyTestdata(t, "testdata/tf-single-workspace")
+
+	// Write state file to a separate temp dir (not inside the project dir)
+	// to avoid tofu init triggering a state migration prompt.
+	stateBytes, err := os.ReadFile("testdata/tf-project/terraform.tfstate")
+	require.NoError(t, err)
+	stateFile := filepath.Join(t.TempDir(), "terraform.tfstate")
+	require.NoError(t, os.WriteFile(stateFile, stateBytes, 0o600))
+
+	ctx := context.Background()
+	state, err := LoadTerraformState(ctx, LoadTerraformStateOptions{
+		StateFilePath: stateFile,
+		ProjectDir:    dir,
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, len(state.Values.RootModule.Resources))
+}
+
+func Test_LoadTerraformState_SingleWorkspace_ProjectDir(t *testing.T) {
+	token := os.Getenv("PULUMI_ACCESS_TOKEN")
+	if token == "" {
+		t.Skip("PULUMI_ACCESS_TOKEN not set")
+	}
+	t.Setenv("TF_TOKEN_api_pulumi_com", token)
+
+	dir := copyTestdata(t, "testdata/tf-single-workspace")
+
+	ctx := context.Background()
+	state, err := LoadTerraformState(ctx, LoadTerraformStateOptions{
+		ProjectDir: dir,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, state)
 }
 
 func Test_GetProviderVersions(t *testing.T) {
