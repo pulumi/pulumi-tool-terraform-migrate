@@ -1,5 +1,7 @@
 bridged:
     aiven:
+        - pulumi: v6.51.0
+          upstream: v4.53.0
         - pulumi: v6.50.0
           upstream: v4.52.0
         - pulumi: v6.49.0
@@ -3216,6 +3218,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     cloudamqp:
+        - pulumi: v3.27.1
+          upstream: v1.43.1
         - pulumi: v3.27.0
           upstream: v1.43.0
         - pulumi: v3.26.1
@@ -3767,6 +3771,10 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     confluentcloud:
+        - pulumi: v2.61.0
+          upstream: v2.65.0
+        - pulumi: v2.60.0
+          upstream: v2.64.0
         - pulumi: v2.59.0
           upstream: v2.63.0
         - pulumi: v2.58.0
@@ -4121,6 +4129,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     databricks:
+        - pulumi: v1.90.0
+          upstream: v1.112.0
         - pulumi: v1.89.0
           upstream: v1.111.0
         - pulumi: v1.88.0
@@ -4718,6 +4728,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     digitalocean:
+        - pulumi: v4.62.0
+          upstream: v2.80.0
         - pulumi: v4.61.0
           upstream: v2.79.0
         - pulumi: v4.60.0
@@ -5391,6 +5403,8 @@ bridged:
         - pulumi: v0.0.1
           upstream: v2.3.1
     f5bigip:
+        - pulumi: v3.20.1
+          upstream: v1.25.1
         - pulumi: v3.20.0
           upstream: v1.25.0
         - pulumi: v3.19.3
@@ -5775,6 +5789,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     gcp:
+        - pulumi: v9.16.0
+          upstream: v7.24.0
         - pulumi: v9.15.0
           upstream: v7.23.0
         - pulumi: v9.14.0
@@ -6926,6 +6942,8 @@ bridged:
         - pulumi: v0.18.0
           error: no GitHub release
     harness:
+        - pulumi: v0.11.7
+          upstream: v0.41.7
         - pulumi: v0.11.6
           upstream: v0.41.6
         - pulumi: v0.11.5
@@ -9055,6 +9073,10 @@ bridged:
         - pulumi: v0.0.1
           error: 'failed to parse version from release notes: no upstream version found in commit message'
     oci:
+        - pulumi: v4.3.1
+          upstream: v8.6.0
+        - pulumi: v4.3.0
+          upstream: v8.6.0
         - pulumi: v4.2.0
           upstream: v8.4.0
         - pulumi: v4.1.0
@@ -9847,6 +9869,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     pagerduty:
+        - pulumi: v4.31.0
+          upstream: v3.32.0
         - pulumi: v4.30.4
           upstream: v3.31.4
         - pulumi: v4.30.3
@@ -10713,6 +10737,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     signalfx:
+        - pulumi: v7.24.0
+          upstream: v9.27.1
         - pulumi: v7.23.0
           upstream: v9.26.0
         - pulumi: v7.22.0
@@ -11216,6 +11242,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     splunk:
+        - pulumi: v1.2.26
+          upstream: v1.4.36
         - pulumi: v1.2.25
           upstream: v1.4.35
         - pulumi: v1.2.24
