@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,6 +33,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 		input                        TerraformProvider
 		expectedBridgedProvider      string
 		expectedVersion              string
+		expectedMinVersion           string // use >= instead of == (for "latest" fallback cases)
 		expectedUseTerraformProvider bool
 	}{
 		{
@@ -61,7 +63,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.19.0",
+			expectedMinVersion:           "v7.23.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -71,7 +73,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "invalid-version",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.19.0",
+			expectedMinVersion:           "v7.23.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -101,7 +103,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "7.0.0",
 			},
 			expectedBridgedProvider:      "gcp",
-			expectedVersion:              "v9.12.0",
+			expectedMinVersion:           "v9.15.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -118,6 +120,10 @@ func TestRecommendPulumiProvider(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.expectedVersion != "" && tt.expectedMinVersion != "" {
+				t.Fatal("test case must not set both expectedVersion and expectedMinVersion")
+			}
+
 			result := RecommendPulumiProvider(tt.input)
 
 			if tt.expectedUseTerraformProvider {
@@ -138,9 +144,25 @@ func TestRecommendPulumiProvider(t *testing.T) {
 						t.Errorf("Expected StaticallyBridgedProvider.Identifier to be %q, got %q",
 							tt.expectedBridgedProvider, result.StaticallyBridgedProvider.Identifier)
 					}
-					if result.StaticallyBridgedProvider.Version != tt.expectedVersion {
-						t.Errorf("Expected StaticallyBridgedProvider.Version to be %q, got %q",
-							tt.expectedVersion, result.StaticallyBridgedProvider.Version)
+					if tt.expectedVersion != "" {
+						if result.StaticallyBridgedProvider.Version != tt.expectedVersion {
+							t.Errorf("Expected StaticallyBridgedProvider.Version to be %q, got %q",
+								tt.expectedVersion, result.StaticallyBridgedProvider.Version)
+						}
+					}
+					if tt.expectedMinVersion != "" {
+						got, err := semver.Parse(strings.TrimPrefix(result.StaticallyBridgedProvider.Version, "v"))
+						if err != nil {
+							t.Fatalf("Failed to parse version %q: %v", result.StaticallyBridgedProvider.Version, err)
+						}
+						min, err := semver.Parse(strings.TrimPrefix(tt.expectedMinVersion, "v"))
+						if err != nil {
+							t.Fatalf("Failed to parse min version %q: %v", tt.expectedMinVersion, err)
+						}
+						if got.LT(min) {
+							t.Errorf("Expected StaticallyBridgedProvider.Version >= %q, got %q",
+								tt.expectedMinVersion, result.StaticallyBridgedProvider.Version)
+						}
 					}
 				}
 			}
