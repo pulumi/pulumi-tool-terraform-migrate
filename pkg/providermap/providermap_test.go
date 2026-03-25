@@ -120,6 +120,10 @@ func TestRecommendPulumiProvider(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.expectedVersion != "" && tt.expectedMinVersion != "" {
+				t.Fatal("test case must not set both expectedVersion and expectedMinVersion")
+			}
+
 			result := RecommendPulumiProvider(tt.input)
 
 			if tt.expectedUseTerraformProvider {
