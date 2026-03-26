@@ -22,6 +22,7 @@ import (
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/diag"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/env"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/plugin"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
@@ -70,7 +71,7 @@ func GetMappingFromBinary(ctx context.Context, binaryPath string, opts GetMappin
 	host := &minimalHost{}
 
 	// Create a plugin context for the provider
-	pctx, err := plugin.NewContext(ctx, nil, nil, nil, nil, "", nil, false, nil)
+	pctx, err := plugin.NewContext(ctx, nil, nil, nil, nil, "", nil, false, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create plugin context: %w", err)
 	}
@@ -160,7 +161,7 @@ func (h *minimalHost) ListAnalyzers() []plugin.Analyzer {
 	return nil
 }
 
-func (h *minimalHost) Provider(descriptor workspace.PluginDescriptor) (plugin.Provider, error) {
+func (h *minimalHost) Provider(descriptor workspace.PluginDescriptor, e env.Env) (plugin.Provider, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
@@ -194,6 +195,10 @@ func (h *minimalHost) StartDebugging(info plugin.DebuggingInfo) error {
 
 func (h *minimalHost) AttachDebugger(spec plugin.DebugSpec) bool {
 	return false
+}
+
+func (h *minimalHost) LoaderAddr() string {
+	return ""
 }
 
 func (h *minimalHost) Close() error {

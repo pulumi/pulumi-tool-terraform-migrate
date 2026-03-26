@@ -27,7 +27,6 @@ import (
 	"github.com/google/uuid"
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge"
-	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/bridge"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
@@ -94,7 +93,11 @@ func TranslateAndWriteState(
 	if requiredProvidersOutputFilePath != "" {
 		requiredProviders := make([]RequiredProviderExport, 0, len(res.RequiredProviders))
 		for _, provider := range res.RequiredProviders {
-			requiredProviders = append(requiredProviders, RequiredProviderExport{Name: provider.Name, Version: provider.Version})
+			name := provider.Name
+			if provider.IsDynamic {
+				name = formatDynamicProviderName(provider.TerraformAddress)
+			}
+			requiredProviders = append(requiredProviders, RequiredProviderExport{Name: name, Version: provider.Version})
 		}
 		bytes, err := json.Marshal(requiredProviders)
 		if err != nil {
@@ -110,7 +113,7 @@ func TranslateAndWriteState(
 
 type TranslateStateResult struct {
 	Export            StackExport
-	RequiredProviders []*info.Provider
+	RequiredProviders []*ProviderWithMetadata
 	ErrorMessages     []ErroredResource
 }
 
@@ -154,7 +157,7 @@ type ErroredResource struct {
 	ErrorMessage     string `json:"error_message"`
 }
 
-func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*info.Provider) (*PulumiState, []ErroredResource, error) {
+func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata) (*PulumiState, []ErroredResource, error) {
 	pulumiState := &PulumiState{}
 
 	// TODO[pulumi/pulumi-service#35512]: This assumes one Pulumi provider per Terraform provider.
@@ -192,7 +195,7 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 				ResourceName:     resource.Name,
 				ResourceType:     resource.Type,
 				ResourceProvider: resource.ProviderName,
-				ErrorMessage:     fmt.Sprintf("no bridged Pulumi provider found for Terraform provider %s", resource.ProviderName),
+				ErrorMessage:     fmt.Sprintf("no Pulumi provider available for Terraform provider %s (neither statically bridged nor dynamically bridged)", resource.ProviderName),
 			})
 			return nil
 		}
@@ -219,7 +222,7 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 
 func convertResourceStateExceptProviderLink(
 	res *tfjson.StateResource,
-	pulumiProviders map[providermap.TerraformProviderName]*info.Provider,
+	pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata,
 ) (PulumiResource, error) {
 	prov, ok := pulumiProviders[providermap.TerraformProviderName(res.ProviderName)]
 	if !ok {
@@ -246,7 +249,7 @@ func convertResourceStateExceptProviderLink(
 		sensitivePaths = tofu.SensitiveObjToCtyPath(sensitiveValues)
 	}
 
-	pulumiTypeToken, err := bridge.PulumiTypeToken(res.Type, prov)
+	pulumiTypeToken, err := bridge.PulumiTypeToken(res.Type, prov.Provider)
 	if err != nil {
 		return PulumiResource{}, fmt.Errorf("failed to get Pulumi type token: %w", err)
 	}
@@ -270,6 +273,21 @@ func convertResourceStateExceptProviderLink(
 		Inputs:  inputs,
 		Outputs: props,
 	}, nil
+}
+
+// formatDynamicProviderName formats a Terraform provider address for use with the
+// terraform-provider Pulumi package. For example:
+// "registry.terraform.io/hashicorp/time" -> "terraform-provider hashicorp/time"
+func formatDynamicProviderName(tfAddr string) string {
+	// Split by "/" and take the last two parts (namespace/name)
+	parts := strings.Split(tfAddr, "/")
+	if len(parts) >= 2 {
+		namespace := parts[len(parts)-2]
+		name := parts[len(parts)-1]
+		return fmt.Sprintf("terraform-provider %s/%s", namespace, name)
+	}
+	// Fallback: just use the whole address
+	return "terraform-provider " + tfAddr
 }
 
 // PulumiNameFromTerraformAddress extracts a unique Pulumi resource name from a Terraform address.

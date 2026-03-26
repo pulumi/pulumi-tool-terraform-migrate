@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,6 +33,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 		input                        TerraformProvider
 		expectedBridgedProvider      string
 		expectedVersion              string
+		expectedMinVersion           string // use >= instead of == (for "latest" fallback cases)
 		expectedUseTerraformProvider bool
 	}{
 		{
@@ -61,7 +63,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.16.0",
+			expectedMinVersion:           "v7.23.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -71,7 +73,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "invalid-version",
 			},
 			expectedBridgedProvider:      "aws",
-			expectedVersion:              "v7.16.0",
+			expectedMinVersion:           "v7.23.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -101,7 +103,7 @@ func TestRecommendPulumiProvider(t *testing.T) {
 				Version:    "7.0.0",
 			},
 			expectedBridgedProvider:      "gcp",
-			expectedVersion:              "v9.10.0",
+			expectedMinVersion:           "v9.15.0",
 			expectedUseTerraformProvider: false,
 		},
 		{
@@ -118,29 +120,49 @@ func TestRecommendPulumiProvider(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.expectedVersion != "" && tt.expectedMinVersion != "" {
+				t.Fatal("test case must not set both expectedVersion and expectedMinVersion")
+			}
+
 			result := RecommendPulumiProvider(tt.input)
 
 			if tt.expectedUseTerraformProvider {
-				if !result.UseTerraformProviderPackage {
-					t.Errorf("Expected UseTerraformProviderPackage to be true, got false")
+				if !result.UseDynamicBridging {
+					t.Errorf("Expected UseDynamicBridging to be true, got false")
 				}
-				if result.BridgedPulumiProvider != nil {
-					t.Errorf("Expected BridgedPulumiProvider to be nil, got %v", result.BridgedPulumiProvider)
+				if result.StaticallyBridgedProvider != nil {
+					t.Errorf("Expected StaticallyBridgedProvider to be nil, got %v", result.StaticallyBridgedProvider)
 				}
 			} else {
-				if result.UseTerraformProviderPackage {
-					t.Errorf("Expected UseTerraformProviderPackage to be false, got true")
+				if result.UseDynamicBridging {
+					t.Errorf("Expected UseDynamicBridging to be false, got true")
 				}
-				if result.BridgedPulumiProvider == nil {
-					t.Errorf("Expected BridgedPulumiProvider to be non-nil, got nil")
+				if result.StaticallyBridgedProvider == nil {
+					t.Errorf("Expected StaticallyBridgedProvider to be non-nil, got nil")
 				} else {
-					if result.BridgedPulumiProvider.Identifier != tt.expectedBridgedProvider {
-						t.Errorf("Expected BridgedPulumiProvider.Identifier to be %q, got %q",
-							tt.expectedBridgedProvider, result.BridgedPulumiProvider.Identifier)
+					if result.StaticallyBridgedProvider.Identifier != tt.expectedBridgedProvider {
+						t.Errorf("Expected StaticallyBridgedProvider.Identifier to be %q, got %q",
+							tt.expectedBridgedProvider, result.StaticallyBridgedProvider.Identifier)
 					}
-					if result.BridgedPulumiProvider.Version != tt.expectedVersion {
-						t.Errorf("Expected BridgedPulumiProvider.Version to be %q, got %q",
-							tt.expectedVersion, result.BridgedPulumiProvider.Version)
+					if tt.expectedVersion != "" {
+						if result.StaticallyBridgedProvider.Version != tt.expectedVersion {
+							t.Errorf("Expected StaticallyBridgedProvider.Version to be %q, got %q",
+								tt.expectedVersion, result.StaticallyBridgedProvider.Version)
+						}
+					}
+					if tt.expectedMinVersion != "" {
+						got, err := semver.Parse(strings.TrimPrefix(result.StaticallyBridgedProvider.Version, "v"))
+						if err != nil {
+							t.Fatalf("Failed to parse version %q: %v", result.StaticallyBridgedProvider.Version, err)
+						}
+						min, err := semver.Parse(strings.TrimPrefix(tt.expectedMinVersion, "v"))
+						if err != nil {
+							t.Fatalf("Failed to parse min version %q: %v", tt.expectedMinVersion, err)
+						}
+						if got.LT(min) {
+							t.Errorf("Expected StaticallyBridgedProvider.Version >= %q, got %q",
+								tt.expectedMinVersion, result.StaticallyBridgedProvider.Version)
+						}
 					}
 				}
 			}

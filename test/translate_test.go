@@ -139,8 +139,8 @@ func TestTranslateBasicWithDependencies(t *testing.T) {
 	require.NoError(t, err)
 
 	dependencies, err := os.ReadFile(filepath.Join(stackFolder, "dependencies.json"))
-	require.NoError(t, err)	
-	require.Contains(t,	string(dependencies), `[{"name":"random","version":`)
+	require.NoError(t, err)
+	require.Contains(t, string(dependencies), `[{"name":"random","version":`)
 }
 
 func TestTranslateBasicWithEdit(t *testing.T) {
@@ -221,7 +221,6 @@ func TestTranslateWithDependency(t *testing.T) {
 	output := runCommand(t, stackFolder, "pulumi", "up", "--yes")
 	require.Contains(t, output, "5 unchanged")
 }
-
 
 // Running many tests in parallel exposes race conditions in Pulumi plugin handling; isolate PULUMI_HOME. Note that
 // this helper conflicts with `t.Parallel()`.

@@ -121,7 +121,7 @@ type SkippedResource struct {
 func TranslateStateFile(
 	ctx context.Context,
 	sf *states.State,
-	providers map[providermap.TerraformProviderName]*info.Provider,
+	providers map[providermap.TerraformProviderName]*pkg.ProviderWithMetadata,
 ) (*TranslateResult, error) {
 	if sf == nil {
 		return &TranslateResult{}, nil
@@ -184,12 +184,12 @@ func TranslateStateFile(
 				// provider schema version. Currently the bridged provider shim doesn't
 				// reliably expose schema versions (often returns 0), so we fall back to
 				// upgrade-on-error.
-				translated, err := TranslateResourceInstance(res, key, provider)
+				translated, err := TranslateResourceInstance(res, key, provider.Provider)
 				if err != nil {
 					upgradedInstance, upgradeErr := upgrader.UpgradeInstance(ctx, res, key)
 					if upgradeErr == nil && upgradedInstance != nil {
 						instance.Current = upgradedInstance
-						translated, err = TranslateResourceInstance(res, key, provider)
+						translated, err = TranslateResourceInstance(res, key, provider.Provider)
 					}
 				}
 
