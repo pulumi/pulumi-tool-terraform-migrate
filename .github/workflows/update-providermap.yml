@@ -43,6 +43,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      - name: Compare provider list with registry
+        run: go run . compare-providers pkg/providermap/versions.yaml
+
       - name: Run update script
         run: ./scripts/update_providermap.sh
 
