@@ -1,4 +1,5 @@
 bridged:
+    acme: []
     aiven:
         - pulumi: v6.48.0
           upstream: v4.50.0
@@ -742,6 +743,7 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    aquasec: []
     archive:
         - pulumi: v0.3.6
           upstream: v2.7.1
@@ -777,6 +779,7 @@ bridged:
           upstream: v2.4.0
         - pulumi: v0.0.1
           upstream: v2.4.0
+    argocd: []
     artifactory:
         - pulumi: v8.10.1
           upstream: v12.11.1
@@ -1056,6 +1059,7 @@ bridged:
           error: no GitHub release
         - pulumi: v0.1.0
           error: no GitHub release
+    astra: []
     auth0:
         - pulumi: v3.37.0
           upstream: v1.39.0
@@ -1267,6 +1271,7 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    aviatrix: []
     aws:
         - pulumi: v7.16.0
           upstream: v6.28.0
@@ -2182,6 +2187,8 @@ bridged:
           error: no GitHub release
         - pulumi: v0.8.1
           error: no GitHub release
+    awscontroltower: []
+    azapi: []
     azure:
         - pulumi: v6.31.0
           upstream: v4.57.0
@@ -3173,6 +3180,13 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    buildkite: []
+    bytepluscc: []
+    castai: []
+    checkly: []
+    chronosphere: []
+    cilium: []
+    clickhouse: []
     cloudamqp:
         - pulumi: v3.25.1
           upstream: v1.41.1
@@ -3737,6 +3751,8 @@ bridged:
           upstream: v2.0.20
         - pulumi: v0.0.1
           upstream: v2.0.20
+    cockroach: []
+    confluent: []
     confluentcloud:
         - pulumi: v2.56.0
           error: 'failed to checkout v2.56.0: exit status 1'
@@ -4085,6 +4101,10 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    cpln: []
+    cratedb: []
+    crowdstrike: []
+    ctfd: []
     databricks:
         - pulumi: v1.83.0
           upstream: v1.104.0
@@ -4571,6 +4591,7 @@ bridged:
           error: no GitHub release
         - pulumi: v0.18.0
           error: no GitHub release
+    datarobot: []
     dbtcloud:
         - pulumi: v1.5.0
           upstream: v1.7.0
@@ -4660,6 +4681,7 @@ bridged:
           error: no GitHub release
         - pulumi: v0.1.0
           error: no GitHub release
+    descope: []
     digitalocean:
         - pulumi: v4.56.0
           upstream: v2.72.0
@@ -5223,6 +5245,8 @@ bridged:
           error: no GitHub release
         - pulumi: v0.14.0
           error: no GitHub release
+    doppler: []
+    dynatrace: []
     ec:
         - pulumi: v0.10.9
           upstream: v0.12.4
@@ -5280,6 +5304,9 @@ bridged:
           error: no GitHub release
         - pulumi: v0.1.0
           error: no GitHub release
+    equinix: []
+    eventstorecloud: []
+    exoscale: []
     external:
         - pulumi: v0.0.17
           upstream: v2.3.5
@@ -5693,6 +5720,11 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    flux: []
+    formal: []
+    fortios: []
+    fusionauth: []
+    gandi: []
     gcp:
         - pulumi: v9.11.0
           upstream: v7.17.0
@@ -6392,6 +6424,7 @@ bridged:
           error: no GitHub release
         - pulumi: v0.9.11
           error: no GitHub release
+    genesiscloud: []
     github:
         - pulumi: v6.11.0
           upstream: v6.10.2
@@ -6828,6 +6861,8 @@ bridged:
           error: no GitHub release
         - pulumi: v0.18.0
           error: no GitHub release
+    grafana: []
+    harbor: []
     harness:
         - pulumi: v0.11.1
           error: 'failed to checkout v0.11.1: exit status 1'
@@ -7104,6 +7139,8 @@ bridged:
           error: no GitHub release
         - pulumi: v0.0.1
           error: no GitHub release
+    hcp: []
+    heroku: []
     http:
         - pulumi: v0.1.3
           upstream: v3.5.0
@@ -7135,6 +7172,11 @@ bridged:
           upstream: v3.4.1
         - pulumi: v0.0.1
           error: no GitHub release
+    impart: []
+    influxdb: []
+    influxdb3: []
+    ionoscloud: []
+    iosxe: []
     ise:
         - pulumi: v0.2.9
           upstream: v0.2.15
@@ -7640,6 +7682,8 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    koyeb: []
+    launchdarkly: []
     linode:
         - pulumi: v5.7.0
           upstream: v3.8.0
@@ -7986,6 +8030,7 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    matchbox: []
     meraki:
         - pulumi: v0.4.5
           upstream: v3.119.0
@@ -8311,6 +8356,7 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    mssql: []
     mysql:
         - pulumi: v3.2.13
           upstream: v3.119.0
@@ -8795,6 +8841,7 @@ bridged:
           error: no GitHub release
         - pulumi: v0.17.1
           error: no GitHub release
+    ngrok: []
     nomad:
         - pulumi: v2.5.4
           upstream: v2.5.2
@@ -9002,6 +9049,8 @@ bridged:
           upstream: v3.2.2
         - pulumi: v0.0.1
           error: 'failed to parse version from release notes: no upstream version found in commit message'
+    nutanix: []
+    nxos: []
     oci:
         - pulumi: v3.16.0
           upstream: v7.32.0
@@ -9476,6 +9525,7 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    onepassword: []
     openstack:
         - pulumi: v5.4.1
           upstream: v3.120.0
@@ -9778,6 +9828,8 @@ bridged:
           error: no GitHub release
         - pulumi: v0.1.0
           error: no GitHub release
+    ovh: []
+    packet: []
     pagerduty:
         - pulumi: v4.29.9
           upstream: v3.30.9
@@ -10039,6 +10091,8 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    pgedge: []
+    port: []
     postgresql:
         - pulumi: v3.16.2
           upstream: v1.26.0
@@ -10176,6 +10230,9 @@ bridged:
           error: no GitHub release
         - pulumi: v0.18.0
           error: no GitHub release
+    prodvana: []
+    proxmoxve: []
+    qovery: []
     rabbitmq:
         - pulumi: v3.4.1
           upstream: v1.10.1
@@ -10587,6 +10644,9 @@ bridged:
           error: no GitHub release
         - pulumi: v0.0.1
           error: no GitHub release
+    rediscloud: []
+    rootly: []
+    scaleway: []
     scm:
         - pulumi: v1.0.3
           upstream: v1.0.7
@@ -10630,6 +10690,7 @@ bridged:
           upstream: v0.8.0
         - pulumi: v0.1.0
           upstream: v0.8.0
+    sdm: []
     sdwan:
         - pulumi: v0.6.0
           upstream: v0.9.0
@@ -10671,6 +10732,7 @@ bridged:
           error: no GitHub release
         - pulumi: v0.1.0
           error: no GitHub release
+    sentry: []
     signalfx:
         - pulumi: v7.21.0
           upstream: v9.24.0
@@ -11164,6 +11226,7 @@ bridged:
           error: no GitHub release
         - pulumi: v0.1.0
           error: no GitHub release
+    splight: []
     splunk:
         - pulumi: v1.2.24
           upstream: v1.4.34
@@ -11650,6 +11713,11 @@ bridged:
           error: no GitHub release
         - pulumi: v1.0.0
           error: no GitHub release
+    stackit: []
+    statsig: []
+    statuscake: []
+    sumologic: []
+    symbiosis: []
     tailscale:
         - pulumi: v0.24.0
           upstream: v0.25.0
@@ -11737,6 +11805,8 @@ bridged:
           error: no GitHub release
         - pulumi: v0.1.0
           error: no GitHub release
+    talos: []
+    time: []
     tls:
         - pulumi: v5.3.0
           upstream: v4.2.1
@@ -11870,6 +11940,10 @@ bridged:
           error: no GitHub release
         - pulumi: v0.18.0
           error: no GitHub release
+    twingate: []
+    unifi: []
+    upcloud: []
+    upstash: []
     vault:
         - pulumi: v7.6.0
           upstream: v5.6.0
@@ -12134,6 +12208,9 @@ bridged:
           error: no GitHub release
         - pulumi: v0.1.0
           error: no GitHub release
+    vercel: []
+    volcengine: []
+    volcenginecc: []
     vsphere:
         - pulumi: v4.16.2
           upstream: v2.15.0
@@ -12339,3 +12416,9 @@ bridged:
           error: no GitHub release
         - pulumi: v0.16.0
           error: no GitHub release
+    vultr: []
+    wavefront: []
+    xenorchestra: []
+    yandex: []
+    zitadel: []
+    zpa: []
