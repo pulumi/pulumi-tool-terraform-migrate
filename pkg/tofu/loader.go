@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -68,20 +67,18 @@ type TofuVersionOutput struct {
 // Requires `tofu` in path and executes these commands:
 //
 //	tofu init
-//	tofu refresh
 //	tofu show -json
-//	tofu workspace *
-//	tofu state {push,pull}
+//	tofu workspace show/select
+//	tofu state pull
 //
 // OpenTofu sometimes has a problem reading states created by Terraform proper that rely on providers from the
-// Terraform registry. LoadTerraformState works around this by using a temporary workspace to convert providers to
-// their OpenTofu registry equivalents and extracts the OpenTofu-translated state without modifying the original
-// workspace. This workaround calls `tofu refresh` to compensate.
+// Terraform registry. LoadTerraformState works around this by rewriting registry.terraform.io provider references
+// to registry.opentofu.org in the state JSON, then parsing the rewritten state with `tofu show -json`.
 //
 // Common errors:
 //
 // - will fail if `tofu` binary is not in PATH
-// - will fail if `tofu` fails to authenticate to an state backend such as the S3 state backend
+// - will fail if `tofu` fails to authenticate to a state backend such as the S3 state backend
 //
 // See also: https://github.com/pulumi/pulumi-service/issues/34864
 func LoadTerraformState(ctx context.Context, opts LoadTerraformStateOptions) (finalState *tfjson.State, finalError error) {
@@ -158,29 +155,23 @@ func LoadTerraformState(ctx context.Context, opts LoadTerraformStateOptions) (fi
 		return nil, fmt.Errorf("tofu init failed: %w", err)
 	}
 
-	// If given an explicit StateFilePath, re-interpret it as a temp workspace.
+	// If given an explicit StateFilePath, try ShowStateFile first; fall back to provider rewrite
+	// if OpenTofu cannot resolve Terraform registry provider references.
 	if opts.StateFilePath != "" {
-		tempWorkspace, err := pickTempWorkspaceName(ctx, tofu)
+		absStateFile, err := filepath.Abs(opts.StateFilePath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("resolving state file path: %w", err)
 		}
-
-		if err := newWorkspace(ctx, tofu, tempWorkspace, opts.StateFilePath); err != nil {
-			return nil, fmt.Errorf("temp workspace construction failed: %w", err)
+		state, err := tofu.ShowStateFile(ctx, absStateFile)
+		if err == nil {
+			return state, nil
 		}
-
-		defer func() {
-			err := tofu.WorkspaceDelete(ctx, tempWorkspace, tfexec.Force(true))
-			if err != nil {
-				err = fmt.Errorf("deleting tofu workspace failed: %w", err)
-				finalError = errors.Join(finalError, err)
-			}
-		}()
-
-		opts = LoadTerraformStateOptions{
-			ProjectDir: opts.ProjectDir,
-			Workspace:  tempWorkspace,
+		if strings.Contains(err.Error(), "Failed to load plugin schemas") &&
+			strings.Contains(err.Error(), "while loading schemas for plugin components") {
+			fmt.Fprintln(os.Stderr, "Error reading state file with OpenTofu. Rewriting provider references.")
+			return loadStateFileWithRewrite(ctx, tofu, absStateFile)
 		}
+		return nil, fmt.Errorf("tofu show on state file failed: %w", err)
 	}
 
 	workspace := opts.Workspace
@@ -192,7 +183,7 @@ func LoadTerraformState(ctx context.Context, opts LoadTerraformStateOptions) (fi
 		workspace = w
 	}
 
-	return loadWorkspaceState(ctx, tofu, opts.ProjectDir, workspace)
+	return loadWorkspaceState(ctx, tofu, workspace)
 }
 
 func tofuNew(projectDir string) (*tfexec.Terraform, error) {
@@ -243,18 +234,7 @@ func getProviderVersions(ctx context.Context, tofu *tfexec.Terraform) (TofuVersi
 func loadWorkspaceState(
 	ctx context.Context,
 	tofu *tfexec.Terraform,
-	projectDir string,
 	workspace string,
-) (finalState *tfjson.State, finalError error) {
-	return loadWorkspaceStateInner(ctx, tofu, projectDir, workspace, true /* workaroundRegistryError */)
-}
-
-func loadWorkspaceStateInner(
-	ctx context.Context,
-	tofu *tfexec.Terraform,
-	projectDir string,
-	workspace string,
-	workaroundRegistryError bool,
 ) (finalState *tfjson.State, finalError error) {
 	currentWorkspace, err := tofu.WorkspaceShow(ctx)
 	if err != nil {
@@ -282,186 +262,13 @@ func loadWorkspaceStateInner(
 
 	// Working around this error: https://github.com/pulumi/pulumi-service/issues/34864
 	case strings.Contains(err.Error(), "Failed to load plugin schemas") &&
-		strings.Contains(err.Error(), "while loading schemas for plugin components") &&
-		workaroundRegistryError:
+		strings.Contains(err.Error(), "while loading schemas for plugin components"):
 
-		fmt.Fprintln(os.Stderr, "Error reading Terraform-generated state with OpenTofu. Computing OpenTofu state.")
+		fmt.Fprintln(os.Stderr, "Error reading Terraform-generated state with OpenTofu. Rewriting provider references.")
+		return loadStateWithRewrite(ctx, tofu)
 
-		tempWorkspace, err := pickTempWorkspaceName(ctx, tofu)
-		if err != nil {
-			return nil, err
-		}
-
-		fmt.Fprintln(os.Stderr, "Creating a temporary workspace", tempWorkspace)
-
-		defer func() {
-			fmt.Fprintln(os.Stderr, "Cleaning up the temporary workspace", tempWorkspace)
-
-			err := tofu.WorkspaceDelete(ctx, tempWorkspace, tfexec.Force(true))
-			if err != nil {
-				err = fmt.Errorf("tofu workspace delete failed: %w", err)
-				finalError = errors.Join(finalError, err)
-			}
-		}()
-
-		if err := cloneCurrentWorkspace(ctx, tofu, tempWorkspace); err != nil {
-			return nil, err
-		}
-
-		if err := fixupProviderError(ctx, tofu, tempWorkspace); err != nil {
-			return nil, err
-		}
-
-		return loadWorkspaceStateInner(ctx, tofu, projectDir, tempWorkspace,
-			false /* workaroundRegistryError */) // avoid infinite workaround regress here
 	default:
 		return nil, fmt.Errorf("tofu show failed: %w", err)
-	}
-}
-
-// Runs tofu refresh in a given workspace.
-func fixupProviderError(ctx context.Context, tofu *tfexec.Terraform, workspace string) (finalError error) {
-	currentWorkspace, err := tofu.WorkspaceShow(ctx)
-	if err != nil {
-		return fmt.Errorf("tofu workspace show failed: %w", err)
-	}
-
-	defer func() {
-		if err := tofu.WorkspaceSelect(ctx, currentWorkspace); err != nil {
-			err = fmt.Errorf("tofu workspace select failed: %w", err)
-			finalError = errors.Join(finalError, err)
-		}
-	}()
-
-	if err := tofu.WorkspaceSelect(ctx, workspace); err != nil {
-		err = fmt.Errorf("tofu workspace select failed: %w", err)
-		return err
-	}
-
-	fmt.Fprintln(os.Stderr, "Running tofu refresh in the workspace", workspace)
-	if err := tofu.Refresh(ctx); err != nil {
-		return fmt.Errorf("tofu refresh failed: %w", err)
-	}
-
-	return nil
-}
-
-// Creates destWorkspace with the given state file. Does not modify the currently selected workspace.
-func newWorkspace(
-	ctx context.Context,
-	tofu *tfexec.Terraform,
-	newWorkspaceName string,
-	stateFilePath string,
-) (finalError error) {
-	currentWorkspace, err := tofu.WorkspaceShow(ctx)
-	if err != nil {
-		err = fmt.Errorf("tofu workspace show failed: %w", err)
-		return err
-	}
-
-	defer func() {
-		if err := tofu.WorkspaceSelect(ctx, currentWorkspace); err != nil {
-			err = fmt.Errorf("tofu workspace select failed: %w", err)
-			finalError = errors.Join(finalError, err)
-		}
-	}()
-
-	if err := tofu.WorkspaceNew(ctx, newWorkspaceName); err != nil {
-		err = fmt.Errorf("tofu workspace new failed: %w", err)
-		return err
-	}
-
-	if err := tofu.WorkspaceSelect(ctx, newWorkspaceName); err != nil {
-		err = fmt.Errorf("tofu workspace select failed: %w", err)
-		return err
-	}
-
-	if err := tofuStatePush(ctx, tofu, stateFilePath); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Wraps tofu state push to take care of relative paths.
-func tofuStatePush(ctx context.Context, tofu *tfexec.Terraform, stateFilePath string) error {
-	absPath, err := filepath.Abs(stateFilePath)
-	if err != nil {
-		return err
-	}
-
-	if err := tofu.StatePush(ctx, absPath); err != nil {
-		return fmt.Errorf("tofu state push failed: %w", err)
-	}
-
-	return nil
-}
-
-// A variation of cloneWorkspace that extracts the state from the current workspace first.
-func cloneCurrentWorkspace(
-	ctx context.Context,
-	tofu *tfexec.Terraform,
-	destWorkspace string,
-) (finalError error) {
-	stateData, err := tofu.StatePull(ctx)
-	if err != nil {
-		return err
-	}
-
-	tempFile, err := os.CreateTemp("", "temp-tofu-state*.json")
-	if err != nil {
-		return err
-	}
-
-	if _, err = io.Copy(tempFile, strings.NewReader(stateData)); err != nil {
-		return err
-	}
-
-	defer func() {
-		err := os.Remove(tempFile.Name())
-		if err != nil {
-			finalError = errors.Join(finalError, err)
-		}
-	}()
-
-	if err := newWorkspace(ctx, tofu, destWorkspace, tempFile.Name()); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Picks a new name that does not conflict with any existing workspaces.
-func pickTempWorkspaceName(ctx context.Context, tofu *tfexec.Terraform) (string, error) {
-	allWorkspaces, currentWorkspace, err := tofu.WorkspaceList(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed listing tofu workspaces: %w", err)
-	}
-
-	allWorkspacesSet := make(map[string]struct{})
-	for _, w := range allWorkspaces {
-		allWorkspacesSet[w] = struct{}{}
-	}
-
-	i := 0
-	for {
-		var candidate string
-		if i == 0 {
-			candidate = fmt.Sprintf("%s-temp", currentWorkspace)
-		} else {
-			candidate = fmt.Sprintf("%s-temp%d", currentWorkspace, i)
-		}
-
-		_, taken := allWorkspacesSet[candidate]
-		if !taken {
-			return candidate, nil
-		}
-
-		if i > 1000 {
-			return "", fmt.Errorf("failed to allocate a temp workspace name")
-		}
-
-		i++
 	}
 }
 
@@ -486,4 +293,54 @@ func generateUniqueBackupFileName(dir, prefix string) string {
 func fileOrFolderExists(path string) bool {
 	_, err := os.Stat(path)
 	return !errors.Is(err, fs.ErrNotExist)
+}
+
+// loadStateWithRewrite pulls state from the backend, rewrites registry.terraform.io provider references
+// to registry.opentofu.org, and parses via `tofu show -json`. This is used as a fallback when `tofu show`
+// fails due to Terraform registry provider references that OpenTofu cannot resolve.
+func loadStateWithRewrite(ctx context.Context, tofu *tfexec.Terraform) (*tfjson.State, error) {
+	stateData, err := tofu.StatePull(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("tofu state pull failed: %w", err)
+	}
+
+	return parseStateWithProviderRewrite(ctx, tofu, []byte(stateData))
+}
+
+// loadStateFileWithRewrite reads a local state file, rewrites registry.terraform.io provider references
+// to registry.opentofu.org, and parses via `tofu show -json`. This is used when loading state from an
+// explicit StateFilePath.
+func loadStateFileWithRewrite(ctx context.Context, tofu *tfexec.Terraform, stateFilePath string) (*tfjson.State, error) {
+	stateData, err := os.ReadFile(stateFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("reading state file failed: %w", err)
+	}
+
+	return parseStateWithProviderRewrite(ctx, tofu, stateData)
+}
+
+// parseStateWithProviderRewrite rewrites registry.terraform.io → registry.opentofu.org in state JSON,
+// writes to a temp file, and uses `tofu show -json` to parse it.
+func parseStateWithProviderRewrite(ctx context.Context, tofu *tfexec.Terraform, stateData []byte) (*tfjson.State, error) {
+	rewritten := strings.ReplaceAll(string(stateData), "registry.terraform.io/", "registry.opentofu.org/")
+
+	tempFile, err := os.CreateTemp("", "temp-tofu-rewritten-state*.tfstate")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(tempFile.Name())
+
+	if _, err := tempFile.WriteString(rewritten); err != nil {
+		return nil, err
+	}
+	if err := tempFile.Close(); err != nil {
+		return nil, err
+	}
+
+	state, err := tofu.ShowStateFile(ctx, tempFile.Name())
+	if err != nil {
+		return nil, fmt.Errorf("tofu show on rewritten state file failed: %w", err)
+	}
+
+	return state, nil
 }
