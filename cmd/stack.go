@@ -16,6 +16,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg"
 	"github.com/spf13/cobra"
@@ -27,6 +29,8 @@ func newStackCmd() *cobra.Command {
 	var to string
 	var plugins string
 	var strict bool
+	var noModuleComponents bool
+	var moduleTypeMaps []string
 	var pulumiStack string
 	var pulumiProject string
 
@@ -70,7 +74,22 @@ See also:
   https://www.pulumi.com/docs/iac/cli/commands/pulumi_plugin_install/
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := pkg.TranslateAndWriteState(cmd.Context(), from, to, out, plugins, strict, pulumiStack, pulumiProject)
+			typeOverrides := map[string]string{}
+			for _, mapping := range moduleTypeMaps {
+				parts := strings.SplitN(mapping, "=", 2)
+				if len(parts) != 2 {
+					return fmt.Errorf("invalid --module-type-map format %q, expected module.name=type:token", mapping)
+				}
+				typeOverrides[parts[0]] = parts[1]
+			}
+
+			enableComponents := !noModuleComponents
+			if noModuleComponents && len(moduleTypeMaps) > 0 {
+				fmt.Fprintf(os.Stderr, "Warning: --module-type-map is ignored when --no-module-components is set\n")
+				typeOverrides = nil
+			}
+
+			err := pkg.TranslateAndWriteState(cmd.Context(), from, to, out, plugins, strict, enableComponents, typeOverrides, pulumiStack, pulumiProject)
 			if err != nil {
 				return fmt.Errorf("failed to convert and write Terraform state: %w", err)
 			}
@@ -83,6 +102,10 @@ See also:
 	cmd.Flags().StringVarP(&out, "out", "o", "", "Where to emit the translated Pulumi stack file")
 	cmd.Flags().StringVarP(&plugins, "plugins", "p", "", "Where to emit plugin requirements")
 	cmd.Flags().BoolVarP(&strict, "strict", "s", false, "Fail if any resources fail to be translated")
+	cmd.Flags().BoolVar(&noModuleComponents, "no-module-components", false,
+		"Disable creation of component resources for Terraform modules (flat mode)")
+	cmd.Flags().StringArrayVar(&moduleTypeMaps, "module-type-map", nil,
+		"Override component type token for a module (repeatable, format: module.name=pkg:mod:Type)")
 	cmd.Flags().StringVar(&pulumiStack, "pulumi-stack", "", "Override Pulumi stack name (skip auto-detection)")
 	cmd.Flags().StringVar(&pulumiProject, "pulumi-project", "", "Override Pulumi project name (skip auto-detection)")
 
