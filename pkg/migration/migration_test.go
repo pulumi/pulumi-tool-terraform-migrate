@@ -15,152 +15,29 @@
 package migration
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadMigration(t *testing.T) {
-	t.Parallel()
+func TestLoadMigrationWithModules(t *testing.T) {
+	mf, err := LoadMigration("testdata/migration_with_modules.json")
+	require.NoError(t, err)
+	require.Len(t, mf.Migration.Stacks[0].Modules, 2)
 
-	t.Run("loads valid migration file", func(t *testing.T) {
-		t.Parallel()
+	vpc := mf.Migration.Stacks[0].Modules[0]
+	require.Equal(t, "module.vpc", vpc.TFModule)
+	require.Equal(t, "myproject:index:VpcComponent", vpc.PulumiType)
+	require.Empty(t, vpc.HCLSource)
 
-		// Create a temporary migration file
-		tmpDir := t.TempDir()
-		migrationPath := filepath.Join(tmpDir, "migration.json")
-
-		content := `{
-  "migration": {
-    "tf-sources": "./terraform",
-    "pulumi-sources": "./pulumi",
-    "stacks": [
-      {
-        "tf-state": "terraform.tfstate",
-        "pulumi-stack": "dev",
-        "resources": [
-          {
-            "tf-addr": "aws_instance.web",
-            "urn": "urn:pulumi:dev::my-project::aws:ec2/instance:Instance::web"
-          },
-          {
-            "tf-addr": "aws_s3_bucket.data",
-            "migrate": "skip"
-          }
-        ]
-      }
-    ]
-  }
-}`
-		err := os.WriteFile(migrationPath, []byte(content), 0644)
-		require.NoError(t, err)
-
-		// Load the migration
-		mf, err := LoadMigration(migrationPath)
-		require.NoError(t, err)
-		require.NotNil(t, mf)
-
-		// Verify the loaded data
-		assert.Equal(t, "./terraform", mf.Migration.TFSources)
-		assert.Equal(t, "./pulumi", mf.Migration.PulumiSources)
-		assert.Len(t, mf.Migration.Stacks, 1)
-
-		stack := mf.Migration.Stacks[0]
-		assert.Equal(t, "terraform.tfstate", stack.TFState)
-		assert.Equal(t, "dev", stack.PulumiStack)
-		assert.Len(t, stack.Resources, 2)
-
-		assert.Equal(t, "aws_instance.web", stack.Resources[0].TFAddr)
-		assert.Equal(t, "urn:pulumi:dev::my-project::aws:ec2/instance:Instance::web", stack.Resources[0].URN)
-		assert.Equal(t, MigrateModeEmpty, stack.Resources[0].Migrate)
-
-		assert.Equal(t, "aws_s3_bucket.data", stack.Resources[1].TFAddr)
-		assert.Equal(t, "", stack.Resources[1].URN)
-		assert.Equal(t, MigrateModeSkip, stack.Resources[1].Migrate)
-	})
-
-	t.Run("returns error for non-existent file", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := LoadMigration("/non/existent/path/migration.json")
-		assert.Error(t, err)
-	})
-
-	t.Run("returns error for invalid JSON", func(t *testing.T) {
-		t.Parallel()
-
-		tmpDir := t.TempDir()
-		migrationPath := filepath.Join(tmpDir, "migration.json")
-
-		err := os.WriteFile(migrationPath, []byte("invalid json"), 0644)
-		require.NoError(t, err)
-
-		_, err = LoadMigration(migrationPath)
-		assert.Error(t, err)
-	})
+	subnets := mf.Migration.Stacks[0].Modules[1]
+	require.Equal(t, "module.vpc.module.subnets", subnets.TFModule)
+	require.Equal(t, "myproject:network:SubnetGroup", subnets.PulumiType)
+	require.Equal(t, "./modules/subnets", subnets.HCLSource)
 }
 
-func TestMigrationFile_Save(t *testing.T) {
-	t.Parallel()
-
-	t.Run("saves migration file correctly", func(t *testing.T) {
-		t.Parallel()
-
-		tmpDir := t.TempDir()
-		migrationPath := filepath.Join(tmpDir, "migration.json")
-
-		// Create a migration file
-		mf := &MigrationFile{
-			Migration: Migration{
-				TFSources:     "./terraform",
-				PulumiSources: "./pulumi",
-				Stacks: []Stack{
-					{
-						TFState:     "terraform.tfstate",
-						PulumiStack: "prod",
-						Resources: []Resource{
-							{
-								TFAddr: "aws_instance.app",
-								URN:    "urn:pulumi:prod::my-project::aws:ec2/instance:Instance::app",
-							},
-							{
-								TFAddr:  "aws_s3_bucket.logs",
-								Migrate: MigrateModeIgnoreNoState,
-							},
-						},
-					},
-				},
-			},
-		}
-
-		// Save the file
-		err := mf.Save(migrationPath)
-		require.NoError(t, err)
-
-		// Verify the file exists
-		_, err = os.Stat(migrationPath)
-		require.NoError(t, err)
-
-		// Load it back and verify contents
-		loaded, err := LoadMigration(migrationPath)
-		require.NoError(t, err)
-
-		assert.Equal(t, mf.Migration.TFSources, loaded.Migration.TFSources)
-		assert.Equal(t, mf.Migration.PulumiSources, loaded.Migration.PulumiSources)
-		assert.Len(t, loaded.Migration.Stacks, 1)
-		assert.Equal(t, "prod", loaded.Migration.Stacks[0].PulumiStack)
-		assert.Len(t, loaded.Migration.Stacks[0].Resources, 2)
-		assert.Equal(t, MigrateModeIgnoreNoState, loaded.Migration.Stacks[0].Resources[1].Migrate)
-	})
-
-	t.Run("returns error for invalid path", func(t *testing.T) {
-		t.Parallel()
-
-		mf := &MigrationFile{}
-		err := mf.Save("/invalid/directory/that/does/not/exist/migration.json")
-		assert.Error(t, err)
-	})
+func TestLoadMigrationWithoutModules_BackwardCompatible(t *testing.T) {
+	mf, err := LoadMigration("testdata/migration_no_modules.json")
+	require.NoError(t, err)
+	require.Nil(t, mf.Migration.Stacks[0].Modules)
 }

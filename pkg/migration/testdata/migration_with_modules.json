@@ -1,0 +1,22 @@
+{
+  "migration": {
+    "tf-sources": "./tf",
+    "pulumi-sources": "./pulumi",
+    "stacks": [{
+      "tf-state": "terraform.tfstate",
+      "pulumi-stack": "dev",
+      "modules": [
+        {
+          "tf-module": "module.vpc",
+          "pulumi-type": "myproject:index:VpcComponent"
+        },
+        {
+          "tf-module": "module.vpc.module.subnets",
+          "pulumi-type": "myproject:network:SubnetGroup",
+          "hcl-source": "./modules/subnets"
+        }
+      ],
+      "resources": []
+    }]
+  }
+}

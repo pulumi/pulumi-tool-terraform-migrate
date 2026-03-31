@@ -63,6 +63,9 @@ type Stack struct {
 
 	// Resource mappings.
 	Resources []Resource `json:"resources"`
+
+	// Module mappings for component resource generation.
+	Modules []Module `json:"modules,omitempty"`
 }
 
 // Resource represents a mapping between a Terraform resource and a Pulumi resource
@@ -77,6 +80,19 @@ type Resource struct {
 	// Encode how the particular Terraform resource should be migrated, can it be skipped completely or can certain
 	// checks for this resource be ignored.
 	Migrate MigrateMode `json:"migrate,omitempty"`
+}
+
+// Module represents a mapping between a Terraform module and a Pulumi component resource.
+type Module struct {
+	// Terraform module address such as "module.vpc" or "module.vpc.module.subnets".
+	TFModule string `json:"tf-module"`
+
+	// Pulumi type token for the component resource, e.g. "myproject:index:VpcComponent".
+	// If empty, the type is auto-derived from the module name.
+	PulumiType string `json:"pulumi-type,omitempty"`
+
+	// Path to HCL source files for this module (Phase 2).
+	HCLSource string `json:"hcl-source,omitempty"`
 }
 
 // LoadMigration reads and parses a migration.json file
