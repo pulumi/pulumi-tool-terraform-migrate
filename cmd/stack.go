@@ -27,6 +27,8 @@ func newStackCmd() *cobra.Command {
 	var to string
 	var plugins string
 	var strict bool
+	var pulumiStack string
+	var pulumiProject string
 
 	cmd := &cobra.Command{
 		Use:   "stack",
@@ -68,7 +70,7 @@ See also:
   https://www.pulumi.com/docs/iac/cli/commands/pulumi_plugin_install/
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := pkg.TranslateAndWriteState(cmd.Context(), from, to, out, plugins, strict)
+			err := pkg.TranslateAndWriteState(cmd.Context(), from, to, out, plugins, strict, pulumiStack, pulumiProject)
 			if err != nil {
 				return fmt.Errorf("failed to convert and write Terraform state: %w", err)
 			}
@@ -81,6 +83,8 @@ See also:
 	cmd.Flags().StringVarP(&out, "out", "o", "", "Where to emit the translated Pulumi stack file")
 	cmd.Flags().StringVarP(&plugins, "plugins", "p", "", "Where to emit plugin requirements")
 	cmd.Flags().BoolVarP(&strict, "strict", "s", false, "Fail if any resources fail to be translated")
+	cmd.Flags().StringVar(&pulumiStack, "pulumi-stack", "", "Override Pulumi stack name (skip auto-detection)")
+	cmd.Flags().StringVar(&pulumiProject, "pulumi-project", "", "Override Pulumi project name (skip auto-detection)")
 
 	cmd.MarkFlagRequired("from")
 	cmd.MarkFlagRequired("to")
