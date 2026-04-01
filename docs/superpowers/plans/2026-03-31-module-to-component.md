@@ -1374,13 +1374,13 @@ gh pr create --base feat/mc-06-hcl-parser \
 
 ### Task 11: Implement HCL expression evaluator
 
-- [ ] **Step 1: Verify `pulumi/opentofu` function library access**
+**Verified:** Both function libraries are importable (no submodule needed):
+- `github.com/pulumi/opentofu/lang/funcs` — 60+ Terraform-specific functions (cidr, template, crypto, time, etc.)
+- `github.com/zclconf/go-cty/cty/function/stdlib` — 80+ standard functions (join, split, regex, json, collections, etc.)
 
-```bash
-go doc github.com/pulumi/opentofu/lang/funcs 2>/dev/null || echo "Try alternative paths"
-```
+HCL's evaluator natively handles literals, variable refs, conditionals, and `for` expressions without any function library. The function table is only needed for function calls like `join(...)` or `cidrsubnets(...)`.
 
-- [ ] **Step 2: Write failing tests**
+- [ ] **Step 1: Write failing tests**
 
 Test helpers parse HCL expression strings via `hclsyntax.ParseExpression`:
 
@@ -1506,9 +1506,30 @@ func NewEvalContext(
 }
 
 // buildFunctionTable returns the Terraform-compatible function table.
-// Uses functions from github.com/pulumi/opentofu/lang/funcs if available.
+// Combines standard functions from zclconf/go-cty stdlib with
+// Terraform-specific functions from pulumi/opentofu.
 func buildFunctionTable() map[string]function.Function {
-	// Import from pulumi/opentofu fork, or fall back to cty stdlib
+	funcs := map[string]function.Function{
+		// From zclconf/go-cty/cty/function/stdlib (standard functions)
+		"join": stdlib.JoinFunc, "split": stdlib.SplitFunc,
+		"upper": stdlib.UpperFunc, "lower": stdlib.LowerFunc,
+		"length": stdlib.LengthFunc, "flatten": stdlib.FlattenFunc,
+		"merge": stdlib.MergeFunc, "keys": stdlib.KeysFunc,
+		"values": stdlib.ValuesFunc, "contains": stdlib.ContainsFunc,
+		"regex": stdlib.RegexFunc, "regexall": stdlib.RegexAllFunc,
+		"jsonencode": stdlib.JSONEncodeFunc, "jsondecode": stdlib.JSONDecodeFunc,
+		// ... all stdlib functions
+
+		// From github.com/pulumi/opentofu/lang/funcs (Terraform-specific)
+		"cidrhost": funcs.CidrHostFunc, "cidrnetmask": funcs.CidrNetmaskFunc,
+		"cidrsubnet": funcs.CidrSubnetFunc, "cidrsubnets": funcs.CidrSubnetsFunc,
+		"timestamp": funcs.TimestampFunc, "timeadd": funcs.TimeAddFunc,
+		"base64encode": funcs.Base64EncodeFunc, "base64decode": funcs.Base64DecodeFunc,
+		"md5": funcs.Md5Func, "sha256": funcs.Sha256Func,
+		"parseint": funcs.ParseIntFunc, "replace": funcs.ReplaceFunc,
+		// ... all opentofu/lang/funcs functions
+	}
+	return funcs
 }
 
 func (e *EvalContext) EvaluateExpression(expr hcl.Expression) (cty.Value, error) {

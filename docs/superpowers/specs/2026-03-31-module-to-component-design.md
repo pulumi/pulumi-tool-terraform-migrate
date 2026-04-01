@@ -220,16 +220,30 @@ The tool needs to find the `.tf` files for each module. Sources specified via:
 
 #### Expression Evaluation
 
-Use the `hashicorp/hcl/v2` Go library which includes `hcl.EvalContext` and expression evaluation. Build the eval context from:
+Use the `hashicorp/hcl/v2` Go library for expression evaluation. HCL's evaluator natively handles literals, variable references, conditionals, and `for` expressions. For **function calls** (e.g., `join(...)`, `cidrsubnets(...)`), the evaluator looks up functions by name in `hcl.EvalContext.Functions` — we must populate this map with the full Terraform function table.
 
-- **Literals** (`"10.0.0.0/16"`) — trivial.
-- **Variable references** (`var.cidr`) — look up in `terraform.tfvars` or variable defaults.
-- **Resource attribute references** (`aws_vpc.this.id`) — look up in TF state.
-- **Module output references** (`module.vpc.vpc_id`) — resolve from child resource attributes in TF state.
-- **Function calls** (`cidrsubnets(...)`, `join(...)`) — Terraform's built-in function library is in an `internal` package and cannot be imported directly. Use the `zclconf/go-cty` function stdlib or reimplement common functions. Supported functions should be explicitly enumerated during implementation.
-- **Conditionals, `for` expressions** — evaluate using HCL's built-in expression evaluator.
+**Function table sources** (both are already importable dependencies — no submodule needed):
+- `github.com/pulumi/opentofu/lang/funcs` — Terraform-specific functions: `cidrsubnets`, `cidrhost`, `templatefile`, `bcrypt`, `timestamp`, `parseint`, etc. (60+ functions)
+- `github.com/zclconf/go-cty/cty/function/stdlib` — Standard functions: `join`, `split`, `upper`, `lower`, `length`, `flatten`, `merge`, `keys`, `values`, `regex`, `jsonencode`, `jsondecode`, etc. (80+ functions)
 
-**Fallback**: If an expression can't be evaluated (unsupported function, etc.), log a warning and omit that field from component state. The user can address it manually or via the migration file.
+**Eval context population** — build `hcl.EvalContext` with:
+
+- `Variables["var"]` — from `terraform.tfvars` or variable defaults
+- `Variables["<resource_type>"]` — resource attributes from TF state (e.g., `aws_vpc.this.id`)
+- `Variables["module"]` — module output references from TF state (e.g., `module.vpc.vpc_id`)
+- `Functions` — combined function table from both libraries above
+
+Expression types that work without any function library (handled natively by HCL evaluator):
+- Literals (`"10.0.0.0/16"`)
+- Variable references (`var.cidr`)
+- Conditionals (`var.enable ? "yes" : "no"`)
+- `for` expressions (`[for s in var.list : s]`)
+- Arithmetic, comparison, logical operators
+
+Expression types that require the function table:
+- Function calls (`join("-", ["a", "b"])`, `cidrsubnets(var.cidr, 4, 4)`)
+
+**Fallback**: If an expression can't be evaluated (unregistered function, missing variable, etc.), log a warning and omit that field from component state. The user can address it manually or via the migration file.
 
 #### Component State Population
 
