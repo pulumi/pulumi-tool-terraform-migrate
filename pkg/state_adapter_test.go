@@ -77,6 +77,46 @@ func TestConvertTwoModules(t *testing.T) {
 	require.Equal(t, 2, len(bucketURNs), "expected 2 unique URNs for buckets")
 }
 
+func TestConvertTwoModules_FlatMode(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: "testdata/tofu_state_two_buckets.json",
+	})
+	require.NoError(t, err)
+
+	// enableComponents=false: flat mode, no component resources
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", false, nil)
+	require.NoError(t, err)
+
+	// No component resources in flat mode
+	for _, r := range data.Export.Deployment.Resources {
+		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
+			t.Fatalf("unexpected component resource in flat mode: %s", r.Type)
+		}
+	}
+
+	// All resources parented to Stack
+	for _, r := range data.Export.Deployment.Resources {
+		if r.Custom && string(r.Type) != "pulumi:providers:aws" {
+			require.Contains(t, string(r.Parent), "pulumi:pulumi:Stack",
+				"resource %s should be parented to Stack in flat mode", r.URN)
+		}
+	}
+
+	// Names include module path (not short names)
+	bucketURNs := make(map[string]bool)
+	for _, r := range data.Export.Deployment.Resources {
+		if r.Type == "aws:s3/bucket:Bucket" {
+			bucketURNs[string(r.URN)] = true
+			// Flat mode names include module prefix
+			require.Contains(t, string(r.URN), "s3_bucket_",
+				"flat mode bucket URN should include module prefix")
+		}
+	}
+	require.Equal(t, 2, len(bucketURNs), "expected 2 unique bucket URNs")
+}
+
 func TestConvertNestedModules(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
