@@ -1624,14 +1624,20 @@ cmd.Flags().StringArrayVar(&moduleSourceMaps, "module-source-map", nil,
 - [ ] **Step 2: Thread HCL parsing into `convertState`**
 
 After building component tree, for each component:
+
+**Inputs** (from HCL parsing + expression evaluation):
 1. Resolve HCL source path: CLI flag > migration file > (later: auto-discovery)
-2. Parse variables and outputs via `ParseModuleVariables`/`ParseModuleOutputs`
-3. Parse call site via `ParseModuleCallSites`
+2. Parse variables via `ParseModuleVariables` (for interface/type info)
+3. Parse call site via `ParseModuleCallSites` (for argument expressions)
 4. Load `terraform.tfvars` via `LoadTfvars`
 5. Build `EvalContext` with variables, TF state resource attributes, module outputs
 6. Evaluate call-site argument expressions → component inputs
-7. Evaluate output expressions → component outputs
-8. Convert via `CtyMapToPulumiPropertyMap`
+7. Convert via `CtyMapToPulumiPropertyMap`
+
+**Outputs** (from raw state — simpler than HCL evaluation):
+1. If raw `.tfstate` is available, read `opentofu/states.Module.OutputValues` directly — these are already-resolved `cty.Value`s
+2. Convert via `CtyMapToPulumiPropertyMap`
+3. Fallback: if only JSON state is available, evaluate output expressions from HCL (same as input evaluation path)
 
 For nested modules: build eval context hierarchically — a nested module's context includes parent module scope.
 

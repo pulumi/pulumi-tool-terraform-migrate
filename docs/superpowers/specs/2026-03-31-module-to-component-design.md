@@ -43,7 +43,13 @@ module "vpc" {
 }
 ```
 
-**Critical finding: Module inputs and outputs are NOT in Terraform state.** The `tfjson.StateModule` struct only contains `Resources`, `ChildModules`, and `Address`. Module variable values and output values are resolved at plan/apply time and baked into child resource attribute values. To recover them, we must parse the HCL source files.
+**Critical findings about Terraform state:**
+
+- **Module inputs are NOT in state** — neither the JSON format (`tfjson.StateModule`) nor the raw format (`opentofu/states.Module`) stores variable values. They are resolved at plan/apply time and baked into child resource attributes. To recover input values, we must parse the HCL call site and evaluate expressions.
+
+- **Module outputs ARE in raw state** — `opentofu/states.Module` has an `OutputValues` field (`map[string]*OutputValue`) containing the resolved output values as `cty.Value`. However, these are NOT available in the JSON state format (`tfjson.StateModule` only has `Resources`, `ChildModules`, `Address`).
+
+- **Module interface (variable/output declarations)** — the names, types, and descriptions of inputs and outputs are only in HCL source files, not in state. We need these for code generation regardless of where values come from.
 
 ### What Pulumi Stores in Component Resource State
 
@@ -64,12 +70,13 @@ This means:
 
 ### Why HCL Parsing is Required
 
-Since module inputs/outputs aren't in TF state, and we need them to populate component state, we must parse the module HCL files to:
-1. **Extract the component interface** — `variable` blocks define constructor args, `output` blocks define public properties.
-2. **Resolve input values** — Parse the call site expressions and evaluate them against TF state + tfvars to get concrete values.
-3. **Resolve output values** — Evaluate output expressions (e.g., `aws_vpc.this.id`) against child resource state.
+HCL parsing serves two purposes:
 
-Input values at call sites can be complex HCL expressions (`var.cidr`, `module.other.output`, `join(...)`, conditionals, etc.), requiring a full HCL expression evaluator with access to the Terraform function library.
+1. **Component interface extraction** (always needed) — `variable` blocks define constructor args, `output` blocks define public properties. This tells the code generator what the component class signature should look like. Only available in HCL source files.
+
+2. **Input value resolution** (needed for clean preview) — Parse call site expressions and evaluate them against TF state + tfvars to get concrete values. Input values at call sites can be complex HCL expressions (`var.cidr`, `module.other.output`, `join(...)`, conditionals), requiring a full HCL expression evaluator with access to the Terraform function library.
+
+**Output values can be sourced from raw state** — Since `opentofu/states.Module.OutputValues` contains resolved output values, we can read them directly from the raw `.tfstate` file instead of evaluating output expressions from HCL. This is simpler and more reliable than expression evaluation. The tool already has a `pkg/statefile/` package that reads raw state via the `opentofu/states` library.
 
 ## Design
 
@@ -305,8 +312,8 @@ Expression types that require the function table:
 
 #### Component State Population
 
-- **Inputs**: Evaluated values from module call site arguments. These must exactly match what the generated Pulumi component code will pass as constructor args.
-- **Outputs**: Evaluated values from module `output` block expressions. Set via `registerOutputs()` in generated code.
+- **Inputs**: Evaluated values from module call site arguments. These must exactly match what the generated Pulumi component code will pass as constructor args. Source: HCL call site parsing + expression evaluation.
+- **Outputs**: Read directly from `opentofu/states.Module.OutputValues` in the raw `.tfstate` file. Fallback: evaluate output expressions from HCL if raw state is unavailable (e.g., JSON-only input). Set via `registerOutputs()` in generated code.
 
 #### Key Code Changes (Phase 2)
 
