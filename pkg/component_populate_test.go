@@ -31,7 +31,7 @@ func TestPopulateComponentsFromHCL_VariableDefaults(t *testing.T) {
 		{name: "named_pet", resourceName: "named-pet", typeToken: "terraform:module/namedPet:NamedPet"},
 	}
 
-	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true)
+	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil)
 	require.NoError(t, err)
 	require.Nil(t, metadata) // metadata is nil when populateInputs=true
 
@@ -58,7 +58,7 @@ func TestPopulateComponentsFromHCL_VariableDefaultsMerged(t *testing.T) {
 		{name: "pet", key: "0", resourceName: "pet-0", typeToken: "terraform:module/pet:Pet"},
 	}
 
-	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true)
+	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil)
 	require.NoError(t, err)
 	require.Nil(t, metadata)
 
@@ -88,7 +88,7 @@ func TestPopulateComponentsFromHCL_NoInputsWhenFlagFalse(t *testing.T) {
 		{name: "named_pet", resourceName: "named-pet", typeToken: "terraform:module/namedPet:NamedPet"},
 	}
 
-	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", false)
+	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", false, nil)
 	require.NoError(t, err)
 
 	// Inputs should be empty (not populated)
