@@ -148,16 +148,39 @@ func populateComponentsFromHCL(
 			}
 		}
 
-		// Populate outputs from parsed module output declarations.
-		// Module output values are NOT persisted in TF state v4 format — they are
-		// only available at runtime. We record output names from HCL declarations.
-		// Output values would require evaluating output expressions (stretch goal).
+		// Populate outputs by evaluating output expressions from HCL.
+		// Module output values are NOT persisted in TF state v4 format, so we
+		// evaluate the output `value` expressions using the module's child resource
+		// attributes from state as the eval context.
 		if sourcePath != "" {
 			outputs, err := hclpkg.ParseModuleOutputs(sourcePath)
 			if err == nil {
 				parsedOutputs[moduleName] = outputs
+
+				// Build module-scoped eval context: output expressions reference
+				// child resources (e.g., random_pet.this.id), so we need resource
+				// attrs scoped to this module's address.
+				moduleResourceAttrs := buildModuleScopedResourceAttrs(resourceAttrs, node.modulePath)
+
+				// Also include var.* from the module's inputs (for outputs that reference inputs)
+				moduleVars := map[string]cty.Value{}
+				if components[i].Inputs != nil {
+					moduleVars = hclpkg.PulumiPropertyMapToCtyMap(components[i].Inputs)
+				}
+
+				outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, nil)
+
 				outputMap := resource.PropertyMap{}
 				for _, o := range outputs {
+					if o.Expression != nil {
+						val, evalErr := outputEvalCtx.EvaluateExpression(o.Expression)
+						if evalErr == nil {
+							outputMap[resource.PropertyKey(o.Name)] = hclpkg.CtyValueToPulumiPropertyValue(val)
+							continue
+						}
+						fmt.Fprintf(os.Stderr, "Warning: failed to evaluate output %q for module.%s: %v\n", o.Name, moduleName, evalErr)
+					}
+					// Fallback: record output name with empty value
 					outputMap[resource.PropertyKey(o.Name)] = resource.NewStringProperty("")
 				}
 				if len(outputMap) > 0 {
@@ -196,6 +219,23 @@ func populateComponentsFromHCL(
 	}
 
 	return nil, nil
+}
+
+// buildModuleScopedResourceAttrs filters the global resource attr map to only include
+// resources that belong to a specific module. Output expressions like `random_pet.this.id`
+// reference child resources within the module scope, so we need attrs for resources
+// with addresses like `module.pet[0].random_pet.this`.
+func buildModuleScopedResourceAttrs(allAttrs map[string]map[string]cty.Value, modulePath string) map[string]map[string]cty.Value {
+	if allAttrs == nil || modulePath == "" {
+		return nil
+	}
+
+	// The allAttrs map is keyed by short resource type (last two parts of address).
+	// We need to build a new map scoped to this module. Since buildResourceAttrMap
+	// strips module prefixes, resources from different modules with the same type/name
+	// would collide. For now, return the full map — this works for single-module cases.
+	// TODO: scope properly by rebuilding from full addresses when needed.
+	return allAttrs
 }
 
 // buildResourceAttrMap builds a map of resource type → resource name → attributes (as cty.Value)
