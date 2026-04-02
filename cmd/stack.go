@@ -34,6 +34,7 @@ func newStackCmd() *cobra.Command {
 	var pulumiStack string
 	var pulumiProject string
 	var moduleSchemas []string
+	var componentInputs bool
 	var moduleSourceMaps []string
 
 	cmd := &cobra.Command{
@@ -109,7 +110,7 @@ See also:
 				typeOverrides = nil
 			}
 
-			err := pkg.TranslateAndWriteState(cmd.Context(), from, to, out, plugins, strict, enableComponents, typeOverrides, sourceOverrides, schemaOverrides, pulumiStack, pulumiProject)
+			err := pkg.TranslateAndWriteState(cmd.Context(), from, to, out, plugins, strict, enableComponents, componentInputs, typeOverrides, sourceOverrides, schemaOverrides, pulumiStack, pulumiProject)
 			if err != nil {
 				return fmt.Errorf("failed to convert and write Terraform state: %w", err)
 			}
@@ -130,6 +131,8 @@ See also:
 	cmd.Flags().StringVar(&pulumiProject, "pulumi-project", "", "Override Pulumi project name (skip auto-detection)")
 	cmd.Flags().StringArrayVar(&moduleSchemas, "module-schema", nil,
 		"Pulumi package schema for component validation (repeatable, format: module.name=./path/to/schema.json)")
+	cmd.Flags().BoolVar(&componentInputs, "component-inputs", true,
+		"Populate component inputs in state (true for component providers, false for single-language components)")
 	cmd.Flags().StringArrayVar(&moduleSourceMaps, "module-source-map", nil,
 		"Map module to HCL source path (repeatable, format: module.name=./path)")
 

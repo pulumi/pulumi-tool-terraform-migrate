@@ -72,9 +72,10 @@ type PulumiResource struct {
 }
 
 type PulumiState struct {
-	Providers  []PulumiResource
-	Components []PulumiResource
-	Resources  []PulumiResource
+	Providers         []PulumiResource
+	Components        []PulumiResource
+	Resources         []PulumiResource
+	ComponentMetadata *ComponentSchemaMetadata
 }
 
 func (st PulumiState) FindProvider(identity PulumiResourceID) (PulumiResource, error) {

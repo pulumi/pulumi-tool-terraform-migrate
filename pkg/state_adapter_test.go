@@ -88,7 +88,7 @@ func TestConvertTwoModules_FlatMode(t *testing.T) {
 	require.NoError(t, err)
 
 	// enableComponents=false: flat mode, no component resources
-	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", false, nil, nil, nil, "")
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", false, true, nil, nil, nil, "")
 	require.NoError(t, err)
 
 	// No component resources in flat mode
@@ -214,7 +214,7 @@ func TestConvertWithHCLPopulation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Pass tfSourceDir so HCL parsing populates component inputs
-	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, nil, nil, nil, "testdata/tf_indexed_modules")
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, true, nil, nil, nil, "testdata/tf_indexed_modules")
 	require.NoError(t, err)
 
 	// Find component resources
@@ -275,7 +275,7 @@ func TestConvertWithSchemaValidation(t *testing.T) {
 		"module.pet": "testdata/schemas/pet_component_schema.json",
 	}
 
-	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, nil, nil, schemaOverrides, "testdata/tf_indexed_modules")
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, true, nil, nil, schemaOverrides, "testdata/tf_indexed_modules")
 	require.NoError(t, err)
 
 	// Find component resources and verify they have populated inputs/outputs
@@ -309,7 +309,7 @@ func TestConvertWithSchemaValidation_CustomTypeToken(t *testing.T) {
 		"module.pet": "testdata/schemas/pet_custom_component_schema.json",
 	}
 
-	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, typeOverrides, nil, schemaOverrides, "testdata/tf_indexed_modules")
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, true, typeOverrides, nil, schemaOverrides, "testdata/tf_indexed_modules")
 	require.NoError(t, err)
 
 	var components []apitype.ResourceV3
@@ -341,7 +341,7 @@ func TestConvertWithSchemaValidation_Mismatch(t *testing.T) {
 		"module.pet": "testdata/schemas/pet_component_schema_mismatch.json",
 	}
 
-	_, err = TranslateState(ctx, tfState, nil, "dev", "test-project", true, nil, nil, schemaOverrides, "testdata/tf_indexed_modules")
+	_, err = TranslateState(ctx, tfState, nil, "dev", "test-project", true, true, nil, nil, schemaOverrides, "testdata/tf_indexed_modules")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "region")
 	require.Contains(t, err.Error(), "required by schema")
@@ -354,7 +354,7 @@ func translateStateFromJson(ctx context.Context, tfStateJson string) (*Translate
 	if err != nil {
 		return nil, err
 	}
-	return TranslateState(ctx, tfState, nil, "dev", "test-project", true, nil, nil, nil, "")
+	return TranslateState(ctx, tfState, nil, "dev", "test-project", true, true, nil, nil, nil, "")
 }
 
 func Test_convertState_simple(t *testing.T) {
@@ -369,7 +369,7 @@ func Test_convertState_simple(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, nil, nil, nil, "")
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, true, nil, nil, nil, "")
 	require.NoError(t, err, "failed to convert state")
 	require.Equal(t, 0, len(errorMessages), "expected no error messages")
 
@@ -396,7 +396,7 @@ func Test_convertState_multi_provider(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, nil, nil, nil, "")
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, true, nil, nil, nil, "")
 	require.NoError(t, err, "failed to convert state")
 	require.Equal(t, 0, len(errorMessages), "expected no error messages")
 
@@ -451,7 +451,7 @@ func Test_convertState_corrupted_state(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	_, errorMessages, err := convertState(tfState, pulumiProviders, false, nil, nil, nil, "")
+	_, errorMessages, err := convertState(tfState, pulumiProviders, false, true, nil, nil, nil, "")
 	require.NoError(t, err, "failed to convert state")
 	require.Equal(t, 1, len(errorMessages), "expected 1 error message")
 	require.Equal(t, "password", errorMessages[0].ResourceName)
@@ -474,7 +474,7 @@ func Test_convertState_unknown_provider(t *testing.T) {
 
 	require.Len(t, pulumiProviders, 1, "should only have 1 provider (random)")
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, nil, nil, nil, "")
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, true, nil, nil, nil, "")
 	require.NoError(t, err, "failed to convert state")
 
 	require.Len(t, errorMessages, 1, "expected 1 error message for unknown_resource")
