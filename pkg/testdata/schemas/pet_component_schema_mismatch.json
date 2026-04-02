@@ -1,0 +1,24 @@
+{
+  "name": "terraform",
+  "version": "0.1.0",
+  "resources": {
+    "terraform:module/pet:Pet": {
+      "isComponent": true,
+      "inputProperties": {
+        "prefix": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        }
+      },
+      "requiredInputs": ["prefix", "region"],
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["name"]
+    }
+  }
+}

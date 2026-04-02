@@ -1,0 +1,21 @@
+{
+  "name": "myproject",
+  "version": "0.1.0",
+  "resources": {
+    "myproject:index:PetComponent": {
+      "isComponent": true,
+      "inputProperties": {
+        "prefix": {
+          "type": "string"
+        }
+      },
+      "requiredInputs": ["prefix"],
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["name"]
+    }
+  }
+}
