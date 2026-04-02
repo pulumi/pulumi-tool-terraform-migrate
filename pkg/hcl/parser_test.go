@@ -73,6 +73,53 @@ func TestParseModuleOutputs_NonexistentDir(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestParseModuleCallSites(t *testing.T) {
+	t.Parallel()
+	calls, err := ParseModuleCallSites("testdata/root_with_pet")
+	require.NoError(t, err)
+	require.Len(t, calls, 2)
+
+	pet := findCall(calls, "pet")
+	require.NotNil(t, pet)
+	require.Equal(t, "../pet_module", pet.Source)
+	require.Len(t, pet.Arguments, 1) // prefix (count is not an argument)
+
+	named := findCall(calls, "named_pet")
+	require.NotNil(t, named)
+	require.Equal(t, "../pet_module", named.Source)
+	require.Len(t, named.Arguments, 3) // prefix, separator, length
+}
+
+func TestParseModuleCallSites_NonexistentDir(t *testing.T) {
+	t.Parallel()
+	_, err := ParseModuleCallSites("testdata/nonexistent")
+	require.Error(t, err)
+}
+
+func TestLoadTfvars(t *testing.T) {
+	t.Parallel()
+	vars, err := LoadTfvars("testdata/root_with_pet/terraform.tfvars")
+	require.NoError(t, err)
+	require.Len(t, vars, 1)
+	require.Equal(t, "production", vars["env"].AsString())
+}
+
+func TestLoadTfvars_NotFound(t *testing.T) {
+	t.Parallel()
+	vars, err := LoadTfvars("testdata/nonexistent/terraform.tfvars")
+	require.NoError(t, err)
+	require.Len(t, vars, 0)
+}
+
+func findCall(calls []ModuleCallSite, name string) *ModuleCallSite {
+	for i := range calls {
+		if calls[i].Name == name {
+			return &calls[i]
+		}
+	}
+	return nil
+}
+
 func findVar(vars []ModuleVariable, name string) *ModuleVariable {
 	for i := range vars {
 		if vars[i].Name == name {

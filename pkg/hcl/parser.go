@@ -121,6 +121,99 @@ func ParseModuleOutputs(moduleDir string) ([]ModuleOutput, error) {
 	return outputs, nil
 }
 
+// ModuleCallSite represents a parsed module block from a root Terraform configuration.
+type ModuleCallSite struct {
+	Name      string
+	Source    string
+	Arguments map[string]hcl.Expression // argument name -> expression (excludes source, version, count, for_each, providers, depends_on)
+}
+
+// metaArguments are module block attributes that are not passed as input arguments.
+var metaArguments = map[string]bool{
+	"source":     true,
+	"version":    true,
+	"count":      true,
+	"for_each":   true,
+	"providers":  true,
+	"depends_on": true,
+}
+
+// ParseModuleCallSites parses all .tf files in rootDir and extracts module call blocks.
+func ParseModuleCallSites(rootDir string) ([]ModuleCallSite, error) {
+	files, err := parseTFFiles(rootDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var calls []ModuleCallSite
+	for _, file := range files {
+		body, ok := file.Body.(*hclsyntax.Body)
+		if !ok {
+			continue
+		}
+		for _, block := range body.Blocks {
+			if block.Type != "module" || len(block.Labels) == 0 {
+				continue
+			}
+			c := ModuleCallSite{
+				Name:      block.Labels[0],
+				Arguments: map[string]hcl.Expression{},
+			}
+
+			attrs, _ := block.Body.JustAttributes()
+			if sourceAttr, ok := attrs["source"]; ok {
+				val, diags := sourceAttr.Expr.Value(nil)
+				if !diags.HasErrors() {
+					c.Source = val.AsString()
+				}
+			}
+			for name, attr := range attrs {
+				if !metaArguments[name] {
+					c.Arguments[name] = attr.Expr
+				}
+			}
+
+			calls = append(calls, c)
+		}
+	}
+	return calls, nil
+}
+
+// LoadTfvars loads a terraform.tfvars file and returns the values as a map.
+// Returns an empty map (not an error) if the file doesn't exist.
+func LoadTfvars(path string) (map[string]cty.Value, error) {
+	parser := hclparse.NewParser()
+	f, diags := parser.ParseHCLFile(path)
+	if diags.HasErrors() {
+		// Check if file doesn't exist
+		for _, d := range diags {
+			if d.Summary == "Failed to read file" {
+				return map[string]cty.Value{}, nil
+			}
+		}
+		return nil, fmt.Errorf("parsing tfvars %s: %s", path, diags.Error())
+	}
+
+	body, ok := f.Body.(*hclsyntax.Body)
+	if !ok {
+		return map[string]cty.Value{}, nil
+	}
+
+	attrs, diags := body.JustAttributes()
+	if diags.HasErrors() {
+		return nil, fmt.Errorf("reading tfvars attributes: %s", diags.Error())
+	}
+
+	values := map[string]cty.Value{}
+	for name, attr := range attrs {
+		val, diags := attr.Expr.Value(nil)
+		if !diags.HasErrors() {
+			values[name] = val
+		}
+	}
+	return values, nil
+}
+
 // parseTFFiles parses all .tf files in a directory.
 func parseTFFiles(dir string) ([]*hcl.File, error) {
 	matches, err := filepath.Glob(filepath.Join(dir, "*.tf"))
