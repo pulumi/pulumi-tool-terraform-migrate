@@ -22,6 +22,8 @@ import (
 	"strings"
 
 	tfjson "github.com/hashicorp/terraform-json"
+	"github.com/pulumi/opentofu/encryption"
+	"github.com/pulumi/opentofu/states/statefile"
 	hclpkg "github.com/pulumi/pulumi-tool-terraform-migrate/pkg/hcl"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
@@ -71,6 +73,9 @@ func populateComponentsFromHCL(
 	for i := range callSites {
 		callSiteMap[callSites[i].Name] = &callSites[i]
 	}
+
+	// Read module outputs from raw state file (if available)
+	rawModuleOutputs := readModuleOutputsFromRawState(tfSourceDir)
 
 	// Collect parsed variables/outputs for metadata (when populateInputs=false)
 	parsedVariables := map[string][]hclpkg.ModuleVariable{}
@@ -148,21 +153,36 @@ func populateComponentsFromHCL(
 			}
 		}
 
-		// Populate outputs from parsed module output declarations
-		if sourcePath != "" {
+		// Populate outputs: prefer raw state values, fallback to HCL declaration names
+		moduleAddr := node.modulePath
+		if rawOutputs, ok := rawModuleOutputs[moduleAddr]; ok {
+			// Use actual output values from raw .tfstate
+			outputMap := resource.PropertyMap{}
+			for name, val := range rawOutputs {
+				outputMap[resource.PropertyKey(name)] = hclpkg.CtyValueToPulumiPropertyValue(val)
+			}
+			if len(outputMap) > 0 {
+				components[i].Outputs = outputMap
+			}
+		} else if sourcePath != "" {
+			// Fallback: use output names from HCL declarations with empty values
 			outputs, err := hclpkg.ParseModuleOutputs(sourcePath)
 			if err == nil {
 				parsedOutputs[moduleName] = outputs
 				outputMap := resource.PropertyMap{}
 				for _, o := range outputs {
-					// Output values come from TF state (Phase 2 raw state reading),
-					// not from HCL expression evaluation. For now, record output names
-					// with empty values as placeholders.
 					outputMap[resource.PropertyKey(o.Name)] = resource.NewStringProperty("")
 				}
 				if len(outputMap) > 0 {
 					components[i].Outputs = outputMap
 				}
+			}
+		}
+
+		// Also collect parsed outputs for metadata (needed when populateInputs=false)
+		if sourcePath != "" && parsedOutputs[moduleName] == nil {
+			if outs, err := hclpkg.ParseModuleOutputs(sourcePath); err == nil {
+				parsedOutputs[moduleName] = outs
 			}
 		}
 
@@ -196,6 +216,41 @@ func populateComponentsFromHCL(
 	}
 
 	return nil, nil
+}
+
+// readModuleOutputsFromRawState reads the raw .tfstate file and extracts module output values.
+// Returns a map of module address (e.g., "module.vpc") → output name → cty.Value.
+// Returns nil if the raw state file is unavailable.
+func readModuleOutputsFromRawState(tfSourceDir string) map[string]map[string]cty.Value {
+	rawStatePath := filepath.Join(tfSourceDir, "terraform.tfstate")
+	f, err := os.Open(rawStatePath)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	sf, err := statefile.Read(f, encryption.StateEncryptionDisabled())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to read raw state file %s: %v\n", rawStatePath, err)
+		return nil
+	}
+
+	result := map[string]map[string]cty.Value{}
+	for key, mod := range sf.State.Modules {
+		// Skip root module (empty string key) and modules with no outputs
+		if key == "" || mod.OutputValues == nil {
+			continue
+		}
+		outputs := map[string]cty.Value{}
+		for name, ov := range mod.OutputValues {
+			outputs[name] = ov.Value
+		}
+		if len(outputs) > 0 {
+			result[key] = outputs
+		}
+	}
+
+	return result
 }
 
 // buildResourceAttrMap builds a map of resource type → resource name → attributes (as cty.Value)
