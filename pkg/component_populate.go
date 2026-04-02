@@ -129,6 +129,15 @@ func populateComponentsFromHCL(
 				}
 				inputs[resource.PropertyKey(argName)] = hclpkg.CtyValueToPulumiPropertyValue(val)
 			}
+			// Merge variable defaults for any variable not already in call-site args
+			if vars, ok := parsedVariables[moduleName]; ok {
+				for _, v := range vars {
+					if _, alreadySet := inputs[resource.PropertyKey(v.Name)]; !alreadySet && v.Default != nil {
+						inputs[resource.PropertyKey(v.Name)] = hclpkg.CtyValueToPulumiPropertyValue(*v.Default)
+					}
+				}
+			}
+
 			if len(inputs) > 0 {
 				components[i].Inputs = inputs
 			}
