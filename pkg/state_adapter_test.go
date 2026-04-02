@@ -262,6 +262,91 @@ func TestConvertWithHCLPopulation_NoSource(t *testing.T) {
 	}
 }
 
+func TestConvertWithSchemaValidation(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: "testdata/tofu_state_indexed_modules.json",
+	})
+	require.NoError(t, err)
+
+	// Pass schema that matches the pet module interface (input: prefix, output: name)
+	schemaOverrides := map[string]string{
+		"module.pet": "testdata/schemas/pet_component_schema.json",
+	}
+
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, nil, nil, schemaOverrides, "testdata/tf_indexed_modules")
+	require.NoError(t, err)
+
+	// Find component resources and verify they have populated inputs/outputs
+	var components []apitype.ResourceV3
+	for _, r := range data.Export.Deployment.Resources {
+		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
+			components = append(components, r)
+		}
+	}
+	require.Len(t, components, 2)
+
+	for _, comp := range components {
+		require.Contains(t, comp.Inputs, "prefix", "component %s should have prefix input", comp.URN)
+		require.Contains(t, comp.Outputs, "name", "component %s should have name output", comp.URN)
+	}
+}
+
+func TestConvertWithSchemaValidation_CustomTypeToken(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: "testdata/tofu_state_indexed_modules.json",
+	})
+	require.NoError(t, err)
+
+	// Map module.pet to a custom type token, and provide a schema using that token
+	typeOverrides := map[string]string{
+		"module.pet": "myproject:index:PetComponent",
+	}
+	schemaOverrides := map[string]string{
+		"module.pet": "testdata/schemas/pet_custom_component_schema.json",
+	}
+
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, typeOverrides, nil, schemaOverrides, "testdata/tf_indexed_modules")
+	require.NoError(t, err)
+
+	var components []apitype.ResourceV3
+	for _, r := range data.Export.Deployment.Resources {
+		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
+			components = append(components, r)
+		}
+	}
+	require.Len(t, components, 2)
+
+	// Components should use the custom type token
+	for _, comp := range components {
+		require.Contains(t, string(comp.Type), "myproject:index:PetComponent")
+		require.Contains(t, comp.Inputs, "prefix")
+		require.Contains(t, comp.Outputs, "name")
+	}
+}
+
+func TestConvertWithSchemaValidation_Mismatch(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: "testdata/tofu_state_indexed_modules.json",
+	})
+	require.NoError(t, err)
+
+	// Pass schema that requires an extra input "region" not present in the HCL
+	schemaOverrides := map[string]string{
+		"module.pet": "testdata/schemas/pet_component_schema_mismatch.json",
+	}
+
+	_, err = TranslateState(ctx, tfState, nil, "dev", "test-project", true, nil, nil, schemaOverrides, "testdata/tf_indexed_modules")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "region")
+	require.Contains(t, err.Error(), "required by schema")
+}
+
 func translateStateFromJson(ctx context.Context, tfStateJson string) (*TranslateStateResult, error) {
 	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
 		StateFilePath: tfStateJson,
