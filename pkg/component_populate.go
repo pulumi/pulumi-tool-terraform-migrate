@@ -77,7 +77,7 @@ func populateComponentsFromHCL(
 			sourcePath = override
 		} else if callSite, ok := callSiteMap[moduleName]; ok {
 			// Auto-resolve from call site source attribute (local paths only)
-			if isLocalSource(callSite.Source) {
+			if hclpkg.IsLocalModuleSource(callSite.Source) {
 				sourcePath = filepath.Join(tfSourceDir, callSite.Source)
 			}
 		}
@@ -195,7 +195,3 @@ func buildMetaArgContext(key string) map[string]cty.Value {
 	return vars
 }
 
-// isLocalSource returns true if the module source is a local path.
-func isLocalSource(source string) bool {
-	return len(source) > 0 && (source[0] == '.' || source[0] == '/')
-}
