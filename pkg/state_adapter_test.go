@@ -16,9 +16,11 @@ package pkg
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/stretchr/testify/require"
@@ -115,6 +117,60 @@ func TestConvertTwoModules_FlatMode(t *testing.T) {
 		}
 	}
 	require.Equal(t, 2, len(bucketURNs), "expected 2 unique bucket URNs")
+}
+
+func TestConvertIndexedModules(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	data, err := translateStateFromJson(ctx, "testdata/tofu_state_indexed_modules.json")
+	require.NoError(t, err)
+
+	var components []apitype.ResourceV3
+	for _, r := range data.Export.Deployment.Resources {
+		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
+			components = append(components, r)
+		}
+	}
+	require.Len(t, components, 2, "expected 2 component resources (pet-0, pet-1)")
+	// Same type token for both instances
+	require.Equal(t, components[0].Type, components[1].Type)
+	// Different URNs
+	require.NotEqual(t, string(components[0].URN), string(components[1].URN))
+	// Type token is derived from module name
+	require.Equal(t, tokens.Type("terraform:module/pet:Pet"), components[0].Type)
+}
+
+func TestConvertKeyedModules(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	data, err := translateStateFromJson(ctx, "testdata/tofu_state_keyed_modules.json")
+	require.NoError(t, err)
+
+	var components []apitype.ResourceV3
+	for _, r := range data.Export.Deployment.Resources {
+		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
+			components = append(components, r)
+		}
+	}
+	require.Len(t, components, 2, "expected 2 component resources (pet-alpha, pet-beta)")
+	// Same type token
+	require.Equal(t, components[0].Type, components[1].Type)
+	// Different URNs
+	require.NotEqual(t, string(components[0].URN), string(components[1].URN))
+
+	// Check both keys are represented in URNs
+	alphaFound, betaFound := false, false
+	for _, c := range components {
+		urn := string(c.URN)
+		if strings.Contains(urn, "alpha") {
+			alphaFound = true
+		}
+		if strings.Contains(urn, "beta") {
+			betaFound = true
+		}
+	}
+	require.True(t, alphaFound, "expected component with 'alpha' key")
+	require.True(t, betaFound, "expected component with 'beta' key")
 }
 
 func TestConvertNestedModules(t *testing.T) {
