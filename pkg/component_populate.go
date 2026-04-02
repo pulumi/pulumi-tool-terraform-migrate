@@ -16,6 +16,7 @@ package pkg
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 
@@ -28,6 +29,9 @@ import (
 // For each component that has an HCL source path (via sourceOverrides or auto-discovery),
 // it parses the module call site, evaluates argument expressions, and converts to PropertyMap.
 //
+// When populateInputs=false, component inputs are left empty and a ComponentSchemaMetadata
+// is returned instead (for use as a sidecar file by the code generator).
+//
 // If a schema is provided (via schemaOverrides), the parsed interface is validated against it.
 func populateComponentsFromHCL(
 	components []PulumiResource,
@@ -35,9 +39,10 @@ func populateComponentsFromHCL(
 	sourceOverrides map[string]string,
 	schemaOverrides map[string]string,
 	tfSourceDir string,
-) error {
+	populateInputs bool,
+) (*ComponentSchemaMetadata, error) {
 	if tfSourceDir == "" {
-		return nil
+		return nil, nil
 	}
 
 	// Parse module call sites from the root TF source directory
@@ -45,7 +50,7 @@ func populateComponentsFromHCL(
 	if err != nil {
 		// Not fatal — HCL source may not be available
 		fmt.Fprintf(os.Stderr, "Warning: failed to parse module call sites from %s: %v\n", tfSourceDir, err)
-		return nil
+		return nil, nil
 	}
 
 	// Load tfvars for variable resolution
@@ -61,6 +66,11 @@ func populateComponentsFromHCL(
 	for i := range callSites {
 		callSiteMap[callSites[i].Name] = &callSites[i]
 	}
+
+	// Collect parsed variables/outputs for metadata (when populateInputs=false)
+	parsedVariables := map[string][]hclpkg.ModuleVariable{}
+	parsedOutputs := map[string][]hclpkg.ModuleOutput{}
+	resolvedSources := map[string]string{}
 
 	// Process each component
 	for i, comp := range components {
@@ -81,15 +91,23 @@ func populateComponentsFromHCL(
 				sourcePath = filepath.Join(tfSourceDir, callSite.Source)
 			}
 		}
+		if sourcePath != "" {
+			resolvedSources["module."+moduleName] = sourcePath
+		}
 
-		// Populate inputs from call site argument evaluation
+		// Parse module variables (needed for both metadata and default merging)
+		if sourcePath != "" {
+			if vars, err := hclpkg.ParseModuleVariables(sourcePath); err == nil {
+				parsedVariables[moduleName] = vars
+			}
+		}
+
+		// Populate inputs from call site argument evaluation (only when populateInputs=true)
 		callSite, hasCallSite := callSiteMap[moduleName]
-		if hasCallSite && len(callSite.Arguments) > 0 {
+		if populateInputs && hasCallSite && len(callSite.Arguments) > 0 {
 			// Build eval context variables including count.index / each.key
 			evalVars := map[string]cty.Value{}
-			for k, v := range tfvars {
-				evalVars[k] = v
-			}
+			maps.Copy(evalVars, tfvars)
 
 			// Build meta-argument context (count.index, each.key/each.value)
 			var metaVars map[string]cty.Value
@@ -120,6 +138,7 @@ func populateComponentsFromHCL(
 		if sourcePath != "" {
 			outputs, err := hclpkg.ParseModuleOutputs(sourcePath)
 			if err == nil {
+				parsedOutputs[moduleName] = outputs
 				outputMap := resource.PropertyMap{}
 				for _, o := range outputs {
 					// Output values come from TF state (Phase 2 raw state reading),
@@ -138,7 +157,7 @@ func populateComponentsFromHCL(
 			componentType := comp.Type
 			schemaIface, err := LoadComponentSchema(schemaPath, componentType)
 			if err != nil {
-				return fmt.Errorf("loading schema for module.%s: %w", moduleName, err)
+				return nil, fmt.Errorf("loading schema for module.%s: %w", moduleName, err)
 			}
 
 			// Build parsed interface from component's inputs/outputs
@@ -151,12 +170,18 @@ func populateComponentsFromHCL(
 			}
 
 			if err := ValidateAgainstSchema(parsed, schemaIface); err != nil {
-				return fmt.Errorf("schema validation failed for module.%s: %w", moduleName, err)
+				return nil, fmt.Errorf("schema validation failed for module.%s: %w", moduleName, err)
 			}
 		}
 	}
 
-	return nil
+	// Build and return metadata when populateInputs=false
+	if !populateInputs {
+		metadata := buildComponentSchemaMetadata(components, componentTree, parsedVariables, parsedOutputs, resolvedSources)
+		return metadata, nil
+	}
+
+	return nil, nil
 }
 
 // findComponentNode finds the component node by resource name in the tree.
@@ -194,4 +219,3 @@ func buildMetaArgContext(key string) map[string]cty.Value {
 
 	return vars
 }
-
