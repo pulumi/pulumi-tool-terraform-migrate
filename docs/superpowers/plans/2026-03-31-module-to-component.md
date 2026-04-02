@@ -1953,11 +1953,85 @@ gh pr create --base feat/mc-07-callsite-tfvars \
 
 | Action | File | Responsibility |
 |--------|------|----------------|
-| Modify | `pkg/component_populate.go` | Fix gaps: variable defaults, resource attr refs, output values from raw state |
-| Modify | `pkg/state_adapter.go` | Thread raw state file path and TF resource attributes into population pipeline |
-| Modify | `pkg/state_adapter_test.go` | Integration tests for HCL population + schema validation |
+| Modify | `cmd/stack.go` | Add `--component-inputs` flag |
+| Modify | `pkg/component_populate.go` | Fix gaps: variable defaults, resource attr refs, output values from raw state; gate input population on flag |
+| Create | `pkg/component_metadata.go` | Component schema metadata struct + JSON serialization |
+| Create | `pkg/component_metadata_test.go` | Tests for metadata generation |
+| Modify | `pkg/state_adapter.go` | Thread raw state file path, TF resource attributes, and `populateComponentInputs` flag into pipeline; write metadata file |
+| Modify | `pkg/state_adapter_test.go` | Integration tests for HCL population + schema validation + metadata file |
 
-### Task 12: Merge variable defaults into component inputs ✅ (already implemented) / Gap fix
+### Task 11.5: Add `--component-inputs` flag and schema metadata file
+
+**New flag:** `--component-inputs` (default: `true`)
+- `true` → populate component inputs in state (for component providers / IDP)
+- `false` → empty inputs `{}` + write `component-schemas.json` sidecar file (for single-language components)
+
+- [ ] **Step 1: Write failing tests**
+
+```go
+func TestComponentMetadata_GeneratesSchemaFile(t *testing.T) {
+	// --component-inputs=false + HCL source available
+	// → component inputs = {} in state
+	// → component-schemas.json written with variable/output declarations
+}
+
+func TestComponentMetadata_NotGeneratedWhenInputsEnabled(t *testing.T) {
+	// --component-inputs=true (default)
+	// → component inputs populated in state
+	// → no component-schemas.json file written
+}
+```
+
+- [ ] **Step 2: Create `pkg/component_metadata.go`**
+
+```go
+type ComponentSchemaMetadata struct {
+	Components map[string]ComponentSchema `json:"components"`
+}
+
+type ComponentSchema struct {
+	Type    string                `json:"type"`
+	Source  string                `json:"source,omitempty"`
+	Inputs  []ComponentFieldMeta  `json:"inputs"`
+	Outputs []ComponentFieldMeta  `json:"outputs"`
+}
+
+type ComponentFieldMeta struct {
+	Name     string      `json:"name"`
+	Type     string      `json:"type"`
+	Required bool        `json:"required,omitempty"`
+	Default  interface{} `json:"default,omitempty"`
+}
+```
+
+- [ ] **Step 3: Add flag to `cmd/stack.go`**
+
+```go
+var componentInputs bool
+cmd.Flags().BoolVar(&componentInputs, "component-inputs", true,
+	"Populate component inputs in state (true for component providers, false for single-language components)")
+```
+
+- [ ] **Step 4: Gate input population in `populateComponentsFromHCL`**
+
+When `populateComponentInputs=false`:
+- Skip call-site expression evaluation for inputs
+- Still parse HCL for interface extraction (variables + outputs)
+- Collect `ComponentSchemaMetadata` from parsed variables/outputs
+- Return metadata to caller for writing to sidecar file
+
+When `populateComponentInputs=true`:
+- Existing behavior: evaluate and populate inputs in state
+
+- [ ] **Step 5: Write metadata file in `state_adapter.go`**
+
+After `populateComponentsFromHCL` returns, if metadata is non-nil, write `component-schemas.json` to the same directory as the output state file.
+
+- [ ] **Step 6: Run tests, commit**
+
+---
+
+### Task 12: Merge variable defaults into component inputs (when `--component-inputs=true`)
 
 **Location:** `pkg/component_populate.go:85-117`
 
@@ -2105,9 +2179,42 @@ func TestConvertWithResourceAttrRefs(t *testing.T) {
 func TestConvertWithOutputsFromRawState(t *testing.T) {
 	// Raw state available → outputs populated with real values
 }
+
+func TestConvertWithComponentInputsFalse(t *testing.T) {
+	// --component-inputs=false → component inputs = {} in state
+	// → component-schemas.json sidecar file written with interface declarations
+}
+
+func TestConvertWithComponentInputsTrue(t *testing.T) {
+	// --component-inputs=true (default) → component inputs populated in state
+	// → no component-schemas.json file written
+}
 ```
 
 - [ ] **Step 2: Run full test suite, commit**
+
+### Task 16: Update terraform-migrate skill with flag guidance
+
+Update the terraform-migrate agent skill (if it exists) or document guidance for agents using the tool. The skill should instruct agents on when to use each flag:
+
+- [ ] **Step 1: Find and update the skill**
+
+Add guidance covering all module-related flags:
+
+| Flag | When to use |
+|------|-------------|
+| `--component-inputs` (default: true) | `true` for component providers / IDP registration (common case). `false` for single-language inline ComponentResource classes. |
+| `--module-type-map` | Override auto-derived type tokens when target Pulumi code uses custom component types. |
+| `--module-source-map` | Map modules to HCL source paths when auto-discovery can't find them (remote modules, non-standard layouts). |
+| `--module-schema` | Provide Pulumi package schema for validation when wrapping with existing component providers. |
+| `--no-module-components` | Disable component generation entirely (flat mode). Use only for backward compatibility. |
+
+Key decision tree for agents:
+1. Will the generated code use a component provider (terraform-module plugin, IDP-registered)? → `--component-inputs=true` (default)
+2. Will the generated code use inline ComponentResource classes? → `--component-inputs=false`, consume `component-schemas.json` for code generation
+3. Should modules be represented as components at all? → Default yes. Use `--no-module-components` only if the user explicitly wants flat migration.
+
+- [ ] **Step 2: Commit**
 
 ### PR 9 Submission
 
@@ -2117,14 +2224,18 @@ gh pr create --base feat/mc-08-evaluator \
   --title "feat(modules): complete component state population with gap fixes" \
   --body "$(cat <<'EOF'
 ## Summary
-- Merge variable defaults into component inputs when call site omits defaulted args
+- `--component-inputs` flag: true populates inputs in state (component providers), false writes sidecar schema metadata (single-language components)
+- Merge variable defaults into component inputs when enabled
 - Build resource attribute map from TF state for eval context (enables `aws_vpc.this.id` refs)
 - Read output values from raw `.tfstate` via `opentofu/states.Module.OutputValues`
 - Auto-discover local module sources from root HCL files
-- Integration tests for HCL population + schema validation
+- Schema metadata sidecar file (`component-schemas.json`) for code generator
+- Integration tests for all modes
 
 ## Test plan
-- [ ] Variable defaults merged into inputs
+- [ ] --component-inputs=false produces empty inputs + sidecar file
+- [ ] --component-inputs=true (default) populates inputs, no sidecar
+- [ ] Variable defaults merged into inputs when enabled
 - [ ] Resource attribute refs evaluate correctly
 - [ ] Output values read from raw state (not placeholders)
 - [ ] Auto-discovery finds local sources, skips remote

@@ -53,28 +53,51 @@ module "vpc" {
 
 ### What Pulumi Stores in Component Resource State
 
-Research into the Pulumi engine (`pulumi/pulumi`) revealed:
+Research into the Pulumi engine (`pulumi/pulumi`) revealed two distinct behaviors depending on the component type:
 
-1. **Inputs ARE stored** — Whatever `args` are passed to the component constructor gets written to the `inputs` field of the resource state via the `RegisterResource` RPC.
+#### Single-language components (`custom=false`, `remote=false`)
 
-2. **Outputs ARE stored** — Set by `registerOutputs()`. The Node.js SDK calls it automatically with `{}` if not called explicitly.
+These are inline `ComponentResource` subclasses written in the same language as the Pulumi program.
 
-3. **Diff is `DeepEquals` on inputs only** — On `pulumi preview`, the engine compares old inputs vs new inputs using a simple `DeepEquals` (no provider involvement for components). If they don't match, a diff/update is shown. **Outputs are NOT compared during diff.**
+**Before Pulumi v3.202.0 (Oct 2025):** SDKs did NOT send component inputs to the engine:
+- Go SDK: `RegisterComponentResource()` explicitly passes `nil` for props
+- Node.js SDK: Replaces `args` with `{}` for non-remote components
+- Python SDK: Always sent props (the exception)
 
-4. **No provider involvement** — Components have no provider, so no `Check`, `Create`, `Diff`, or `Update` RPCs. The engine just stores what the program sends.
+**After v3.202.0 (PR #20357):** SDKs now send inputs, but an escape hatch exists (`PULUMI_NODEJS_SKIP_COMPONENT_INPUTS`). Most existing stacks still have empty inputs.
 
-This means:
-- For a **clean `pulumi preview`**, the translated state's component `inputs` must exactly match what the generated code will pass to the constructor.
-- Component `outputs` don't cause diffs but should be populated for state fidelity.
-- The chain is: TF state → translate (with component inputs/outputs) → Pulumi state → generate matching component code → `pulumi preview` = 0 diffs.
+**Result:** Single-language component inputs in state are typically `{}` or `nil`.
+
+#### Component providers / remote components (`custom=false`, `remote=true`)
+
+These are multi-language components served via a provider's `Construct` RPC (e.g., `pulumi-terraform-module` plugin, `@pulumi/awsx`). All SDKs have always sent inputs for remote components — they're needed for the `Construct` call.
+
+**Result:** Remote component inputs in state are always populated.
+
+#### Common behavior
+
+1. **Outputs ARE stored** — Set by `registerOutputs()`. Both component types store outputs.
+
+2. **Diff is `DeepEquals` on inputs only** — On `pulumi preview`, the engine compares old inputs vs new inputs using a simple `DeepEquals` (no provider involvement for components). If they don't match, a diff/update is shown. **Outputs are NOT compared during diff.** (Source: `step_generator.go:2698-2703`)
+
+3. **No provider involvement** — Components have no provider, so no `Check`, `Create`, `Diff`, or `Update` RPCs. The engine just stores what the program sends.
+
+#### Implications for state translation
+
+- **Component providers (remote=true):** Translated state SHOULD have populated inputs — the generated code will send inputs via `Construct`, and they must match for a clean preview.
+- **Single-language components (remote=false):** Translated state should have **empty inputs `{}`** — the SDK will send `{}`, so populated inputs would cause a spurious diff. The component interface (variable names, types, defaults) should be emitted as a **sidecar metadata file** for the code generator.
+- **Outputs:** Always populated regardless of component type (from raw state when available).
+- The `--component-inputs` flag controls this behavior at translation time.
 
 ### Why HCL Parsing is Required
 
-HCL parsing serves two purposes:
+HCL parsing serves three purposes:
 
 1. **Component interface extraction** (always needed) — `variable` blocks define constructor args, `output` blocks define public properties. This tells the code generator what the component class signature should look like. Only available in HCL source files.
 
-2. **Input value resolution** (needed for clean preview) — Parse call site expressions and evaluate them against TF state + tfvars to get concrete values. Input values at call sites can be complex HCL expressions (`var.cidr`, `module.other.output`, `join(...)`, conditionals), requiring a full HCL expression evaluator with access to the Terraform function library.
+2. **Input value resolution** (needed when `--component-inputs=true`) — Parse call site expressions and evaluate them against TF state + tfvars to get concrete values. Input values at call sites can be complex HCL expressions (`var.cidr`, `module.other.output`, `join(...)`, conditionals), requiring a full HCL expression evaluator with access to the Terraform function library.
+
+3. **Schema metadata generation** (needed when `--component-inputs=false`) — Even when inputs are not written to state, the code generator needs the component interface (variable names, types, defaults, output names). HCL parsing extracts this into a sidecar `component-schemas.json` file.
 
 **Output values can be sourced from raw state** — Since `opentofu/states.Module.OutputValues` contains resolved output values, we can read them directly from the raw `.tfstate` file instead of evaluating output expressions from HCL. This is simpler and more reliable than expression evaluation. The tool already has a `pkg/statefile/` package that reads raw state via the `opentofu/states` library.
 
@@ -214,6 +237,58 @@ Repeatable flag for multiple mappings. CLI flags take precedence over migration 
 - Exact match on the full module path (e.g., `module.vpc.module.subnets`).
 - For indexed/keyed modules, the mapping applies to all instances — map `module.vpc` and it matches `module.vpc[0]`, `module.vpc["us-east-1"]`, etc.
 - **Precedence chain**: CLI flag > migration file > auto-derived default.
+
+### Component Input Mode (`--component-inputs`)
+
+Controls whether component inputs are populated in translated state. This flag exists because single-language components and component providers handle inputs differently (see Background Research).
+
+#### `--component-inputs=true` (default)
+
+Populate component inputs in translated state from HCL call-site expression evaluation + variable defaults. Use this when the generated Pulumi code will use **component providers** (remote components), e.g., wrapping TF modules via `pulumi-terraform-module` or registering with IDP.
+
+- Inputs written to component `ResourceV3.Inputs` in state
+- No sidecar metadata file generated (interface is in the state)
+
+#### `--component-inputs=false`
+
+Leave component inputs as empty `{}` in translated state. Use this when the generated Pulumi code will use **single-language ComponentResource classes** (inline components).
+
+- Component `ResourceV3.Inputs` = `{}` in state
+- Sidecar file `component-schemas.json` written alongside the state output file
+- Contains the parsed component interface for each module (variable names, types, defaults, output names, descriptions)
+
+#### Sidecar metadata file format
+
+Written to the same directory as the output state file when `--component-inputs=false`:
+
+```json
+{
+  "components": {
+    "module.vpc": {
+      "type": "terraform:module/vpc:Vpc",
+      "source": "./modules/vpc",
+      "inputs": [
+        {"name": "cidr", "type": "string", "required": true},
+        {"name": "name", "type": "string", "required": true},
+        {"name": "enable_dns", "type": "bool", "default": true}
+      ],
+      "outputs": [
+        {"name": "vpc_id", "type": "string"},
+        {"name": "cidr_block", "type": "string"}
+      ]
+    }
+  }
+}
+```
+
+The code generator agent consumes this file to know:
+- What constructor args to declare (from `inputs`)
+- Which args are required vs have defaults
+- What to pass to `registerOutputs()` (from `outputs`)
+
+#### Outputs are always populated
+
+Regardless of `--component-inputs`, component outputs are populated from raw `.tfstate` `Module.OutputValues` when available. Both single-language and remote components store outputs via `registerOutputs()`.
 
 ### Component Schema Validation
 
