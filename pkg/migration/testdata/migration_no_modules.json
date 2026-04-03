@@ -1,0 +1,11 @@
+{
+  "migration": {
+    "tf-sources": "./tf",
+    "pulumi-sources": "./pulumi",
+    "stacks": [{
+      "tf-state": "terraform.tfstate",
+      "pulumi-stack": "dev",
+      "resources": []
+    }]
+  }
+}
