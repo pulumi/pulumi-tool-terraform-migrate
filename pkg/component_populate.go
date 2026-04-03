@@ -80,10 +80,44 @@ func populateComponentsFromHCL(
 		callSiteMap[callSites[i].Name] = &callSites[i]
 	}
 
+	// Pre-pass: resolve source paths and evaluate module outputs for cross-references.
+	// This builds the module.* namespace so input expressions like module.vpc.vpc_id resolve.
+	moduleOutputValues := map[string]map[string]cty.Value{}
+	resolvedSources := map[string]string{}
+	for _, comp := range components {
+		node := findComponentNode(componentTree, comp.Name)
+		if node == nil {
+			continue
+		}
+		sourcePath := resolveModuleSourcePath(node, sourceOverrides, callSiteMap, tfSourceDir, cachedModuleSources)
+		if sourcePath == "" {
+			continue
+		}
+		resolvedSources["module."+node.name] = sourcePath
+
+		outputs, err := hclpkg.ParseModuleOutputs(sourcePath)
+		if err != nil || len(outputs) == 0 {
+			continue
+		}
+		moduleResourceAttrs := buildModuleScopedResourceAttrs(resourceAttrs, node.modulePath)
+		outputEvalCtx := hclpkg.NewEvalContext(nil, moduleResourceAttrs, nil)
+		evaluated := map[string]cty.Value{}
+		for _, o := range outputs {
+			if o.Expression != nil {
+				val, evalErr := outputEvalCtx.EvaluateExpression(o.Expression)
+				if evalErr == nil {
+					evaluated[o.Name] = val
+				}
+			}
+		}
+		if len(evaluated) > 0 {
+			moduleOutputValues[node.name] = evaluated
+		}
+	}
+
 	// Collect parsed variables/outputs for metadata (when populateInputs=false)
 	parsedVariables := map[string][]hclpkg.ModuleVariable{}
 	parsedOutputs := map[string][]hclpkg.ModuleOutput{}
-	resolvedSources := map[string]string{}
 
 	// Process each component
 	for i, comp := range components {
@@ -94,20 +128,7 @@ func populateComponentsFromHCL(
 		moduleName := node.name
 
 		// Resolve HCL source path: override > local auto-discovery > module cache
-		sourcePath := ""
-		if override, ok := sourceOverrides["module."+moduleName]; ok {
-			sourcePath = override
-		} else if callSite, ok := callSiteMap[moduleName]; ok && hclpkg.IsLocalModuleSource(callSite.Source) {
-			sourcePath = filepath.Join(tfSourceDir, callSite.Source)
-		}
-		if sourcePath == "" {
-			if cached, ok := cachedModuleSources[node.modulePath]; ok {
-				sourcePath = cached
-			}
-		}
-		if sourcePath != "" {
-			resolvedSources["module."+moduleName] = sourcePath
-		}
+		sourcePath := resolveModuleSourcePath(node, sourceOverrides, callSiteMap, tfSourceDir, cachedModuleSources)
 
 		// Parse module variables (needed for both metadata and default merging)
 		if sourcePath != "" {
@@ -127,7 +148,7 @@ func populateComponentsFromHCL(
 				metaVars = buildMetaArgContext(node.key)
 			}
 
-			evalCtx := hclpkg.NewEvalContext(evalVars, resourceAttrs, nil)
+			evalCtx := hclpkg.NewEvalContext(evalVars, resourceAttrs, moduleOutputValues)
 			if metaVars != nil {
 				evalCtx.AddVariables(metaVars)
 			}
@@ -250,6 +271,27 @@ func populateComponentsFromHCL(
 	}
 
 	return nil, nil
+}
+
+// resolveModuleSourcePath resolves the HCL source path for a module component.
+// Priority: override > local auto-discovery > .terraform/modules cache.
+func resolveModuleSourcePath(
+	node *componentNode,
+	sourceOverrides map[string]string,
+	callSiteMap map[string]*hclpkg.ModuleCallSite,
+	tfSourceDir string,
+	cachedModuleSources map[string]string,
+) string {
+	if override, ok := sourceOverrides["module."+node.name]; ok {
+		return override
+	}
+	if callSite, ok := callSiteMap[node.name]; ok && hclpkg.IsLocalModuleSource(callSite.Source) {
+		return filepath.Join(tfSourceDir, callSite.Source)
+	}
+	if cached, ok := cachedModuleSources[node.modulePath]; ok {
+		return cached
+	}
+	return ""
 }
 
 // evaluateLocals evaluates local definitions against an eval context.
