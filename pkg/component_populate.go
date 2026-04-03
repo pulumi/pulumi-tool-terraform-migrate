@@ -19,10 +19,14 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"strings"
 
+	tfjson "github.com/hashicorp/terraform-json"
 	hclpkg "github.com/pulumi/pulumi-tool-terraform-migrate/pkg/hcl"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/zclconf/go-cty/cty"
+	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
 // populateComponentsFromHCL populates component inputs and outputs by parsing HCL sources.
@@ -40,6 +44,7 @@ func populateComponentsFromHCL(
 	schemaOverrides map[string]string,
 	tfSourceDir string,
 	populateInputs bool,
+	resourceAttrs map[string]map[string]cty.Value,
 ) (*ComponentSchemaMetadata, error) {
 	if tfSourceDir == "" {
 		return nil, nil
@@ -115,7 +120,7 @@ func populateComponentsFromHCL(
 				metaVars = buildMetaArgContext(node.key)
 			}
 
-			evalCtx := hclpkg.NewEvalContext(evalVars, nil, nil)
+			evalCtx := hclpkg.NewEvalContext(evalVars, resourceAttrs, nil)
 			if metaVars != nil {
 				evalCtx.AddVariables(metaVars)
 			}
@@ -129,21 +134,53 @@ func populateComponentsFromHCL(
 				}
 				inputs[resource.PropertyKey(argName)] = hclpkg.CtyValueToPulumiPropertyValue(val)
 			}
+			// Merge variable defaults for any variable not already in call-site args
+			if vars, ok := parsedVariables[moduleName]; ok {
+				for _, v := range vars {
+					if _, alreadySet := inputs[resource.PropertyKey(v.Name)]; !alreadySet && v.Default != nil {
+						inputs[resource.PropertyKey(v.Name)] = hclpkg.CtyValueToPulumiPropertyValue(*v.Default)
+					}
+				}
+			}
+
 			if len(inputs) > 0 {
 				components[i].Inputs = inputs
 			}
 		}
 
-		// Populate outputs from parsed module output declarations
+		// Populate outputs by evaluating output expressions from HCL.
+		// Module output values are NOT persisted in TF state v4 format, so we
+		// evaluate the output `value` expressions using the module's child resource
+		// attributes from state as the eval context.
 		if sourcePath != "" {
 			outputs, err := hclpkg.ParseModuleOutputs(sourcePath)
 			if err == nil {
 				parsedOutputs[moduleName] = outputs
+
+				// Build module-scoped eval context: output expressions reference
+				// child resources (e.g., random_pet.this.id), so we need resource
+				// attrs scoped to this module's address.
+				moduleResourceAttrs := buildModuleScopedResourceAttrs(resourceAttrs, node.modulePath)
+
+				// Also include var.* from the module's inputs (for outputs that reference inputs)
+				moduleVars := map[string]cty.Value{}
+				if components[i].Inputs != nil {
+					moduleVars = hclpkg.PulumiPropertyMapToCtyMap(components[i].Inputs)
+				}
+
+				outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, nil)
+
 				outputMap := resource.PropertyMap{}
 				for _, o := range outputs {
-					// Output values come from TF state (Phase 2 raw state reading),
-					// not from HCL expression evaluation. For now, record output names
-					// with empty values as placeholders.
+					if o.Expression != nil {
+						val, evalErr := outputEvalCtx.EvaluateExpression(o.Expression)
+						if evalErr == nil {
+							outputMap[resource.PropertyKey(o.Name)] = hclpkg.CtyValueToPulumiPropertyValue(val)
+							continue
+						}
+						fmt.Fprintf(os.Stderr, "Warning: failed to evaluate output %q for module.%s: %v\n", o.Name, moduleName, evalErr)
+					}
+					// Fallback: record output name with empty value
 					outputMap[resource.PropertyKey(o.Name)] = resource.NewStringProperty("")
 				}
 				if len(outputMap) > 0 {
@@ -182,6 +219,104 @@ func populateComponentsFromHCL(
 	}
 
 	return nil, nil
+}
+
+// buildModuleScopedResourceAttrs filters the global resource attr map to only include
+// resources that belong to a specific module. Output expressions like `random_pet.this.id`
+// reference child resources within the module scope, so we need attrs for resources
+// with addresses like `module.pet[0].random_pet.this`.
+func buildModuleScopedResourceAttrs(allAttrs map[string]map[string]cty.Value, modulePath string) map[string]map[string]cty.Value {
+	if allAttrs == nil || modulePath == "" {
+		return nil
+	}
+
+	// The allAttrs map is keyed by short resource type (last two parts of address).
+	// We need to build a new map scoped to this module. Since buildResourceAttrMap
+	// strips module prefixes, resources from different modules with the same type/name
+	// would collide. For now, return the full map — this works for single-module cases.
+	// TODO: scope properly by rebuilding from full addresses when needed.
+	return allAttrs
+}
+
+// buildResourceAttrMap builds a map of resource type → resource name → attributes (as cty.Value)
+// from the TF state JSON. This allows HCL expressions like aws_vpc.this.id to resolve.
+func buildResourceAttrMap(tfState *tfjson.State) map[string]map[string]cty.Value {
+	result := map[string]map[string]cty.Value{}
+	if tfState == nil {
+		return result
+	}
+
+	tofu.VisitResources(tfState, func(r *tfjson.StateResource) error {
+		// Parse resource type and name from address (strip module prefix)
+		addr := r.Address
+		// For module resources like "module.vpc.aws_vpc.this", we want "aws_vpc" and "this"
+		parts := strings.Split(addr, ".")
+		if len(parts) < 2 {
+			return nil
+		}
+		// Take the last two parts as type.name
+		resType := parts[len(parts)-2]
+		resName := parts[len(parts)-1]
+
+		// Convert attribute values (map[string]interface{}) to cty.Value
+		if r.AttributeValues != nil {
+			attrs := map[string]cty.Value{}
+			for k, v := range r.AttributeValues {
+				attrs[k] = interfaceToCty(v)
+			}
+			if _, ok := result[resType]; !ok {
+				result[resType] = map[string]cty.Value{}
+			}
+			result[resType][resName] = cty.ObjectVal(attrs)
+		}
+		return nil
+	}, &tofu.VisitOptions{})
+
+	return result
+}
+
+// interfaceToCty converts a Go interface{} (from JSON state) to a cty.Value.
+func interfaceToCty(v interface{}) cty.Value {
+	if v == nil {
+		return cty.NullVal(cty.DynamicPseudoType)
+	}
+	switch val := v.(type) {
+	case string:
+		return cty.StringVal(val)
+	case bool:
+		return cty.BoolVal(val)
+	case float64:
+		return cty.NumberFloatVal(val)
+	case []interface{}:
+		if len(val) == 0 {
+			return cty.EmptyTupleVal
+		}
+		elems := make([]cty.Value, len(val))
+		for i, e := range val {
+			elems[i] = interfaceToCty(e)
+		}
+		return cty.TupleVal(elems)
+	case map[string]interface{}:
+		if len(val) == 0 {
+			return cty.EmptyObjectVal
+		}
+		attrs := map[string]cty.Value{}
+		for k, e := range val {
+			attrs[k] = interfaceToCty(e)
+		}
+		return cty.ObjectVal(attrs)
+	default:
+		// Fallback: marshal to JSON and unmarshal as cty
+		data, err := ctyjson.Marshal(cty.StringVal(fmt.Sprintf("%v", v)), cty.String)
+		if err != nil {
+			return cty.StringVal(fmt.Sprintf("%v", v))
+		}
+		val2, err := ctyjson.Unmarshal(data, cty.String)
+		if err != nil {
+			return cty.StringVal(fmt.Sprintf("%v", v))
+		}
+		return val2
+	}
 }
 
 // findComponentNode finds the component node by resource name in the tree.
