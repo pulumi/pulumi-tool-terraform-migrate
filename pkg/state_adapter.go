@@ -240,7 +240,7 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 
 			// Populate component inputs/outputs from HCL when source is available
 			resourceAttrs := buildResourceAttrMap(tfState)
-			metadata, err := populateComponentsFromHCL(pulumiState.Components, componentTree, sourceOverrides, schemaOverrides, tfSourceDir, populateComponentInputs, resourceAttrs)
+			metadata, err := populateComponentsFromHCL(pulumiState.Components, componentTree, sourceOverrides, schemaOverrides, tfSourceDir, populateComponentInputs, resourceAttrs, tfState)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to populate component state from HCL: %w", err)
 			}

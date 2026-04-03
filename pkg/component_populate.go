@@ -45,6 +45,7 @@ func populateComponentsFromHCL(
 	tfSourceDir string,
 	populateInputs bool,
 	resourceAttrs map[string]map[string]cty.Value,
+	tfState *tfjson.State,
 ) (*ComponentSchemaMetadata, error) {
 	if tfSourceDir == "" {
 		return nil, nil
@@ -53,18 +54,25 @@ func populateComponentsFromHCL(
 	// Parse module call sites from the root TF source directory
 	callSites, err := hclpkg.ParseModuleCallSites(tfSourceDir)
 	if err != nil {
-		// Not fatal — HCL source may not be available
 		fmt.Fprintf(os.Stderr, "Warning: failed to parse module call sites from %s: %v\n", tfSourceDir, err)
 		return nil, nil
 	}
 
-	// Load tfvars for variable resolution
-	tfvarsPath := filepath.Join(tfSourceDir, "terraform.tfvars")
-	tfvars, err := hclpkg.LoadTfvars(tfvarsPath)
+	// Load all tfvars (terraform.tfvars + *.auto.tfvars)
+	tfvars, err := hclpkg.LoadAllTfvars(tfSourceDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to load tfvars: %v\n", err)
 		tfvars = map[string]cty.Value{}
 	}
+
+	// Resolve remote module sources from .terraform/modules/ cache
+	cachedModuleSources, _ := hclpkg.ResolveModuleSourcesFromCache(tfSourceDir)
+
+	// Build data source attr map for the "data" eval context variable
+	dataSourceAttrs := buildDataSourceAttrMap(tfState)
+
+	// Parse locals from root TF directory
+	localDefs, _ := hclpkg.ParseLocals(tfSourceDir)
 
 	// Build a lookup from module name to call site
 	callSiteMap := map[string]*hclpkg.ModuleCallSite{}
@@ -79,21 +87,22 @@ func populateComponentsFromHCL(
 
 	// Process each component
 	for i, comp := range components {
-		// Find the component node to get module name and key
 		node := findComponentNode(componentTree, comp.Name)
 		if node == nil {
 			continue
 		}
 		moduleName := node.name
 
-		// Resolve HCL source path
+		// Resolve HCL source path: override > local auto-discovery > module cache
 		sourcePath := ""
 		if override, ok := sourceOverrides["module."+moduleName]; ok {
 			sourcePath = override
-		} else if callSite, ok := callSiteMap[moduleName]; ok {
-			// Auto-resolve from call site source attribute (local paths only)
-			if hclpkg.IsLocalModuleSource(callSite.Source) {
-				sourcePath = filepath.Join(tfSourceDir, callSite.Source)
+		} else if callSite, ok := callSiteMap[moduleName]; ok && hclpkg.IsLocalModuleSource(callSite.Source) {
+			sourcePath = filepath.Join(tfSourceDir, callSite.Source)
+		}
+		if sourcePath == "" {
+			if cached, ok := cachedModuleSources[node.modulePath]; ok {
+				sourcePath = cached
 			}
 		}
 		if sourcePath != "" {
@@ -110,11 +119,9 @@ func populateComponentsFromHCL(
 		// Populate inputs from call site argument evaluation (only when populateInputs=true)
 		callSite, hasCallSite := callSiteMap[moduleName]
 		if populateInputs && hasCallSite && len(callSite.Arguments) > 0 {
-			// Build eval context variables including count.index / each.key
 			evalVars := map[string]cty.Value{}
 			maps.Copy(evalVars, tfvars)
 
-			// Build meta-argument context (count.index, each.key/each.value)
 			var metaVars map[string]cty.Value
 			if node.key != "" {
 				metaVars = buildMetaArgContext(node.key)
@@ -123,6 +130,30 @@ func populateComponentsFromHCL(
 			evalCtx := hclpkg.NewEvalContext(evalVars, resourceAttrs, nil)
 			if metaVars != nil {
 				evalCtx.AddVariables(metaVars)
+			}
+
+			// Add path.* refs
+			evalCtx.AddVariables(map[string]cty.Value{
+				"path": cty.ObjectVal(map[string]cty.Value{
+					"module": cty.StringVal(tfSourceDir),
+					"root":   cty.StringVal(tfSourceDir),
+					"cwd":    cty.StringVal(tfSourceDir),
+				}),
+			})
+
+			// Add data.* refs
+			if dataSourceAttrs != nil {
+				evalCtx.AddVariables(map[string]cty.Value{
+					"data": cty.ObjectVal(dataSourceAttrs),
+				})
+			}
+
+			// Evaluate and add local.* refs
+			if len(localDefs) > 0 {
+				localValues := evaluateLocals(localDefs, evalCtx)
+				if len(localValues) > 0 {
+					evalCtx.AddVariables(map[string]cty.Value{"local": cty.ObjectVal(localValues)})
+				}
 			}
 
 			inputs := resource.PropertyMap{}
@@ -219,6 +250,74 @@ func populateComponentsFromHCL(
 	}
 
 	return nil, nil
+}
+
+// evaluateLocals evaluates local definitions against an eval context.
+// Uses iterative evaluation since locals can reference other locals.
+func evaluateLocals(locals []hclpkg.LocalDefinition, evalCtx *hclpkg.EvalContext) map[string]cty.Value {
+	resolved := map[string]cty.Value{}
+	remaining := locals
+
+	for pass := 0; pass < 10 && len(remaining) > 0; pass++ {
+		if len(resolved) > 0 {
+			evalCtx.AddVariables(map[string]cty.Value{"local": cty.ObjectVal(resolved)})
+		}
+		var unresolved []hclpkg.LocalDefinition
+		for _, l := range remaining {
+			val, err := evalCtx.EvaluateExpression(l.Expression)
+			if err == nil {
+				resolved[l.Name] = val
+			} else {
+				unresolved = append(unresolved, l)
+			}
+		}
+		if len(unresolved) == len(remaining) {
+			break // no progress
+		}
+		remaining = unresolved
+	}
+
+	return resolved
+}
+
+// buildDataSourceAttrMap builds a nested cty.Value for the "data" eval context variable.
+// Returns data = { aws_ami = { amzlinux2 = { id = "...", ... } } }
+func buildDataSourceAttrMap(tfState *tfjson.State) map[string]cty.Value {
+	typeMap := map[string]map[string]cty.Value{}
+	if tfState == nil {
+		return nil
+	}
+
+	tofu.VisitResources(tfState, func(r *tfjson.StateResource) error {
+		if r.Mode != tfjson.DataResourceMode || r.AttributeValues == nil {
+			return nil
+		}
+		parts := strings.Split(r.Address, ".")
+		if len(parts) < 2 {
+			return nil
+		}
+		resType := parts[len(parts)-2]
+		resName := parts[len(parts)-1]
+
+		attrs := map[string]cty.Value{}
+		for k, v := range r.AttributeValues {
+			attrs[k] = interfaceToCty(v)
+		}
+		if _, ok := typeMap[resType]; !ok {
+			typeMap[resType] = map[string]cty.Value{}
+		}
+		typeMap[resType][resName] = cty.ObjectVal(attrs)
+		return nil
+	}, &tofu.VisitOptions{IncludeDataSources: true})
+
+	if len(typeMap) == 0 {
+		return nil
+	}
+	result := map[string]cty.Value{}
+	for typeName, instances := range typeMap {
+		result[typeName] = cty.ObjectVal(instances)
+	}
+	return result
 }
 
 // buildModuleScopedResourceAttrs filters the global resource attr map to only include

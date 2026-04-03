@@ -111,6 +111,53 @@ func TestLoadTfvars_NotFound(t *testing.T) {
 	require.Len(t, vars, 0)
 }
 
+func TestLoadAllTfvars(t *testing.T) {
+	t.Parallel()
+	vars, err := LoadAllTfvars("testdata/root_with_auto_tfvars")
+	require.NoError(t, err)
+
+	// From terraform.tfvars
+	require.Equal(t, "prod", vars["env"].AsString())
+
+	// From vpc.auto.tfvars
+	require.Equal(t, "myvpc", vars["vpc_name"].AsString())
+	require.Equal(t, "10.0.0.0/16", vars["vpc_cidr"].AsString())
+
+	// From db.auto.tfvars
+	require.Equal(t, "mydb", vars["db_name"].AsString())
+}
+
+func TestLoadAllTfvars_NoFiles(t *testing.T) {
+	t.Parallel()
+	vars, err := LoadAllTfvars("testdata/pet_module") // no tfvars files
+	require.NoError(t, err)
+	require.Len(t, vars, 0)
+}
+
+func TestParseLocals(t *testing.T) {
+	t.Parallel()
+	locals, err := ParseLocals("testdata/root_with_locals")
+	require.NoError(t, err)
+	require.Len(t, locals, 3) // name, upper_name, tags
+
+	names := map[string]bool{}
+	for _, l := range locals {
+		names[l.Name] = true
+		require.NotNil(t, l.Expression, "local %s should have an expression", l.Name)
+	}
+	require.True(t, names["name"])
+	require.True(t, names["upper_name"])
+	require.True(t, names["tags"])
+}
+
+func TestParseLocals_NoLocals(t *testing.T) {
+	t.Parallel()
+	// pet_module has no locals blocks
+	locals, err := ParseLocals("testdata/pet_module")
+	require.NoError(t, err)
+	require.Len(t, locals, 0)
+}
+
 func findCall(calls []ModuleCallSite, name string) *ModuleCallSite {
 	for i := range calls {
 		if calls[i].Name == name {

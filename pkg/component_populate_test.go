@@ -32,7 +32,7 @@ func TestPopulateComponentsFromHCL_VariableDefaults(t *testing.T) {
 		{name: "named_pet", resourceName: "named-pet", typeToken: "terraform:module/namedPet:NamedPet"},
 	}
 
-	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil)
+	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil, nil)
 	require.NoError(t, err)
 	require.Nil(t, metadata) // metadata is nil when populateInputs=true
 
@@ -59,7 +59,7 @@ func TestPopulateComponentsFromHCL_VariableDefaultsMerged(t *testing.T) {
 		{name: "pet", key: "0", resourceName: "pet-0", typeToken: "terraform:module/pet:Pet"},
 	}
 
-	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil)
+	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil, nil)
 	require.NoError(t, err)
 	require.Nil(t, metadata)
 
@@ -89,7 +89,7 @@ func TestPopulateComponentsFromHCL_NoInputsWhenFlagFalse(t *testing.T) {
 		{name: "named_pet", resourceName: "named-pet", typeToken: "terraform:module/namedPet:NamedPet"},
 	}
 
-	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", false, nil)
+	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", false, nil, nil)
 	require.NoError(t, err)
 
 	// Inputs should be empty (not populated)
@@ -124,7 +124,7 @@ func TestPopulateComponentsFromHCL_ResourceAttrRef(t *testing.T) {
 		},
 	}
 
-	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_resource_ref", true, resourceAttrs)
+	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_resource_ref", true, resourceAttrs, nil)
 	require.NoError(t, err)
 	require.Nil(t, metadata)
 
@@ -146,7 +146,7 @@ func TestPopulateComponentsFromHCL_ResourceAttrRef_NilAttrs(t *testing.T) {
 		{name: "consumer", resourceName: "consumer", typeToken: "terraform:module/consumer:Consumer"},
 	}
 
-	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_resource_ref", true, nil)
+	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_resource_ref", true, nil, nil)
 	require.NoError(t, err) // Should not error — just warn and skip unresolvable inputs
 	require.Nil(t, metadata)
 
@@ -167,7 +167,7 @@ func TestPopulateComponentsFromHCL_OutputNames(t *testing.T) {
 		{name: "named_pet", resourceName: "named-pet", typeToken: "terraform:module/namedPet:NamedPet"},
 	}
 
-	_, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil)
+	_, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil, nil)
 	require.NoError(t, err)
 
 	outputs := components[0].Outputs
@@ -202,7 +202,7 @@ func TestPopulateComponentsFromHCL_OutputValuesEvaluated(t *testing.T) {
 		},
 	}
 
-	_, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_resource_ref", true, resourceAttrs)
+	_, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_resource_ref", true, resourceAttrs, nil)
 	require.NoError(t, err)
 
 	outputs := components[0].Outputs
@@ -228,7 +228,7 @@ func TestPopulateComponentsFromHCL_OutputFallbackWhenEvalFails(t *testing.T) {
 	}
 
 	// No resource attrs — output expressions will fail
-	_, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil)
+	_, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil, nil)
 	require.NoError(t, err)
 
 	outputs := components[0].Outputs
