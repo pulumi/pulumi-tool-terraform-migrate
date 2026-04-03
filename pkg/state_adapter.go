@@ -121,7 +121,7 @@ func TranslateAndWriteState(
 		return fmt.Errorf("failed to write stack export: %w", err)
 	}
 
-	// Write component schema metadata sidecar file when --component-inputs=false
+	// Write component schema metadata sidecar file (always, when HCL sources are available)
 	if res.ComponentMetadata != nil {
 		metadataPath := filepath.Join(filepath.Dir(outputFilePath), "component-schemas.json")
 		if err := WriteComponentSchemaMetadata(res.ComponentMetadata, metadataPath); err != nil {
@@ -154,7 +154,7 @@ type TranslateStateResult struct {
 	Export            StackExport
 	RequiredProviders []*ProviderWithMetadata
 	ErrorMessages     []ErroredResource
-	// ComponentMetadata is non-nil when --component-inputs=false and HCL sources were parsed.
+	// ComponentMetadata is non-nil when HCL sources were available and parsed.
 	ComponentMetadata *ComponentSchemaMetadata
 }
 

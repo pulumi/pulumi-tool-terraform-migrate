@@ -264,13 +264,10 @@ func populateComponentsFromHCL(
 		}
 	}
 
-	// Build and return metadata when populateInputs=false
-	if !populateInputs {
-		metadata := buildComponentSchemaMetadata(components, componentTree, parsedVariables, parsedOutputs, resolvedSources)
-		return metadata, nil
-	}
-
-	return nil, nil
+	// Always build metadata — the code generation agent benefits from typed
+	// component interfaces regardless of whether inputs are in the state.
+	metadata := buildComponentSchemaMetadata(components, componentTree, parsedVariables, parsedOutputs, resolvedSources)
+	return metadata, nil
 }
 
 // resolveModuleSourcePath resolves the HCL source path for a module component.

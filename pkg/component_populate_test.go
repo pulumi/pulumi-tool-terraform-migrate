@@ -34,7 +34,7 @@ func TestPopulateComponentsFromHCL_VariableDefaults(t *testing.T) {
 
 	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil, nil)
 	require.NoError(t, err)
-	require.Nil(t, metadata) // metadata is nil when populateInputs=true
+	require.NotNil(t, metadata) // metadata always returned when HCL sources available
 
 	// named_pet passes all three args explicitly — no defaults needed
 	inputs := components[0].Inputs
@@ -61,7 +61,7 @@ func TestPopulateComponentsFromHCL_VariableDefaultsMerged(t *testing.T) {
 
 	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_pet", true, nil, nil)
 	require.NoError(t, err)
-	require.Nil(t, metadata)
+	require.NotNil(t, metadata)
 
 	inputs := components[0].Inputs
 	require.NotNil(t, inputs)
@@ -126,7 +126,7 @@ func TestPopulateComponentsFromHCL_ResourceAttrRef(t *testing.T) {
 
 	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_resource_ref", true, resourceAttrs, nil)
 	require.NoError(t, err)
-	require.Nil(t, metadata)
+	require.NotNil(t, metadata)
 
 	inputs := components[0].Inputs
 	require.NotNil(t, inputs)
@@ -148,7 +148,7 @@ func TestPopulateComponentsFromHCL_ResourceAttrRef_NilAttrs(t *testing.T) {
 
 	metadata, err := populateComponentsFromHCL(components, tree, nil, nil, "hcl/testdata/root_with_resource_ref", true, nil, nil)
 	require.NoError(t, err) // Should not error — just warn and skip unresolvable inputs
-	require.Nil(t, metadata)
+	require.NotNil(t, metadata)
 
 	inputs := components[0].Inputs
 	// prefix = random_pet.base.id can't resolve without resource attrs
