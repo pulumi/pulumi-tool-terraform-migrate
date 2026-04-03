@@ -320,18 +320,40 @@ func TestBuildChildModuleOutputs(t *testing.T) {
 			{name: "db_subnet_group", resourceName: "db_subnet_group"},
 		},
 	}
-	tree := []*componentNode{parent}
-
 	moduleOutputValues := map[string]map[string]cty.Value{
 		"db_instance":     {"address": cty.StringVal("mydb.rds.amazonaws.com")},
 		"db_subnet_group": {"id": cty.StringVal("sg-123")},
 	}
 
-	childOutputs := buildChildModuleOutputs(parent, tree, moduleOutputValues)
+	childOutputs := buildChildModuleOutputs(parent, moduleOutputValues, nil)
 	require.NotNil(t, childOutputs)
 	require.Len(t, childOutputs, 2)
 	require.Equal(t, cty.StringVal("mydb.rds.amazonaws.com"), childOutputs["db_instance"]["address"])
 	require.Equal(t, cty.StringVal("sg-123"), childOutputs["db_subnet_group"]["id"])
+}
+
+func TestBuildChildModuleOutputs_EmptyChildWithSource(t *testing.T) {
+	// When a child module has no outputs in moduleOutputValues (e.g., zero-instance
+	// or no managed resources in state) but HAS a resolved source with output
+	// declarations, it should still appear with output names as empty strings.
+	parent := &componentNode{
+		name:         "rdsdb",
+		resourceName: "rdsdb",
+		children: []*componentNode{
+			{name: "db_instance", resourceName: "db_instance"},
+		},
+	}
+	resolvedSources := map[string]string{
+		"module.db_instance": "testdata/../hcl/testdata/pet_module", // has outputs: name, separator
+	}
+
+	result := buildChildModuleOutputs(parent, map[string]map[string]cty.Value{}, resolvedSources)
+	require.NotNil(t, result, "should have outputs even for empty children with known source")
+	require.Contains(t, result, "db_instance")
+	require.Contains(t, result["db_instance"], "name")
+	require.Contains(t, result["db_instance"], "separator")
+	// Values should be empty strings (placeholder)
+	require.Equal(t, cty.StringVal(""), result["db_instance"]["name"])
 }
 
 func TestBuildChildModuleOutputs_NoChildren(t *testing.T) {

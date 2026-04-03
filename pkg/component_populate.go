@@ -279,7 +279,7 @@ func populateComponentsFromHCL(
 
 				// Build child module output cross-refs for parent modules
 			// (e.g., rdsdb needs module.db_instance.* outputs to evaluate its own outputs)
-			childOutputs := buildChildModuleOutputs(node, componentTree, moduleOutputValues)
+			childOutputs := buildChildModuleOutputs(node, moduleOutputValues, resolvedSources)
 
 			outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, childOutputs)
 
@@ -554,10 +554,14 @@ func parseCallSitesCached(dir string, cache map[string]map[string]*hclpkg.Module
 // buildChildModuleOutputs collects resolved outputs from child components of a given node.
 // For a parent module like "rdsdb" with children "db_instance", "db_option_group", etc.,
 // this returns {"db_instance": {output1: val1, ...}, "db_option_group": {...}}.
+//
+// For children not in moduleOutputValues (e.g., zero-instance or no managed resources),
+// the function parses output declarations from the child's resolved source and registers
+// them as empty strings so parent output expressions like module.child.name resolve.
 func buildChildModuleOutputs(
 	node *componentNode,
-	tree []*componentNode,
 	moduleOutputValues map[string]map[string]cty.Value,
+	resolvedSources map[string]string,
 ) map[string]map[string]cty.Value {
 	if node.children == nil {
 		return nil
@@ -566,7 +570,22 @@ func buildChildModuleOutputs(
 	for _, child := range node.children {
 		if outputs, ok := moduleOutputValues[child.name]; ok {
 			result[child.name] = outputs
+			continue
 		}
+		// Child has no evaluated outputs — try parsing output declarations from source
+		sourcePath := resolvedSources["module."+child.name]
+		if sourcePath == "" {
+			continue
+		}
+		outputs, err := hclpkg.ParseModuleOutputs(sourcePath)
+		if err != nil || len(outputs) == 0 {
+			continue
+		}
+		emptyOutputs := map[string]cty.Value{}
+		for _, o := range outputs {
+			emptyOutputs[o.Name] = cty.StringVal("")
+		}
+		result[child.name] = emptyOutputs
 	}
 	if len(result) == 0 {
 		return nil
