@@ -14,6 +14,14 @@
 
 package hcl
 
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
 // DiscoverModuleSources parses root .tf files and extracts local module source paths.
 // Remote sources (registry, git) are skipped — they require explicit mapping via
 // CLI flag or migration file. Terragrunt users must also provide explicit mappings.
@@ -37,4 +45,57 @@ func DiscoverModuleSources(rootDir string) (map[string]string, error) {
 // IsLocalModuleSource returns true if the source is a local path (starts with "./" or "../" or "/").
 func IsLocalModuleSource(source string) bool {
 	return len(source) > 0 && (source[0] == '.' || source[0] == '/')
+}
+
+// moduleManifest represents the .terraform/modules/modules.json structure.
+type moduleManifest struct {
+	Modules []moduleManifestEntry `json:"Modules"`
+}
+
+type moduleManifestEntry struct {
+	Key    string `json:"Key"`
+	Source string `json:"Source"`
+	Dir    string `json:"Dir"`
+}
+
+// ResolveModuleSourcesFromCache reads .terraform/modules/modules.json and returns
+// a map of "module.<name>" -> directory path for each cached module.
+// This resolves remote modules (registry, git) that tofu init has downloaded.
+// Returns empty map if no cache exists (not an error).
+func ResolveModuleSourcesFromCache(rootDir string) (map[string]string, error) {
+	manifestPath := filepath.Join(rootDir, ".terraform", "modules", "modules.json")
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return map[string]string{}, nil
+	}
+
+	var manifest moduleManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil, fmt.Errorf("parsing modules.json: %w", err)
+	}
+
+	sources := map[string]string{}
+	for _, entry := range manifest.Modules {
+		if entry.Key == "" {
+			continue
+		}
+		moduleAddr := manifestKeyToModuleAddr(entry.Key)
+		dir := entry.Dir
+		if !filepath.IsAbs(dir) {
+			dir = filepath.Join(rootDir, dir)
+		}
+		sources[moduleAddr] = dir
+	}
+	return sources, nil
+}
+
+// manifestKeyToModuleAddr converts a modules.json key like "rdsdb.db_subnet_group"
+// to a TF module address like "module.rdsdb.module.db_subnet_group".
+func manifestKeyToModuleAddr(key string) string {
+	parts := strings.Split(key, ".")
+	var addr []string
+	for _, p := range parts {
+		addr = append(addr, "module."+p)
+	}
+	return strings.Join(addr, ".")
 }

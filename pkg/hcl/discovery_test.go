@@ -46,3 +46,46 @@ func TestDiscoverModuleSources_NonexistentDir(t *testing.T) {
 	_, err := DiscoverModuleSources("testdata/does_not_exist")
 	require.Error(t, err)
 }
+
+func TestResolveModuleSourcesFromCache(t *testing.T) {
+	t.Parallel()
+	sources, err := ResolveModuleSourcesFromCache("testdata/root_with_module_cache")
+	require.NoError(t, err)
+
+	// "pet" -> "module.pet"
+	petDir, ok := sources["module.pet"]
+	require.True(t, ok, "should resolve module.pet from cache")
+	require.Contains(t, petDir, ".terraform/modules/pet")
+
+	// "nested.child" -> "module.nested.module.child"
+	childDir, ok := sources["module.nested.module.child"]
+	require.True(t, ok, "should resolve module.nested.module.child from cache")
+	require.Contains(t, childDir, ".terraform/modules/nested/modules/child")
+
+	// Root module entry should be excluded
+	_, hasRoot := sources[""]
+	require.False(t, hasRoot)
+}
+
+func TestResolveModuleSourcesFromCache_NoCacheDir(t *testing.T) {
+	t.Parallel()
+	sources, err := ResolveModuleSourcesFromCache("testdata/root_with_pet")
+	require.NoError(t, err)
+	require.Len(t, sources, 0)
+}
+
+func TestManifestKeyToModuleAddr(t *testing.T) {
+	tests := []struct {
+		key      string
+		expected string
+	}{
+		{"vpc", "module.vpc"},
+		{"rdsdb.db_subnet_group", "module.rdsdb.module.db_subnet_group"},
+		{"a.b.c", "module.a.module.b.module.c"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			require.Equal(t, tt.expected, manifestKeyToModuleAddr(tt.key))
+		})
+	}
+}

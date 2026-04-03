@@ -1,0 +1,7 @@
+{
+  "Modules": [
+    {"Key": "", "Source": "", "Dir": "."},
+    {"Key": "pet", "Source": "registry.opentofu.org/someorg/pet/random", "Dir": ".terraform/modules/pet"},
+    {"Key": "nested.child", "Source": "./modules/child", "Dir": ".terraform/modules/nested/modules/child"}
+  ]
+}

@@ -16,7 +16,9 @@ package hcl
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
+	"sort"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/ext/typeexpr"
@@ -212,6 +214,67 @@ func LoadTfvars(path string) (map[string]cty.Value, error) {
 		}
 	}
 	return values, nil
+}
+
+// LoadAllTfvars loads terraform.tfvars and all *.auto.tfvars files from a directory.
+// terraform.tfvars is loaded first, then *.auto.tfvars in alphabetical order.
+// Later values override earlier ones (matching Terraform's behavior).
+func LoadAllTfvars(dir string) (map[string]cty.Value, error) {
+	result := map[string]cty.Value{}
+
+	tfvars, err := LoadTfvars(filepath.Join(dir, "terraform.tfvars"))
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(result, tfvars)
+
+	autoFiles, _ := filepath.Glob(filepath.Join(dir, "*.auto.tfvars"))
+	sort.Strings(autoFiles)
+	for _, f := range autoFiles {
+		vars, err := LoadTfvars(f)
+		if err != nil {
+			return nil, fmt.Errorf("loading %s: %w", f, err)
+		}
+		maps.Copy(result, vars)
+	}
+
+	return result, nil
+}
+
+// LocalDefinition represents a single local value declaration.
+type LocalDefinition struct {
+	Name       string
+	Expression hcl.Expression
+}
+
+// ParseLocals parses all locals blocks from .tf files in a directory.
+// Returns individual local value definitions with their HCL expressions.
+func ParseLocals(dir string) ([]LocalDefinition, error) {
+	files, err := parseTFFiles(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	var locals []LocalDefinition
+	for _, f := range files {
+		body, ok := f.Body.(*hclsyntax.Body)
+		if !ok {
+			continue
+		}
+		for _, block := range body.Blocks {
+			if block.Type != "locals" {
+				continue
+			}
+			attrs, diags := block.Body.JustAttributes()
+			if diags.HasErrors() {
+				continue
+			}
+			for name, attr := range attrs {
+				locals = append(locals, LocalDefinition{Name: name, Expression: attr.Expr})
+			}
+		}
+	}
+	return locals, nil
 }
 
 // parseTFFiles parses all .tf files in a directory.
