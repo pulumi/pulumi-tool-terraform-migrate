@@ -72,7 +72,16 @@ func (e *EvalContext) AddVariables(vars map[string]cty.Value) {
 }
 
 // EvaluateExpression evaluates an HCL expression against the context.
-func (e *EvalContext) EvaluateExpression(expr hcl.Expression) (cty.Value, error) {
+// Includes panic recovery because the upstream HCL library can panic on
+// certain type combinations in conditional expressions (e.g., DynamicPseudoType
+// branches from null resource defaults).
+func (e *EvalContext) EvaluateExpression(expr hcl.Expression) (val cty.Value, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			val = cty.NilVal
+			err = fmt.Errorf("expression evaluation panicked (upstream HCL bug): %v", r)
+		}
+	}()
 	val, diags := expr.Value(e.hclCtx)
 	if diags.HasErrors() {
 		return cty.NilVal, fmt.Errorf("expression evaluation failed: %s", diags.Error())

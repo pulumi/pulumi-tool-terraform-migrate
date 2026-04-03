@@ -158,6 +158,25 @@ func TestParseLocals_NoLocals(t *testing.T) {
 	require.Len(t, locals, 0)
 }
 
+func TestParseResourceBlocks(t *testing.T) {
+	t.Parallel()
+	blocks, err := ParseResourceBlocks("testdata/pet_module")
+	require.NoError(t, err)
+	require.Len(t, blocks, 1)
+	require.Equal(t, "random_pet", blocks[0].Type)
+	require.Equal(t, "this", blocks[0].Name)
+}
+
+func TestParseResourceBlocks_MultipleTypes(t *testing.T) {
+	// root_with_resource_ref has random_pet.base + module (no other resources in root)
+	t.Parallel()
+	blocks, err := ParseResourceBlocks("testdata/root_with_resource_ref")
+	require.NoError(t, err)
+	require.Len(t, blocks, 1)
+	require.Equal(t, "random_pet", blocks[0].Type)
+	require.Equal(t, "base", blocks[0].Name)
+}
+
 func findCall(calls []ModuleCallSite, name string) *ModuleCallSite {
 	for i := range calls {
 		if calls[i].Name == name {

@@ -290,6 +290,71 @@ func TestScopedResourceAttrs_ForModule(t *testing.T) {
 	require.Nil(t, root)
 }
 
+func TestBuildNullAttributeTemplate(t *testing.T) {
+	// When existing instances have attributes, template should have same attrs with "" values
+	instances := map[string]cty.Value{
+		"this[0]": cty.ObjectVal(map[string]cty.Value{
+			"id":     cty.StringVal("subnet-123"),
+			"arn":    cty.StringVal("arn:aws:..."),
+			"vpc_id": cty.StringVal("vpc-456"),
+		}),
+	}
+	template := buildNullAttributeTemplate(instances)
+	require.True(t, template.Type().IsObjectType())
+	require.Equal(t, cty.StringVal(""), template.GetAttr("id"))
+	require.Equal(t, cty.StringVal(""), template.GetAttr("arn"))
+	require.Equal(t, cty.StringVal(""), template.GetAttr("vpc_id"))
+}
+
+func TestBuildNullAttributeTemplate_NoInstances(t *testing.T) {
+	template := buildNullAttributeTemplate(map[string]cty.Value{})
+	require.True(t, template.RawEquals(cty.EmptyObjectVal))
+}
+
+func TestBuildChildModuleOutputs(t *testing.T) {
+	parent := &componentNode{
+		name:         "rdsdb",
+		resourceName: "rdsdb",
+		children: []*componentNode{
+			{name: "db_instance", resourceName: "db_instance"},
+			{name: "db_subnet_group", resourceName: "db_subnet_group"},
+		},
+	}
+	tree := []*componentNode{parent}
+
+	moduleOutputValues := map[string]map[string]cty.Value{
+		"db_instance":     {"address": cty.StringVal("mydb.rds.amazonaws.com")},
+		"db_subnet_group": {"id": cty.StringVal("sg-123")},
+	}
+
+	childOutputs := buildChildModuleOutputs(parent, tree, moduleOutputValues)
+	require.NotNil(t, childOutputs)
+	require.Len(t, childOutputs, 2)
+	require.Equal(t, cty.StringVal("mydb.rds.amazonaws.com"), childOutputs["db_instance"]["address"])
+	require.Equal(t, cty.StringVal("sg-123"), childOutputs["db_subnet_group"]["id"])
+}
+
+func TestBuildChildModuleOutputs_NoChildren(t *testing.T) {
+	node := &componentNode{name: "vpc", resourceName: "vpc"}
+	result := buildChildModuleOutputs(node, nil, nil)
+	require.Nil(t, result)
+}
+
+func TestBuildMetaArgContext_AlwaysSetsEach(t *testing.T) {
+	// Numeric keys should set BOTH count and each
+	vars := buildMetaArgContext("0")
+	require.Contains(t, vars, "count")
+	require.Contains(t, vars, "each")
+	require.Equal(t, cty.StringVal("0"), vars["each"].GetAttr("key"))
+
+	// String keys should set each (and no count)
+	vars2 := buildMetaArgContext("us-east-1")
+	_, hasCount := vars2["count"]
+	require.False(t, hasCount)
+	require.Contains(t, vars2, "each")
+	require.Equal(t, cty.StringVal("us-east-1"), vars2["each"].GetAttr("key"))
+}
+
 func TestInterfaceToCty(t *testing.T) {
 	tests := []struct {
 		name     string

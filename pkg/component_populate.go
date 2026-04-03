@@ -596,11 +596,15 @@ func registerMissingResourceTypes(
 			}
 		}
 
-		// Add missing instances as empty tuples
+		// Add missing instances using the attribute shape of existing instances.
+		// Construct an object with the same attributes as a real instance, but
+		// all values set to null strings. This lets expressions like
+		// aws_resource.this.id resolve to "" instead of panicking.
+		template := buildNullAttributeTemplate(instances)
 		for name := range names {
 			if _, exists := instances[name]; !exists {
-				fmt.Fprintf(os.Stderr, "Note: %s.%s not in state for module.%s (likely count=0), defaulting to empty\n", resType, name, moduleName)
-				instances[name] = cty.EmptyTupleVal
+				fmt.Fprintf(os.Stderr, "Note: %s.%s not in state for module.%s (likely count=0), defaulting to null\n", resType, name, moduleName)
+				instances[name] = template
 			}
 		}
 
@@ -612,6 +616,26 @@ func registerMissingResourceTypes(
 	if len(missingVars) > 0 {
 		evalCtx.AddVariables(missingVars)
 	}
+}
+
+// buildNullAttributeTemplate creates a cty object with the same attribute names as
+// existing instances but all values set to null strings. Used for missing resource
+// instances (count=0) so attribute access resolves to "" instead of panicking.
+func buildNullAttributeTemplate(instances map[string]cty.Value) cty.Value {
+	// Find any existing instance to use as a template
+	for _, inst := range instances {
+		if inst.Type().IsObjectType() {
+			nullAttrs := map[string]cty.Value{}
+			for name := range inst.Type().AttributeTypes() {
+				nullAttrs[name] = cty.StringVal("")
+			}
+			if len(nullAttrs) > 0 {
+				return cty.ObjectVal(nullAttrs)
+			}
+		}
+		break
+	}
+	return cty.EmptyObjectVal
 }
 
 // parseResourceAddress splits a TF resource address into module path, type, and name.
