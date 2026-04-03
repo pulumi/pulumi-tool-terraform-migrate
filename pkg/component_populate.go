@@ -65,6 +65,15 @@ func populateComponentsFromHCL(
 		tfvars = map[string]cty.Value{}
 	}
 
+	// Merge root variable defaults into tfvars (tfvars take precedence).
+	// This ensures locals that reference var.* with defaults can evaluate.
+	rootVars, _ := hclpkg.ParseModuleVariables(tfSourceDir)
+	for _, v := range rootVars {
+		if _, alreadySet := tfvars[v.Name]; !alreadySet && v.Default != nil {
+			tfvars[v.Name] = *v.Default
+		}
+	}
+
 	// Resolve remote module sources from .terraform/modules/ cache
 	cachedModuleSources, _ := hclpkg.ResolveModuleSourcesFromCache(tfSourceDir)
 
