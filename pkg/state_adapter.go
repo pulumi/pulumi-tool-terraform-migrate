@@ -54,6 +54,8 @@ func TranslateAndWriteState(
 	outputFilePath string,
 	requiredProvidersOutputFilePath string,
 	strict bool,
+	enableComponents bool,
+	typeOverrides map[string]string,
 	stackNameOverride string,
 	projectNameOverride string,
 ) error {
@@ -94,7 +96,7 @@ func TranslateAndWriteState(
 		}
 	}
 
-	res, err := TranslateState(ctx, tfState, providerVersions.ProviderSelections, stackName, projectName)
+	res, err := TranslateState(ctx, tfState, providerVersions.ProviderSelections, stackName, projectName, enableComponents, typeOverrides)
 	if err != nil {
 		return err
 	}
@@ -142,13 +144,13 @@ type TranslateStateResult struct {
 	ErrorMessages     []ErroredResource
 }
 
-func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions map[string]string, stackName, projectName string) (*TranslateStateResult, error) {
+func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions map[string]string, stackName, projectName string, enableComponents bool, typeOverrides map[string]string) (*TranslateStateResult, error) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, providerVersions)
 	if err != nil {
 		return nil, err
 	}
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, enableComponents, typeOverrides)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert state: %w", err)
 	}
@@ -177,7 +179,7 @@ type ErroredResource struct {
 	ErrorMessage     string `json:"error_message"`
 }
 
-func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata) (*PulumiState, []ErroredResource, error) {
+func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata, enableComponents bool, typeOverrides map[string]string) (*PulumiState, []ErroredResource, error) {
 	pulumiState := &PulumiState{}
 
 	// TODO[pulumi/pulumi-service#35512]: This assumes one Pulumi provider per Terraform provider.
@@ -202,6 +204,25 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 		}
 		pulumiState.Providers = append(pulumiState.Providers, providerResource)
 		providerTable[tfProviderName] = providerResource.PulumiResourceID
+	}
+
+	// Build component tree from module hierarchy if enabled
+	var componentTree []*componentNode
+	if enableComponents {
+		var resourceAddresses []string
+		tofu.VisitResources(tfState, func(r *tfjson.StateResource) error {
+			resourceAddresses = append(resourceAddresses, r.Address)
+			return nil
+		}, &tofu.VisitOptions{})
+
+		if len(resourceAddresses) > 0 {
+			var err error
+			componentTree, err = buildComponentTree(resourceAddresses, typeOverrides)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to build component tree: %w", err)
+			}
+			pulumiState.Components = toComponents(componentTree, "")
+		}
 	}
 
 	errorMessages := []ErroredResource{}
@@ -230,6 +251,14 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 			return nil
 		}
 		pulumiResource.Provider = &providerLink
+
+		// When components are enabled, use short name and set parent
+		if enableComponents {
+			pulumiResource.Name = PulumiNameFromTerraformAddress(resource.Address, resource.Type, true)
+			segments := parseModuleSegments(resource.Address)
+			pulumiResource.Parent = componentParentForResource(componentTree, segments)
+		}
+
 		pulumiState.Resources = append(pulumiState.Resources, pulumiResource)
 		return nil
 	}, &tofu.VisitOptions{})
@@ -287,7 +316,7 @@ func convertResourceStateExceptProviderLink(
 	return PulumiResource{
 		PulumiResourceID: PulumiResourceID{
 			ID:   props["id"].StringValue(),
-			Name: PulumiNameFromTerraformAddress(res.Address, res.Type),
+			Name: PulumiNameFromTerraformAddress(res.Address, res.Type, false),
 			Type: string(pulumiTypeToken),
 		},
 		Inputs:  inputs,
@@ -316,10 +345,21 @@ func formatDynamicProviderName(tfAddr string) string {
 //   - Submodule: module.<module_name>.<resource_type>.<name> e.g., "module.s3_bucket.aws_s3_bucket.this"
 //   - Nested: module.<mod1>.module.<mod2>.<resource_type>.<name>
 //
-// We extract the module path and resource name (excluding the type) and join them with underscores.
-func PulumiNameFromTerraformAddress(address, resourceType string) string {
+// When useShortName is true, only the resource name after the type is returned (module path is
+// expressed via the parent component chain instead). When false, module path is baked into the name.
+func PulumiNameFromTerraformAddress(address, resourceType string, useShortName bool) string {
 	parts := strings.Split(address, ".")
 
+	if useShortName {
+		// Return only the resource name part (after the type)
+		for i := 0; i < len(parts); i++ {
+			if parts[i] == resourceType {
+				return strings.Join(parts[i+1:], "_")
+			}
+		}
+	}
+
+	// Original behavior: include module path in name
 	var nameParts []string
 	for i := 0; i < len(parts); i++ {
 		if parts[i] == resourceType {

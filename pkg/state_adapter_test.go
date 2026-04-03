@@ -55,7 +55,8 @@ func TestConvertInvolved(t *testing.T) {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
 
-	require.Len(t, data.Export.Deployment.Resources, 24)
+	// 24 original resources + 1 component for module.data_lake_bucket
+	require.Len(t, data.Export.Deployment.Resources, 25)
 }
 
 func TestConvertTwoModules(t *testing.T) {
@@ -74,6 +75,46 @@ func TestConvertTwoModules(t *testing.T) {
 		}
 	}
 	require.Equal(t, 2, len(bucketURNs), "expected 2 unique URNs for buckets")
+}
+
+func TestConvertTwoModules_FlatMode(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+		StateFilePath: "testdata/tofu_state_two_buckets.json",
+	})
+	require.NoError(t, err)
+
+	// enableComponents=false: flat mode, no component resources
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", false, nil)
+	require.NoError(t, err)
+
+	// No component resources in flat mode
+	for _, r := range data.Export.Deployment.Resources {
+		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
+			t.Fatalf("unexpected component resource in flat mode: %s", r.Type)
+		}
+	}
+
+	// All resources parented to Stack
+	for _, r := range data.Export.Deployment.Resources {
+		if r.Custom && string(r.Type) != "pulumi:providers:aws" {
+			require.Contains(t, string(r.Parent), "pulumi:pulumi:Stack",
+				"resource %s should be parented to Stack in flat mode", r.URN)
+		}
+	}
+
+	// Names include module path (not short names)
+	bucketURNs := make(map[string]bool)
+	for _, r := range data.Export.Deployment.Resources {
+		if r.Type == "aws:s3/bucket:Bucket" {
+			bucketURNs[string(r.URN)] = true
+			// Flat mode names include module prefix
+			require.Contains(t, string(r.URN), "s3_bucket_",
+				"flat mode bucket URN should include module prefix")
+		}
+	}
+	require.Equal(t, 2, len(bucketURNs), "expected 2 unique bucket URNs")
 }
 
 func TestConvertNestedModules(t *testing.T) {
@@ -115,7 +156,7 @@ func translateStateFromJson(ctx context.Context, tfStateJson string) (*Translate
 	if err != nil {
 		return nil, err
 	}
-	return TranslateState(ctx, tfState, nil, "dev", "test-project")
+	return TranslateState(ctx, tfState, nil, "dev", "test-project", true, nil)
 }
 
 func Test_convertState_simple(t *testing.T) {
@@ -130,7 +171,7 @@ func Test_convertState_simple(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, nil)
 	require.NoError(t, err, "failed to convert state")
 	require.Equal(t, 0, len(errorMessages), "expected no error messages")
 
@@ -157,7 +198,7 @@ func Test_convertState_multi_provider(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, nil)
 	require.NoError(t, err, "failed to convert state")
 	require.Equal(t, 0, len(errorMessages), "expected no error messages")
 
@@ -212,7 +253,7 @@ func Test_convertState_corrupted_state(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	_, errorMessages, err := convertState(tfState, pulumiProviders)
+	_, errorMessages, err := convertState(tfState, pulumiProviders, false, nil)
 	require.NoError(t, err, "failed to convert state")
 	require.Equal(t, 1, len(errorMessages), "expected 1 error message")
 	require.Equal(t, "password", errorMessages[0].ResourceName)
@@ -235,7 +276,7 @@ func Test_convertState_unknown_provider(t *testing.T) {
 
 	require.Len(t, pulumiProviders, 1, "should only have 1 provider (random)")
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, nil)
 	require.NoError(t, err, "failed to convert state")
 
 	require.Len(t, errorMessages, 1, "expected 1 error message for unknown_resource")
@@ -287,6 +328,48 @@ func TestFormatDynamicProviderName(t *testing.T) {
 	}
 }
 
+func TestPulumiNameFromTerraformAddress_ShortName(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		address      string
+		resourceType string
+		expected     string
+	}{
+		{
+			name:         "root module resource",
+			address:      "aws_s3_bucket.mybucket",
+			resourceType: "aws_s3_bucket",
+			expected:     "mybucket",
+		},
+		{
+			name:         "single module resource",
+			address:      "module.vpc.aws_subnet.this",
+			resourceType: "aws_subnet",
+			expected:     "this",
+		},
+		{
+			name:         "indexed module resource",
+			address:      "module.vpc[0].aws_subnet.this",
+			resourceType: "aws_subnet",
+			expected:     "this",
+		},
+		{
+			name:         "nested module resource",
+			address:      "module.vpc.module.subnets.aws_subnet.this",
+			resourceType: "aws_subnet",
+			expected:     "this",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := PulumiNameFromTerraformAddress(tc.address, tc.resourceType, true)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestPulumiNameFromTerraformAddress(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -329,7 +412,7 @@ func TestPulumiNameFromTerraformAddress(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := PulumiNameFromTerraformAddress(tc.address, tc.resourceType)
+			result := PulumiNameFromTerraformAddress(tc.address, tc.resourceType, false)
 			require.Equal(t, tc.expected, result)
 		})
 	}
