@@ -60,6 +60,142 @@ func TestSanitizeModuleInstanceName(t *testing.T) {
 	}
 }
 
+func TestBuildComponentTree_SingleModule(t *testing.T) {
+	tree, err := buildComponentTree(
+		[]string{"module.vpc.aws_subnet.this", "module.vpc.aws_route_table.rt"},
+		nil,
+	)
+	require.NoError(t, err)
+	require.Len(t, tree, 1)
+	require.Equal(t, "vpc", tree[0].name)
+	require.Equal(t, "terraform:module/vpc:Vpc", tree[0].typeToken)
+	require.Nil(t, tree[0].children)
+}
+
+func TestBuildComponentTree_NestedModules(t *testing.T) {
+	tree, err := buildComponentTree(
+		[]string{
+			"module.vpc.module.subnets.aws_subnet.this",
+			"module.vpc.aws_vpc.main",
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	require.Len(t, tree, 1)
+	require.Equal(t, "vpc", tree[0].name)
+	require.Len(t, tree[0].children, 1)
+	require.Equal(t, "subnets", tree[0].children[0].name)
+}
+
+func TestBuildComponentTree_WithTypeOverride(t *testing.T) {
+	tree, err := buildComponentTree(
+		[]string{"module.vpc.aws_subnet.this"},
+		map[string]string{"module.vpc": "myproject:index:VpcComponent"},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "myproject:index:VpcComponent", tree[0].typeToken)
+}
+
+func TestBuildComponentTree_IndexedModules(t *testing.T) {
+	tree, err := buildComponentTree(
+		[]string{
+			"module.vpc[0].aws_subnet.this",
+			"module.vpc[1].aws_subnet.this",
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	require.Len(t, tree, 2)
+	require.Equal(t, "vpc-0", tree[0].resourceName)
+	require.Equal(t, "vpc-1", tree[1].resourceName)
+	require.Equal(t, tree[0].typeToken, tree[1].typeToken)
+}
+
+func TestBuildComponentTree_SiblingsSortedAlphabetically(t *testing.T) {
+	tree, err := buildComponentTree(
+		[]string{
+			"module.zebra.aws_s3_bucket.this",
+			"module.alpha.aws_s3_bucket.this",
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	require.Equal(t, "alpha", tree[0].resourceName)
+	require.Equal(t, "zebra", tree[1].resourceName)
+}
+
+func TestBuildComponentTree_Empty(t *testing.T) {
+	tree, err := buildComponentTree([]string{}, nil)
+	require.NoError(t, err)
+	require.Len(t, tree, 0)
+}
+
+func TestBuildComponentTree_RootResourcesIgnored(t *testing.T) {
+	tree, err := buildComponentTree(
+		[]string{"aws_s3_bucket.this"},
+		nil,
+	)
+	require.NoError(t, err)
+	require.Len(t, tree, 0)
+}
+
+func TestBuildComponentTree_SanitizationCollision(t *testing.T) {
+	_, err := buildComponentTree(
+		[]string{
+			`module.vpc["us-east-1"].aws_subnet.this`,
+			`module.vpc["us_east_1"].aws_subnet.that`,
+		},
+		nil,
+	)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "collision")
+}
+
+func TestToComponents_DepthFirst(t *testing.T) {
+	tree, err := buildComponentTree(
+		[]string{
+			"module.vpc.module.subnets.aws_subnet.this",
+			"module.vpc.aws_vpc.main",
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	components := toComponents(tree, "")
+	require.Len(t, components, 2)
+	// vpc first (parent), then subnets (child)
+	require.Equal(t, "vpc", components[0].Name)
+	require.Equal(t, "", components[0].Parent) // top-level
+	require.Equal(t, "subnets", components[1].Name)
+	require.Equal(t, "terraform:module/vpc:Vpc", components[1].Parent) // child of vpc
+}
+
+func TestComponentParentForResource(t *testing.T) {
+	tree, err := buildComponentTree(
+		[]string{
+			"module.vpc.module.subnets.aws_subnet.this",
+			"module.vpc.aws_vpc.main",
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	// Resource in nested module
+	segments := parseModuleSegments("module.vpc.module.subnets.aws_subnet.this")
+	parent := componentParentForResource(tree, segments)
+	require.Equal(t, "terraform:module/vpc:Vpc$terraform:module/subnets:Subnets", parent)
+
+	// Resource in top-level module
+	segments = parseModuleSegments("module.vpc.aws_vpc.main")
+	parent = componentParentForResource(tree, segments)
+	require.Equal(t, "terraform:module/vpc:Vpc", parent)
+
+	// Root resource (no module)
+	segments = parseModuleSegments("aws_s3_bucket.this")
+	parent = componentParentForResource(tree, segments)
+	require.Equal(t, "", parent)
+}
+
 func TestParseModuleSegments(t *testing.T) {
 	tests := []struct {
 		address  string

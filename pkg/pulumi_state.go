@@ -53,8 +53,13 @@ type PulumiResource struct {
 
 	// For resources this identifies the associated provider.
 	//
-	// For provider resources this nil.
+	// For provider resources and components this is nil.
 	Provider *PulumiResourceID
+
+	// Parent type chain for URN encoding (e.g., "terraform:module/vpc:Vpc" or
+	// "terraform:module/vpc:Vpc$terraform:module/subnets:Subnets").
+	// Empty string means parent is Stack.
+	Parent string
 }
 
 type PulumiState struct {
