@@ -151,8 +151,8 @@ func TestConvertDnsToDb_EvalWarningCount(t *testing.T) {
 	for i, w := range warnings {
 		t.Logf("  [%d] %s", i+1, w)
 	}
-	// Was 68 before nested var scope fixes, currently ~12. Threshold guards against regressions.
-	require.Less(t, len(warnings), 20, "eval warning count regressed (was 68 before fixes, target: keep decreasing)")
+	// Was 68 → 12 → 2 (only templatefile missing file warnings remain).
+	require.Less(t, len(warnings), 5, "eval warning count regressed (was 68, now 2; only templatefile warnings remain)")
 }
 
 func TestConvertDnsToDb(t *testing.T) {
