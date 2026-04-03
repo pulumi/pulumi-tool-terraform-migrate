@@ -113,6 +113,36 @@ func TestWriteComponentSchemaMetadata(t *testing.T) {
 	require.True(t, schema.Inputs[0].Required)
 }
 
+func TestHclTypeToPulumiSchemaType(t *testing.T) {
+	tests := []struct {
+		hclType  string
+		expected interface{}
+	}{
+		{"string", "string"},
+		{"number", "number"},
+		{"bool", "boolean"},
+		{"any", "object"},
+		{"list(string)", map[string]interface{}{"type": "array", "items": "string"}},
+		{"set(string)", map[string]interface{}{"type": "array", "items": "string"}},
+		{"map(string)", map[string]interface{}{"type": "object", "additionalProperties": "string"}},
+		{"list(number)", map[string]interface{}{"type": "array", "items": "number"}},
+		{"map(bool)", map[string]interface{}{"type": "object", "additionalProperties": "boolean"}},
+		{"list(list(string))", map[string]interface{}{
+			"type": "array",
+			"items": map[string]interface{}{"type": "array", "items": "string"},
+		}},
+		{"object({name=string})", map[string]interface{}{"type": "object"}},
+		{"tuple([string])", map[string]interface{}{"type": "array"}},
+		{"", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.hclType, func(t *testing.T) {
+			result := hclTypeToPulumiSchemaType(tt.hclType)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestCtyValueToInterface(t *testing.T) {
 	tests := []struct {
 		name     string

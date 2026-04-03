@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	hclpkg "github.com/pulumi/pulumi-tool-terraform-migrate/pkg/hcl"
 	"github.com/zclconf/go-cty/cty"
@@ -38,9 +39,11 @@ type ComponentSchema struct {
 }
 
 // ComponentFieldMeta describes a single input or output field.
+// Type uses Pulumi package schema format: "string", "number", "boolean", "integer"
+// for primitives, or {"type": "array", "items": {...}} for collections.
 type ComponentFieldMeta struct {
 	Name        string      `json:"name"`
-	Type        string      `json:"type,omitempty"`
+	Type        interface{} `json:"type,omitempty"`
 	Required    bool        `json:"required,omitempty"`
 	Default     interface{} `json:"default,omitempty"`
 	Description string      `json:"description,omitempty"`
@@ -74,7 +77,7 @@ func buildComponentSchemaMetadata(
 			for _, v := range vars {
 				field := ComponentFieldMeta{
 					Name:        v.Name,
-					Type:        v.Type,
+					Type:        hclTypeToPulumiSchemaType(v.Type),
 					Required:    v.Default == nil,
 					Description: v.Description,
 				}
@@ -98,6 +101,62 @@ func buildComponentSchemaMetadata(
 	}
 
 	return metadata
+}
+
+// hclTypeToPulumiSchemaType converts an HCL type constraint string to
+// Pulumi package schema type format.
+//
+// Primitives: "string" → "string", "number" → "number", "bool" → "boolean"
+// Collections: "list(string)" → {"type": "array", "items": {"type": "string"}}
+// Maps: "map(string)" → {"type": "object", "additionalProperties": {"type": "string"}}
+// Sets: "set(string)" → {"type": "array", "items": {"type": "string"}}
+// Unknown/empty: returns the original string as-is.
+func hclTypeToPulumiSchemaType(hclType string) interface{} {
+	if hclType == "" {
+		return nil
+	}
+
+	switch hclType {
+	case "string":
+		return "string"
+	case "number":
+		return "number"
+	case "bool":
+		return "boolean"
+	case "any":
+		return "object"
+	}
+
+	// list(T), set(T) → {"type": "array", "items": <T>}
+	if strings.HasPrefix(hclType, "list(") || strings.HasPrefix(hclType, "set(") {
+		inner := hclType[strings.Index(hclType, "(")+1 : len(hclType)-1]
+		return map[string]interface{}{
+			"type":  "array",
+			"items": hclTypeToPulumiSchemaType(inner),
+		}
+	}
+
+	// map(T) → {"type": "object", "additionalProperties": <T>}
+	if strings.HasPrefix(hclType, "map(") {
+		inner := hclType[4 : len(hclType)-1]
+		return map[string]interface{}{
+			"type":                 "object",
+			"additionalProperties": hclTypeToPulumiSchemaType(inner),
+		}
+	}
+
+	// tuple([...]) → {"type": "array"} (no item type info)
+	if strings.HasPrefix(hclType, "tuple(") {
+		return map[string]interface{}{"type": "array"}
+	}
+
+	// object({...}) → {"type": "object"} (TODO: parse property types)
+	if strings.HasPrefix(hclType, "object(") {
+		return map[string]interface{}{"type": "object"}
+	}
+
+	// Unknown type — return as-is
+	return hclType
 }
 
 // ctyValueToInterface converts a cty.Value to a plain Go interface{} for JSON serialization.
