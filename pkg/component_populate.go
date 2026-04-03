@@ -271,6 +271,10 @@ func populateComponentsFromHCL(
 					}
 				}
 
+				// Register missing resource types as empty tuples so conditional
+				// resources (count=0) resolve to [] instead of "Unknown variable".
+				registerMissingResourceTypes(sourcePath, moduleResourceAttrs, outputEvalCtx, moduleName)
+
 				outputMap := resource.PropertyMap{}
 				for _, o := range outputs {
 					if o.Expression != nil {
@@ -439,6 +443,30 @@ func buildScopedResourceAttrMap(tfState *tfjson.State) scopedResourceAttrs {
 		return nil
 	}, &tofu.VisitOptions{})
 
+	// Post-process: for indexed resources (this[0], this[1], this["key"]),
+	// create a base name entry (this) as a tuple/object so HCL expressions
+	// like resource.this[0].attr resolve correctly.
+	for _, typeMap := range result {
+		for _, instances := range typeMap {
+			grouped := map[string][]cty.Value{} // baseName → [instance0, instance1, ...]
+			for name, val := range instances {
+				if idx := strings.Index(name, "["); idx > 0 {
+					baseName := name[:idx]
+					grouped[baseName] = append(grouped[baseName], val)
+				}
+			}
+			for baseName, vals := range grouped {
+				if _, exists := instances[baseName]; !exists {
+					if len(vals) == 1 {
+						instances[baseName] = vals[0]
+					} else {
+						instances[baseName] = cty.TupleVal(vals)
+					}
+				}
+			}
+		}
+	}
+
 	return result
 }
 
@@ -503,6 +531,35 @@ func parseCallSitesCached(dir string, cache map[string]map[string]*hclpkg.Module
 	}
 	cache[dir] = result
 	return result
+}
+
+// registerMissingResourceTypes scans the module HCL source for resource blocks and
+// registers any resource types not in the scoped attr map as empty tuple values.
+// This handles conditional resources (count=0) that don't exist in state.
+func registerMissingResourceTypes(
+	sourcePath string,
+	moduleResourceAttrs map[string]map[string]cty.Value,
+	evalCtx *hclpkg.EvalContext,
+	moduleName string,
+) {
+	resourceTypes, err := hclpkg.ParseResourceTypeNames(sourcePath)
+	if err != nil {
+		return
+	}
+	missingTypes := map[string]cty.Value{}
+	for _, resType := range resourceTypes {
+		if moduleResourceAttrs != nil {
+			if _, ok := moduleResourceAttrs[resType]; ok {
+				continue // already in scoped attrs
+			}
+		}
+		// Resource type not in state — register as empty object with empty instances
+		fmt.Fprintf(os.Stderr, "Note: resource type %s not in state for module.%s (likely count=0), defaulting to empty\n", resType, moduleName)
+		missingTypes[resType] = cty.EmptyObjectVal
+	}
+	if len(missingTypes) > 0 {
+		evalCtx.AddVariables(missingTypes)
+	}
 }
 
 // parseResourceAddress splits a TF resource address into module path, type, and name.
