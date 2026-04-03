@@ -97,7 +97,7 @@ HCL parsing serves three purposes:
 
 2. **Input value resolution** (needed when `--component-inputs=true`) — Parse call site expressions and evaluate them against TF state + tfvars to get concrete values. Input values at call sites can be complex HCL expressions (`var.cidr`, `module.other.output`, `join(...)`, conditionals), requiring a full HCL expression evaluator with access to the Terraform function library.
 
-3. **Schema metadata generation** (needed when `--component-inputs=false`) — Even when inputs are not written to state, the code generator needs the component interface (variable names, types, defaults, output names). HCL parsing extracts this into a sidecar `component-schemas.json` file.
+3. **Schema metadata generation** (always emitted) — A `component-schemas.json` sidecar file is always written alongside the translated state. It contains the component interface for each module (variable names, Pulumi-formatted types, defaults, output names). The code generation agent uses this for type-correct code regardless of whether inputs are in state. Pulumi state itself carries no type information (`inputs`/`outputs` are `map[string]any`).
 
 **Output values are evaluated from HCL** — TF state v4 format does NOT persist module-level output values (only root outputs and resource attributes). Module outputs are computed at runtime during plan/apply and not serialized. Output `value` expressions are evaluated from HCL using the module's child resource attributes from state as the eval context.
 
@@ -105,17 +105,21 @@ HCL parsing serves three purposes:
 
 The Pulumi ecosystem has extensive HCL parsing infrastructure:
 
-- **`codegen/pcl`** (Pulumi SDK) — binds HCL syntax to Pulumi's type system for *code generation*. It produces Pulumi programs, not concrete values.
+- **`codegen/pcl`** (Pulumi SDK) — binds HCL syntax to Pulumi's type system for *code generation*. `model.BindExpression()` produces typed AST nodes (`model.Expression`), not concrete values.
 - **`tf2pulumi/convert`** (Terraform Bridge) — converts TF HCL *syntax* to PCL syntax. It's a syntax-to-syntax transformer with an intermediate language (`il/graph.go` with `ModuleNode`, `LocalNode`, etc.).
 
-**Neither serves our use case.** We need to evaluate HCL expressions to *concrete values* (strings, numbers, objects) using TF state data as the eval context, then insert those values into Pulumi component state. This is fundamentally different from syntax transformation or type-system binding.
+**Neither serves our use case.** We need to evaluate HCL expressions to *concrete values* (strings, numbers, objects) using TF state data as the eval context, then insert those values into Pulumi component state.
+
+The PCL binder's `model.Expression` does have an `.Evaluate(context)` method that produces `cty.Value`, but it delegates to the same `hcl.Expression.Value(ctx)` call we use directly. Using the PCL binder would add a binding/type-checking layer that requires constructing `model.Scope` definitions from TF state — extra work for the same result. The binder is designed for static analysis of Pulumi programs, not evaluation with runtime data from TF state.
 
 Our custom `pkg/hcl/` package (~1600 lines) uses the correct foundation:
 - `hashicorp/hcl/v2` for parsing (same as all Pulumi/Terraform tools)
 - `opentofu/lang.Scope.Functions()` for the full Terraform function library
-- `hcl.Expression.Value(ctx)` for expression evaluation against a populated eval context
+- `hcl.Expression.Value(ctx)` for direct expression evaluation
 
-The eval context is populated with data that neither PCL nor tf2pulumi provides: resource attributes from TF state JSON, data source attributes, resolved locals, module cross-references, tfvars values, and path references. This is a state-translation concern, not a code-generation concern.
+The eval context is populated with data that neither PCL nor tf2pulumi provides: resource attributes from TF state JSON, data source attributes, resolved locals, module cross-references, tfvars values, and path references.
+
+**Type information for the code generation agent** is provided separately via `component-schemas.json` — a sidecar metadata file always emitted alongside the translated state. HCL type constraints from `variable` blocks (e.g., `string`, `list(string)`, `map(number)`) are converted to Pulumi package schema type format. This gives the agent Pulumi-native types without requiring the full PCL binder integration. Pulumi state itself carries no type information (inputs/outputs are `map[string]any`).
 
 ## Design
 
@@ -263,19 +267,18 @@ Controls whether component inputs are populated in translated state. This flag e
 Populate component inputs in translated state from HCL call-site expression evaluation + variable defaults. Use this when the generated Pulumi code will use **component providers** (remote components), e.g., wrapping TF modules via `pulumi-terraform-module` or registering with IDP.
 
 - Inputs written to component `ResourceV3.Inputs` in state
-- No sidecar metadata file generated (interface is in the state)
 
 #### `--component-inputs=false`
 
 Leave component inputs as empty `{}` in translated state. Use this when the generated Pulumi code will use **single-language ComponentResource classes** (inline components).
 
 - Component `ResourceV3.Inputs` = `{}` in state
-- Sidecar file `component-schemas.json` written alongside the state output file
-- Contains the parsed component interface for each module (variable names, types, defaults, output names, descriptions)
 
-#### Sidecar metadata file format
+#### Sidecar metadata file (`component-schemas.json`)
 
-Written to the same directory as the output state file when `--component-inputs=false`:
+**Always written** alongside the state output file when HCL sources are available and modules are present. The code generation agent always benefits from typed component interfaces, regardless of whether inputs are in the state. Pulumi state carries no type information.
+
+Types use **Pulumi package schema format**: `"string"`, `"number"`, `"boolean"` for primitives; `{"type": "array", "items": {"type": "string"}}` for `list(string)`; `{"type": "object", "additionalProperties": {"type": "string"}}` for `map(string)`. HCL type constraints from `variable` blocks are converted automatically.
 
 ```json
 {
@@ -286,7 +289,8 @@ Written to the same directory as the output state file when `--component-inputs=
       "inputs": [
         {"name": "cidr", "type": "string", "required": true},
         {"name": "name", "type": "string", "required": true},
-        {"name": "enable_dns", "type": "bool", "default": true}
+        {"name": "enable_dns", "type": "boolean", "default": true},
+        {"name": "private_subnets", "type": {"type": "array", "items": "string"}}
       ],
       "outputs": [
         {"name": "vpc_id", "type": "string"},
