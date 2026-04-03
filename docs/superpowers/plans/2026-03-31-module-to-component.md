@@ -49,8 +49,8 @@
 | 6 | `feat/mc-06-hcl-parser` | PR 5 | HCL module parser (variables + outputs) | **DONE** |
 | 7 | `feat/mc-07-callsite-tfvars` | PR 6 | HCL call site parser + tfvars loader | **DONE** |
 | 8 | `feat/mc-08-evaluator` | PR 7 | Expression evaluator + function library via `pulumi/opentofu` | **DONE** |
-| 9 | `feat/mc-09-state-population` | PR 8 | Component state population + auto-discovery + gap fixes | **IN PROGRESS** |
-| 10 | `feat/mc-10-discovery-acceptance` | PR 9 | Comprehensive E2E state translation tests | TODO |
+| 9 | `feat/mc-09-state-population` | PR 8 | Component state population + auto-discovery + gap fixes | **DONE** |
+| 10 | `feat/mc-10-discovery-acceptance` | PR 9 | Comprehensive E2E state translation tests | **DONE** |
 
 **Implementation notes (PRs 6-8):**
 - `ParseModuleVariables` / `ParseModuleOutputs` / `ParseModuleCallSites` / `LoadTfvars` all in `pkg/hcl/parser.go`.
@@ -58,9 +58,18 @@
 - `CtyValueToPulumiPropertyValue` / `CtyMapToPulumiPropertyMap` / `PulumiPropertyMapToCtyMap` in `pkg/hcl/convert.go`.
 - Call site parser filters meta-arguments (source, version, count, for_each, providers, depends_on).
 
-**PR 9 scope change:** PR 9 now absorbs auto-discovery (originally PR 10) and all gap fixes identified during review. See updated PR 9 section below.
+**Implementation notes (PR 9):**
+- `--component-inputs` flag (default true): true populates inputs in state (component providers), false writes `component-schemas.json` sidecar (single-language components). Background: single-language SDK historically sends `{}` for component inputs (pre-v3.202.0).
+- Variable defaults merged into inputs from `ParseModuleVariables` when call-site omits defaulted args.
+- Resource attribute map built from TF state JSON and passed to eval context for expressions like `aws_vpc.this.id`.
+- Output expressions evaluated from HCL using module-scoped resource attrs; falls back to empty strings.
+- TF state v4 does NOT persist module output values — output evaluation from HCL is the only path.
+- `parseModuleSegments` fixed to handle dots inside quoted for_each keys (e.g., `module.region["ap.southeast.2"]`).
 
-**PR 10 scope change:** PR 10 is now comprehensive E2E state translation tests (not clean preview tests). Tests validate translated Pulumi state values — not program generation or `pulumi preview`. See updated PR 10 section below.
+**Implementation notes (PR 10):**
+- 6 fixtures: DNS-to-DB (real AWS, ~90 resources), multi-resource module, deep nested mixed (3 levels), complex expressions, tfvars resolution, special key sanitization.
+- 15+ test functions covering structural checks, HCL population, type overrides, flat mode sweep.
+- DNS-to-DB fixture from existing deployment; random-provider fixtures deployed and destroyed during development.
 
 ---
 
