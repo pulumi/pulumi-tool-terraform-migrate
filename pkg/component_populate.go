@@ -104,6 +104,16 @@ func populateComponentsFromHCL(
 		}
 		moduleResourceAttrs := scopedAttrs.forModule(node.modulePath)
 		outputEvalCtx := hclpkg.NewEvalContext(nil, moduleResourceAttrs, nil)
+
+		// Parse and evaluate module-internal locals for the pre-pass
+		moduleDefs, _ := hclpkg.ParseLocals(sourcePath)
+		if len(moduleDefs) > 0 {
+			moduleLocalValues := evaluateLocals(moduleDefs, outputEvalCtx)
+			if len(moduleLocalValues) > 0 {
+				outputEvalCtx.AddVariables(map[string]cty.Value{"local": cty.ObjectVal(moduleLocalValues)})
+			}
+		}
+
 		evaluated := map[string]cty.Value{}
 		for _, o := range outputs {
 			if o.Expression != nil {
@@ -224,6 +234,15 @@ func populateComponentsFromHCL(
 				}
 
 				outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, nil)
+
+				// Parse and evaluate module-internal locals
+				moduleDefs, _ := hclpkg.ParseLocals(sourcePath)
+				if len(moduleDefs) > 0 {
+					moduleLocalValues := evaluateLocals(moduleDefs, outputEvalCtx)
+					if len(moduleLocalValues) > 0 {
+						outputEvalCtx.AddVariables(map[string]cty.Value{"local": cty.ObjectVal(moduleLocalValues)})
+					}
+				}
 
 				outputMap := resource.PropertyMap{}
 				for _, o := range outputs {
