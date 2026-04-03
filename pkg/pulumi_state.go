@@ -34,6 +34,15 @@ func makeUrn(stackName, projectName, typeName, resourceName string) resource.URN
 	return resource.URN(fmt.Sprintf("urn:pulumi:%s::%s::%s::%s", stackName, projectName, typeName, resourceName))
 }
 
+// makeUrnWithParent creates a Pulumi URN with a parent type chain encoded via $ delimiters.
+func makeUrnWithParent(stackName, projectName, parentTypeChain, typeName, resourceName string) resource.URN {
+	fullType := typeName
+	if parentTypeChain != "" {
+		fullType = parentTypeChain + "$" + typeName
+	}
+	return resource.URN(fmt.Sprintf("urn:pulumi:%s::%s::%s::%s", stackName, projectName, fullType, resourceName))
+}
+
 // Identifier within a stack.
 type PulumiResourceID struct {
 	ID   string
@@ -63,8 +72,9 @@ type PulumiResource struct {
 }
 
 type PulumiState struct {
-	Providers []PulumiResource
-	Resources []PulumiResource
+	Providers  []PulumiResource
+	Components []PulumiResource
+	Resources  []PulumiResource
 }
 
 func (st PulumiState) FindProvider(identity PulumiResourceID) (PulumiResource, error) {
@@ -156,6 +166,48 @@ func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName st
 		deployment.Resources = append(deployment.Resources, provider)
 	}
 
+	// Insert component resources (after providers, before custom resources).
+	// Components are in depth-first order, so parents are always inserted before children.
+	componentURNs := map[string]resource.URN{} // type chain -> URN
+
+	for _, comp := range state.Components {
+		urn := makeUrnWithParent(stackName, projectName, comp.Parent, comp.Type, comp.Name)
+
+		parentURN := stackURN
+		if comp.Parent != "" {
+			if parentComponentURN, ok := componentURNs[comp.Parent]; ok {
+				parentURN = parentComponentURN
+			}
+		}
+
+		// Register this component's full type chain for child lookups
+		fullTypeChain := comp.Type
+		if comp.Parent != "" {
+			fullTypeChain = comp.Parent + "$" + comp.Type
+		}
+		componentURNs[fullTypeChain] = urn
+
+		inputs := comp.Inputs
+		if inputs == nil {
+			inputs = resource.PropertyMap{}
+		}
+		outputs := comp.Outputs
+		if outputs == nil {
+			outputs = resource.PropertyMap{}
+		}
+
+		deployment.Resources = append(deployment.Resources, apitype.ResourceV3{
+			URN:      urn,
+			Custom:   false,
+			Type:     tokens.Type(comp.Type),
+			Inputs:   inputs.Mappable(),
+			Outputs:  outputs.Mappable(),
+			Parent:   parentURN,
+			Created:  &now,
+			Modified: &now,
+		})
+	}
+
 	for _, res := range state.Resources {
 		contract.Assertf(res.Provider != nil, "Expected a provider association for a custom resource")
 
@@ -167,14 +219,23 @@ func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName st
 		providerURN := makeUrn(stackName, projectName, providerRecord.Type, providerRecord.Name)
 		providerLink := fmt.Sprintf("%s::%s", providerURN, providerRecord.ID)
 
+		urn := makeUrnWithParent(stackName, projectName, res.Parent, res.Type, res.Name)
+
+		parentURN := stackURN
+		if res.Parent != "" {
+			if parentComponentURN, ok := componentURNs[res.Parent]; ok {
+				parentURN = parentComponentURN
+			}
+		}
+
 		deployment.Resources = append(deployment.Resources, apitype.ResourceV3{
-			URN:      makeUrn(stackName, projectName, res.Type, res.Name),
+			URN:      urn,
 			Custom:   true,
 			ID:       resource.ID(res.ID),
 			Type:     tokens.Type(res.Type),
 			Inputs:   res.Inputs.Mappable(),
 			Outputs:  res.Outputs.Mappable(),
-			Parent:   stackURN,
+			Parent:   parentURN,
 			Provider: providerLink,
 			Created:  &now,
 			Modified: &now,
