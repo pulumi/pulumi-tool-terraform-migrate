@@ -34,6 +34,7 @@ func newStackCmd() *cobra.Command {
 	var pulumiStack string
 	var pulumiProject string
 	var moduleSchemas []string
+	var moduleSourceMaps []string
 
 	cmd := &cobra.Command{
 		Use:   "stack",
@@ -92,7 +93,15 @@ See also:
 				}
 				schemaOverrides[parts[0]] = parts[1]
 			}
-			_ = schemaOverrides // TODO: wire into pipeline in Phase 2 (PR 9)
+
+			sourceOverrides := map[string]string{}
+			for _, mapping := range moduleSourceMaps {
+				parts := strings.SplitN(mapping, "=", 2)
+				if len(parts) != 2 {
+					return fmt.Errorf("invalid --module-source-map format %q, expected module.name=./path", mapping)
+				}
+				sourceOverrides[parts[0]] = parts[1]
+			}
 
 			enableComponents := !noModuleComponents
 			if noModuleComponents && len(moduleTypeMaps) > 0 {
@@ -100,7 +109,7 @@ See also:
 				typeOverrides = nil
 			}
 
-			err := pkg.TranslateAndWriteState(cmd.Context(), from, to, out, plugins, strict, enableComponents, typeOverrides, pulumiStack, pulumiProject)
+			err := pkg.TranslateAndWriteState(cmd.Context(), from, to, out, plugins, strict, enableComponents, typeOverrides, sourceOverrides, schemaOverrides, pulumiStack, pulumiProject)
 			if err != nil {
 				return fmt.Errorf("failed to convert and write Terraform state: %w", err)
 			}
@@ -121,6 +130,8 @@ See also:
 	cmd.Flags().StringVar(&pulumiProject, "pulumi-project", "", "Override Pulumi project name (skip auto-detection)")
 	cmd.Flags().StringArrayVar(&moduleSchemas, "module-schema", nil,
 		"Pulumi package schema for component validation (repeatable, format: module.name=./path/to/schema.json)")
+	cmd.Flags().StringArrayVar(&moduleSourceMaps, "module-source-map", nil,
+		"Map module to HCL source path (repeatable, format: module.name=./path)")
 
 	cmd.MarkFlagRequired("from")
 	cmd.MarkFlagRequired("to")

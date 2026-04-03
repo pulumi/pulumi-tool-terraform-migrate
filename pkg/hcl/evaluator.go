@@ -64,6 +64,13 @@ func NewEvalContext(
 	return &EvalContext{hclCtx: ctx}
 }
 
+// AddVariables adds additional variables to the eval context.
+func (e *EvalContext) AddVariables(vars map[string]cty.Value) {
+	for k, v := range vars {
+		e.hclCtx.Variables[k] = v
+	}
+}
+
 // EvaluateExpression evaluates an HCL expression against the context.
 func (e *EvalContext) EvaluateExpression(expr hcl.Expression) (cty.Value, error) {
 	val, diags := expr.Value(e.hclCtx)
@@ -76,6 +83,6 @@ func (e *EvalContext) EvaluateExpression(expr hcl.Expression) (cty.Value, error)
 // buildFunctionTable returns the full Terraform-compatible function table
 // using opentofu/lang.Scope which provides all standard + Terraform-specific functions.
 func buildFunctionTable() map[string]function.Function {
-	scope := &lang.Scope{BaseDir: "."}
+	scope := &lang.Scope{BaseDir: ".", ConsoleMode: true}
 	return scope.Functions()
 }

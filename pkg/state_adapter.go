@@ -56,6 +56,8 @@ func TranslateAndWriteState(
 	strict bool,
 	enableComponents bool,
 	typeOverrides map[string]string,
+	sourceOverrides map[string]string,
+	schemaOverrides map[string]string,
 	stackNameOverride string,
 	projectNameOverride string,
 ) error {
@@ -96,7 +98,7 @@ func TranslateAndWriteState(
 		}
 	}
 
-	res, err := TranslateState(ctx, tfState, providerVersions.ProviderSelections, stackName, projectName, enableComponents, typeOverrides)
+	res, err := TranslateState(ctx, tfState, providerVersions.ProviderSelections, stackName, projectName, enableComponents, typeOverrides, sourceOverrides, schemaOverrides, tfDir)
 	if err != nil {
 		return err
 	}
@@ -144,13 +146,13 @@ type TranslateStateResult struct {
 	ErrorMessages     []ErroredResource
 }
 
-func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions map[string]string, stackName, projectName string, enableComponents bool, typeOverrides map[string]string) (*TranslateStateResult, error) {
+func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions map[string]string, stackName, projectName string, enableComponents bool, typeOverrides map[string]string, sourceOverrides map[string]string, schemaOverrides map[string]string, tfSourceDir string) (*TranslateStateResult, error) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, providerVersions)
 	if err != nil {
 		return nil, err
 	}
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, enableComponents, typeOverrides)
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, enableComponents, typeOverrides, sourceOverrides, schemaOverrides, tfSourceDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert state: %w", err)
 	}
@@ -179,7 +181,7 @@ type ErroredResource struct {
 	ErrorMessage     string `json:"error_message"`
 }
 
-func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata, enableComponents bool, typeOverrides map[string]string) (*PulumiState, []ErroredResource, error) {
+func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata, enableComponents bool, typeOverrides map[string]string, sourceOverrides map[string]string, schemaOverrides map[string]string, tfSourceDir string) (*PulumiState, []ErroredResource, error) {
 	pulumiState := &PulumiState{}
 
 	// TODO[pulumi/pulumi-service#35512]: This assumes one Pulumi provider per Terraform provider.
@@ -222,6 +224,11 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 				return nil, nil, fmt.Errorf("failed to build component tree: %w", err)
 			}
 			pulumiState.Components = toComponents(componentTree, "")
+
+			// Populate component inputs/outputs from HCL when source is available
+			if err := populateComponentsFromHCL(pulumiState.Components, componentTree, sourceOverrides, schemaOverrides, tfSourceDir); err != nil {
+				return nil, nil, fmt.Errorf("failed to populate component state from HCL: %w", err)
+			}
 		}
 	}
 
