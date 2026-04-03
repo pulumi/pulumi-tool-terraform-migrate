@@ -27,13 +27,20 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-// ParseResourceTypeNames extracts unique resource type names from .tf files in a directory.
-func ParseResourceTypeNames(dir string) ([]string, error) {
+// ResourceBlock represents a resource type and name from a resource block declaration.
+type ResourceBlock struct {
+	Type string // e.g., "aws_vpc"
+	Name string // e.g., "this"
+}
+
+// ParseResourceBlocks extracts resource type+name pairs from .tf files in a directory.
+func ParseResourceBlocks(dir string) ([]ResourceBlock, error) {
 	files, err := parseTFFiles(dir)
 	if err != nil {
 		return nil, err
 	}
 
+	var blocks []ResourceBlock
 	seen := map[string]bool{}
 	for _, f := range files {
 		body, ok := f.Body.(*hclsyntax.Body)
@@ -41,17 +48,16 @@ func ParseResourceTypeNames(dir string) ([]string, error) {
 			continue
 		}
 		for _, block := range body.Blocks {
-			if block.Type == "resource" && len(block.Labels) >= 1 {
-				seen[block.Labels[0]] = true
+			if block.Type == "resource" && len(block.Labels) >= 2 {
+				key := block.Labels[0] + "." + block.Labels[1]
+				if !seen[key] {
+					seen[key] = true
+					blocks = append(blocks, ResourceBlock{Type: block.Labels[0], Name: block.Labels[1]})
+				}
 			}
 		}
 	}
-
-	var types []string
-	for t := range seen {
-		types = append(types, t)
-	}
-	return types, nil
+	return blocks, nil
 }
 
 // ModuleVariable represents a parsed variable block from a Terraform module.
