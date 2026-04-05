@@ -91,8 +91,13 @@ func populateComponentsFromHCL(
 
 	// Pre-pass: resolve source paths and evaluate module outputs for cross-references.
 	// This builds the module.* namespace so input expressions like module.vpc.vpc_id resolve.
+	// Two phases: (1) resolve sources and evaluate leaf modules, (2) evaluate parent modules
+	// with child outputs available.
 	moduleOutputValues := map[string]map[string]cty.Value{}
 	resolvedSources := map[string]string{}
+
+	// Phase 1: resolve all source paths and evaluate leaf module outputs
+	var parentNodes []*componentNode
 	for _, comp := range components {
 		node := findComponentNode(componentTree, comp.Name)
 		if node == nil {
@@ -104,27 +109,49 @@ func populateComponentsFromHCL(
 		}
 		resolvedSources["module."+node.name] = sourcePath
 
-		outputs, err := hclpkg.ParseModuleOutputs(sourcePath)
-		if err != nil || len(outputs) == 0 {
+		// Defer parent modules (those with children) to phase 2
+		if len(node.children) > 0 {
+			parentNodes = append(parentNodes, node)
 			continue
 		}
-		moduleResourceAttrs := scopedAttrs.forModule(node.modulePath)
-		outputEvalCtx := hclpkg.NewEvalContext(nil, moduleResourceAttrs, nil)
 
-		evaluateAndAddLocals(sourcePath, outputEvalCtx)
+		evaluatePrePassOutputs(node, sourcePath, scopedAttrs, nil, moduleOutputValues)
+	}
 
-		evaluated := map[string]cty.Value{}
-		for _, o := range outputs {
-			if o.Expression != nil {
-				val, evalErr := outputEvalCtx.EvaluateExpression(o.Expression)
-				if evalErr == nil {
-					evaluated[o.Name] = val
-				}
+	// Resolve child module source paths from parent directories so
+	// buildChildModuleOutputs can find them in phase 2.
+	for _, parentNode := range parentNodes {
+		parentSource := resolvedSources["module."+parentNode.name]
+		if parentSource == "" {
+			continue
+		}
+		parentCallSites, _ := hclpkg.ParseModuleCallSites(parentSource)
+		for _, cs := range parentCallSites {
+			childKey := "module." + cs.Name
+			if _, already := resolvedSources[childKey]; already {
+				continue
+			}
+			if hclpkg.IsLocalModuleSource(cs.Source) {
+				resolvedSources[childKey] = filepath.Join(parentSource, cs.Source)
 			}
 		}
-		if len(evaluated) > 0 {
-			moduleOutputValues[node.name] = evaluated
+		// Also evaluate any child nodes that weren't resolved from root call sites
+		for _, child := range parentNode.children {
+			if _, already := moduleOutputValues[child.name]; already {
+				continue
+			}
+			childSource := resolvedSources["module."+child.name]
+			if childSource != "" {
+				evaluatePrePassOutputs(child, childSource, scopedAttrs, nil, moduleOutputValues)
+			}
 		}
+	}
+
+	// Phase 2: evaluate parent module outputs with child outputs available
+	for _, node := range parentNodes {
+		sourcePath := resolvedSources["module."+node.name]
+		childOutputs := buildChildModuleOutputs(node, moduleOutputValues, resolvedSources, cachedModuleSources)
+		evaluatePrePassOutputs(node, sourcePath, scopedAttrs, childOutputs, moduleOutputValues)
 	}
 
 	// Cache parsed call sites per directory (root already parsed)
@@ -191,6 +218,17 @@ func populateComponentsFromHCL(
 						if _, alreadySet := evalVars[v.Name]; !alreadySet && v.Default != nil {
 							evalVars[v.Name] = *v.Default
 						}
+					}
+				}
+				// Convert null-typed defaults to zero values so functions like
+				// coalesce() don't reject mixed null/concrete types.
+				// Also convert cty.NilVal (Go zero-value from PropertyMap round-trip)
+				// to empty string, since NilVal panics on .IsNull()/.Type().
+				for k, v := range evalVars {
+					if v == cty.NilVal {
+						evalVars[k] = cty.StringVal("")
+					} else if v.IsNull() {
+						evalVars[k] = ctyNullToZero(v)
 					}
 				}
 			} else {
@@ -278,16 +316,16 @@ func populateComponentsFromHCL(
 				}
 
 				// Build child module output cross-refs for parent modules
-			// (e.g., rdsdb needs module.db_instance.* outputs to evaluate its own outputs)
-			childOutputs := buildChildModuleOutputs(node, moduleOutputValues, resolvedSources, cachedModuleSources)
+				// (e.g., rdsdb needs module.db_instance.* outputs to evaluate its own outputs)
+				childOutputs := buildChildModuleOutputs(node, moduleOutputValues, resolvedSources, cachedModuleSources)
 
-			outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, childOutputs)
+				outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, childOutputs)
+
+				// Register missing resource types BEFORE locals evaluation so
+				// locals referencing conditional resources (count=0) resolve.
+				registerMissingResourceTypes(sourcePath, moduleResourceAttrs, outputEvalCtx, moduleName)
 
 				evaluateAndAddLocals(sourcePath, outputEvalCtx)
-
-				// Register missing resource types as empty tuples so conditional
-				// resources (count=0) resolve to [] instead of "Unknown variable".
-				registerMissingResourceTypes(sourcePath, moduleResourceAttrs, outputEvalCtx, moduleName)
 
 				outputMap := resource.PropertyMap{}
 				for _, o := range outputs {
@@ -398,6 +436,57 @@ func evaluateAndAddLocals(sourcePath string, evalCtx *hclpkg.EvalContext) {
 		return
 	}
 	evalCtx.AddVariables(map[string]cty.Value{"local": cty.ObjectVal(vals)})
+}
+
+// ctyNullToZero converts a cty.NullVal to the zero value for its type.
+// This prevents type mismatch errors in functions like coalesce() that
+// reject mixed null/concrete types.
+func ctyNullToZero(v cty.Value) cty.Value {
+	ty := v.Type()
+	switch {
+	case ty == cty.String:
+		return cty.StringVal("")
+	case ty == cty.Number:
+		return cty.NumberIntVal(0)
+	case ty == cty.Bool:
+		return cty.BoolVal(false)
+	case ty == cty.DynamicPseudoType:
+		// HCL parses "default = null" without type context as DynamicPseudoType.
+		// Default to empty string since most Terraform variables are strings.
+		return cty.StringVal("")
+	default:
+		return v // leave complex types as-is
+	}
+}
+
+func evaluatePrePassOutputs(
+	node *componentNode,
+	sourcePath string,
+	scopedAttrs scopedResourceAttrs,
+	childOutputs map[string]map[string]cty.Value,
+	moduleOutputValues map[string]map[string]cty.Value,
+) {
+	outputs, err := hclpkg.ParseModuleOutputs(sourcePath)
+	if err != nil || len(outputs) == 0 {
+		return
+	}
+	moduleResourceAttrs := scopedAttrs.forModule(node.modulePath)
+	outputEvalCtx := hclpkg.NewEvalContext(nil, moduleResourceAttrs, childOutputs)
+
+	evaluateAndAddLocals(sourcePath, outputEvalCtx)
+
+	evaluated := map[string]cty.Value{}
+	for _, o := range outputs {
+		if o.Expression != nil {
+			val, evalErr := outputEvalCtx.EvaluateExpression(o.Expression)
+			if evalErr == nil {
+				evaluated[o.Name] = val
+			}
+		}
+	}
+	if len(evaluated) > 0 {
+		moduleOutputValues[node.name] = evaluated
+	}
 }
 
 // buildDataSourceAttrMap builds a nested cty.Value for the "data" eval context variable.
@@ -638,8 +727,12 @@ func registerMissingResourceTypes(
 		return
 	}
 
-	// Group by type, collect instance names
-	typeInstances := map[string]map[string]bool{} // type → set of names
+	// Group by type, collect instance names and track count/for_each
+	type missingResource struct {
+		hasCount   bool
+		hasForEach bool
+	}
+	typeInstances := map[string]map[string]missingResource{} // type → name → info
 	for _, rb := range resourceBlocks {
 		if moduleResourceAttrs != nil {
 			if instances, ok := moduleResourceAttrs[rb.Type]; ok {
@@ -649,9 +742,12 @@ func registerMissingResourceTypes(
 			}
 		}
 		if _, ok := typeInstances[rb.Type]; !ok {
-			typeInstances[rb.Type] = map[string]bool{}
+			typeInstances[rb.Type] = map[string]missingResource{}
 		}
-		typeInstances[rb.Type][rb.Name] = true
+		typeInstances[rb.Type][rb.Name] = missingResource{
+			hasCount:   rb.HasCount,
+			hasForEach: rb.HasForEach,
+		}
 	}
 
 	missingVars := map[string]cty.Value{}
@@ -667,20 +763,23 @@ func registerMissingResourceTypes(
 			}
 		}
 
-		// Add missing instances using the attribute shape of existing instances.
-		// Construct an object with the same attributes as a real instance, but
-		// all values set to null strings. This lets expressions like
-		// aws_resource.this.id resolve to "" instead of panicking.
-		// Pick any missing name to use for HCL-based attribute discovery
 		var sampleName string
 		for name := range names {
 			sampleName = name
 			break
 		}
 		template := buildNullAttributeTemplate(instances, sourcePath, resType, sampleName)
-		for name := range names {
-			if _, exists := instances[name]; !exists {
-				fmt.Fprintf(os.Stderr, "Note: %s.%s not in state for module.%s (likely count=0), defaulting to null\n", resType, name, moduleName)
+		for name, info := range names {
+			if _, exists := instances[name]; exists {
+				continue
+			}
+			fmt.Fprintf(os.Stderr, "Note: %s.%s not in state for module.%s (likely count=0), defaulting to null\n", resType, name, moduleName)
+			// Resources with count or for_each that have zero instances in state
+			// should be registered as empty tuples so splat/for-each resolve to [].
+			// Resources without count/for_each use the template for .attr access.
+			if info.hasCount || info.hasForEach {
+				instances[name] = cty.EmptyTupleVal
+			} else {
 				instances[name] = template
 			}
 		}

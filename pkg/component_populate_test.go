@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	hclpkg "github.com/pulumi/pulumi-tool-terraform-migrate/pkg/hcl"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/stretchr/testify/require"
@@ -475,6 +476,126 @@ func TestInterfaceToCty(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := interfaceToCty(tt.input)
+			require.True(t, result.RawEquals(tt.expected), "got %s, want %s", result.GoString(), tt.expected.GoString())
+		})
+	}
+}
+
+func TestPopulateComponentsFromHCL_PrePassChildModuleOutputs(t *testing.T) {
+	// Parent module has: output "child_val" { value = module.child.val }
+	// Child module has: output "val" { value = "hello-from-child" }
+	// Consumer module has: input name = module.parent.child_val
+	//
+	// Without the pre-pass building child module outputs for parent modules,
+	// module.parent.child_val won't resolve, so consumer's input "name" will be missing.
+	components := []PulumiResource{
+		{PulumiResourceID: PulumiResourceID{Name: "parent", Type: "terraform:module/parent:Parent"}},
+		{PulumiResourceID: PulumiResourceID{Name: "child", Type: "terraform:module/child:Child"}},
+		{PulumiResourceID: PulumiResourceID{Name: "consumer", Type: "terraform:module/consumer:Consumer"}},
+	}
+	tree := []*componentNode{
+		{
+			name: "parent", resourceName: "parent", typeToken: "terraform:module/parent:Parent",
+			modulePath: "module.parent",
+			children: []*componentNode{
+				{name: "child", resourceName: "child", typeToken: "terraform:module/child:Child",
+					modulePath: "module.parent.module.child"},
+			},
+		},
+		{name: "consumer", resourceName: "consumer", typeToken: "terraform:module/consumer:Consumer",
+			modulePath: "module.consumer"},
+	}
+
+	_, err := populateComponentsFromHCL(
+		components, tree, nil, nil,
+		"hcl/testdata/root_with_parent_child_output", true, nil, nil,
+	)
+	require.NoError(t, err)
+
+	// Consumer's input "name" should be "hello-from-child" — resolved through
+	// parent's output which references child's output via module.child.val
+	consumerInputs := components[2].Inputs
+	require.NotNil(t, consumerInputs, "consumer should have inputs resolved from module.parent.child_val")
+	require.Contains(t, consumerInputs, resource.PropertyKey("name"))
+	require.Equal(t, resource.NewStringProperty("hello-from-child"), consumerInputs["name"])
+}
+
+func TestPopulateComponentsFromHCL_NullDefaultsConvertedToZeroValues(t *testing.T) {
+	// When a parent module variable has a null default (default = null with type = string),
+	// and a nested child call site passes that var, coalesce(var.x, var.y) should not
+	// fail because of null type mismatch. The null should be converted to "" for strings.
+	//
+	// Fixture: parent has var.optional_name (default=null, type=string) and var.fallback_name (default="fallback")
+	//          child call: name = coalesce(var.optional_name, var.fallback_name)
+	components := []PulumiResource{
+		{PulumiResourceID: PulumiResourceID{Name: "parent", Type: "terraform:module/parent:Parent"}},
+		{PulumiResourceID: PulumiResourceID{Name: "child", Type: "terraform:module/child:Child"}},
+	}
+	tree := []*componentNode{
+		{
+			name: "parent", resourceName: "parent", typeToken: "terraform:module/parent:Parent",
+			modulePath: "module.parent",
+			children: []*componentNode{
+				{name: "child", resourceName: "child", typeToken: "terraform:module/child:Child",
+					modulePath: "module.parent.module.child"},
+			},
+		},
+	}
+
+	_, err := populateComponentsFromHCL(
+		components, tree, nil, nil,
+		"hcl/testdata/root_with_coalesce_null", true, nil, nil,
+	)
+	require.NoError(t, err)
+
+	// Child should get name="fallback" — coalesce("", "fallback") = "fallback"
+	// (null default was converted to "" so coalesce doesn't reject mixed types)
+	childInputs := components[1].Inputs
+	require.NotNil(t, childInputs, "child should have inputs resolved through coalesce")
+	require.Contains(t, childInputs, resource.PropertyKey("name"))
+	require.Equal(t, resource.NewStringProperty("fallback"), childInputs["name"])
+}
+
+func TestRegisterMissingResourceTypes_AllMissingAsEmptyTuple(t *testing.T) {
+	// When ALL instances of a resource type+name are missing from state,
+	// registerMissingResourceTypes should register them as cty.EmptyTupleVal
+	// so splat expressions and for-each iterate over an empty collection.
+
+	// sourcePath with resource block "aws_route_table_association" "redshift" (count=0)
+	// and output using splat: aws_route_table_association.redshift[*].id
+	sourcePath := "hcl/testdata/resource_with_count"
+
+	moduleResourceAttrs := map[string]map[string]cty.Value{} // nothing in state
+	evalCtx := hclpkg.NewEvalContext(nil, moduleResourceAttrs, nil)
+
+	registerMissingResourceTypes(sourcePath, moduleResourceAttrs, evalCtx, "vpc")
+
+	// Verify by evaluating the output that uses a splat on the missing resource.
+	// If registered as EmptyTupleVal, the splat resolves to [].
+	outputs, err := hclpkg.ParseModuleOutputs(sourcePath)
+	require.NoError(t, err)
+	require.Len(t, outputs, 1)
+
+	val, evalErr := evalCtx.EvaluateExpression(outputs[0].Expression)
+	require.NoError(t, evalErr, "splat on zero-instance resource should not error")
+	require.True(t, val.Type().IsTupleType(), "splat result should be a tuple")
+	require.Equal(t, 0, val.LengthInt(), "splat on zero-instance resource should be empty")
+}
+
+func TestCtyNullToZero(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    cty.Value
+		expected cty.Value
+	}{
+		{"null_string", cty.NullVal(cty.String), cty.StringVal("")},
+		{"null_number", cty.NullVal(cty.Number), cty.NumberIntVal(0)},
+		{"null_bool", cty.NullVal(cty.Bool), cty.BoolVal(false)},
+		{"null_dynamic", cty.NullVal(cty.DynamicPseudoType), cty.StringVal("")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ctyNullToZero(tt.input)
 			require.True(t, result.RawEquals(tt.expected), "got %s, want %s", result.GoString(), tt.expected.GoString())
 		})
 	}

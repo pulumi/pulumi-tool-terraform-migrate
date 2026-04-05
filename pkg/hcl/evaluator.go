@@ -16,6 +16,7 @@ package hcl
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/pulumi/opentofu/lang"
@@ -78,6 +79,7 @@ func (e *EvalContext) AddVariables(vars map[string]cty.Value) {
 func (e *EvalContext) EvaluateExpression(expr hcl.Expression) (val cty.Value, err error) {
 	defer func() {
 		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "Debug: HCL expression evaluation panicked: %v\n", r)
 			val = cty.NilVal
 			err = fmt.Errorf("expression evaluation panicked (upstream HCL bug): %v", r)
 		}

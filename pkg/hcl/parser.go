@@ -29,8 +29,10 @@ import (
 
 // ResourceBlock represents a resource type and name from a resource block declaration.
 type ResourceBlock struct {
-	Type string // e.g., "aws_vpc"
-	Name string // e.g., "this"
+	Type        string // e.g., "aws_vpc"
+	Name        string // e.g., "this"
+	HasCount    bool   // resource has count meta-argument
+	HasForEach  bool   // resource has for_each meta-argument
 }
 
 // ParseResourceBlocks extracts resource type+name pairs from .tf files in a directory.
@@ -52,7 +54,12 @@ func ParseResourceBlocks(dir string) ([]ResourceBlock, error) {
 				key := block.Labels[0] + "." + block.Labels[1]
 				if !seen[key] {
 					seen[key] = true
-					blocks = append(blocks, ResourceBlock{Type: block.Labels[0], Name: block.Labels[1]})
+					rb := ResourceBlock{Type: block.Labels[0], Name: block.Labels[1]}
+					if block.Body != nil {
+						_, rb.HasCount = block.Body.Attributes["count"]
+						_, rb.HasForEach = block.Body.Attributes["for_each"]
+					}
+					blocks = append(blocks, rb)
 				}
 			}
 		}
