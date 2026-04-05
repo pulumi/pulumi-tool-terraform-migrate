@@ -177,6 +177,23 @@ func TestParseResourceBlocks_MultipleTypes(t *testing.T) {
 	require.Equal(t, "base", blocks[0].Name)
 }
 
+func TestParseResourceBlockAttrs(t *testing.T) {
+	t.Parallel()
+	// pet_module has: resource "random_pet" "this" { prefix, separator, length }
+	attrs, err := ParseResourceBlockAttrs("testdata/pet_module", "random_pet", "this")
+	require.NoError(t, err)
+	require.Contains(t, attrs, "prefix")
+	require.Contains(t, attrs, "separator")
+	require.Contains(t, attrs, "length")
+}
+
+func TestParseResourceBlockAttrs_NotFound(t *testing.T) {
+	t.Parallel()
+	attrs, err := ParseResourceBlockAttrs("testdata/pet_module", "aws_vpc", "this")
+	require.NoError(t, err)
+	require.Empty(t, attrs)
+}
+
 func findCall(calls []ModuleCallSite, name string) *ModuleCallSite {
 	for i := range calls {
 		if calls[i].Name == name {

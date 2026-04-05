@@ -310,6 +310,35 @@ func ParseLocals(dir string) ([]LocalDefinition, error) {
 	return locals, nil
 }
 
+// ParseResourceBlockAttrs parses the resource block for a specific type.name
+// and returns the attribute names found in the block body.
+// This is used as a fallback to discover attribute shapes for zero-instance resources.
+func ParseResourceBlockAttrs(dir, resourceType, resourceName string) ([]string, error) {
+	files, err := parseTFFiles(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, f := range files {
+		body, ok := f.Body.(*hclsyntax.Body)
+		if !ok {
+			continue
+		}
+		for _, block := range body.Blocks {
+			if block.Type == "resource" && len(block.Labels) >= 2 &&
+				block.Labels[0] == resourceType && block.Labels[1] == resourceName {
+				attrs, _ := block.Body.JustAttributes()
+				var names []string
+				for name := range attrs {
+					names = append(names, name)
+				}
+				return names, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
 // parseTFFiles parses all .tf files in a directory.
 func parseTFFiles(dir string) ([]*hcl.File, error) {
 	matches, err := filepath.Glob(filepath.Join(dir, "*.tf"))

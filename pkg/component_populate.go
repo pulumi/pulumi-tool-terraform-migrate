@@ -158,20 +158,44 @@ func populateComponentsFromHCL(
 		callSite, hasCallSite := callSiteMap[moduleName]
 
 		// For nested modules, try parsing call sites from the parent module's source dir
+		isNestedCallSite := false
+		var parentNode *componentNode
 		if !hasCallSite {
-			parentSource := findParentSourcePath(node, componentTree, resolvedSources)
-			if parentSource != "" {
-				parentCallSites := parseCallSitesCached(parentSource, callSiteCache)
-				if cs, ok := parentCallSites[moduleName]; ok {
-					callSite = cs
-					hasCallSite = true
+			parentNode = findParentComponentNode(componentTree, node.resourceName)
+			if parentNode != nil {
+				parentSource := resolvedSources["module."+parentNode.name]
+				if parentSource != "" {
+					parentCallSites := parseCallSitesCached(parentSource, callSiteCache)
+					if cs, ok := parentCallSites[moduleName]; ok {
+						callSite = cs
+						hasCallSite = true
+						isNestedCallSite = true
+					}
 				}
 			}
 		}
 
 		if populateInputs && hasCallSite && len(callSite.Arguments) > 0 {
 			evalVars := map[string]cty.Value{}
-			maps.Copy(evalVars, tfvars)
+			if isNestedCallSite && parentNode != nil {
+				// Nested call site: use the parent component's inputs as var.* scope
+				parentComp := findComponentByName(components, parentNode.resourceName)
+				if parentComp != nil && parentComp.Inputs != nil {
+					maps.Copy(evalVars, hclpkg.PulumiPropertyMapToCtyMap(parentComp.Inputs))
+				}
+				// Also merge parent module's variable defaults for any vars not set
+				parentSource := resolvedSources["module."+parentNode.name]
+				if parentSource != "" {
+					parentVars, _ := hclpkg.ParseModuleVariables(parentSource)
+					for _, v := range parentVars {
+						if _, alreadySet := evalVars[v.Name]; !alreadySet && v.Default != nil {
+							evalVars[v.Name] = *v.Default
+						}
+					}
+				}
+			} else {
+				maps.Copy(evalVars, tfvars)
+			}
 
 			var metaVars map[string]cty.Value
 			if node.key != "" {
@@ -200,7 +224,15 @@ func populateComponentsFromHCL(
 			}
 
 			// Evaluate and add local.* refs
-			evaluateAndAddLocals(tfSourceDir, evalCtx)
+			// For nested call sites, use parent module's locals instead of root locals
+			localsSourceDir := tfSourceDir
+			if isNestedCallSite && parentNode != nil {
+				parentSource := resolvedSources["module."+parentNode.name]
+				if parentSource != "" {
+					localsSourceDir = parentSource
+				}
+			}
+			evaluateAndAddLocals(localsSourceDir, evalCtx)
 
 			inputs := resource.PropertyMap{}
 			for argName, argExpr := range callSite.Arguments {
@@ -247,7 +279,7 @@ func populateComponentsFromHCL(
 
 				// Build child module output cross-refs for parent modules
 			// (e.g., rdsdb needs module.db_instance.* outputs to evaluate its own outputs)
-			childOutputs := buildChildModuleOutputs(node, componentTree, moduleOutputValues)
+			childOutputs := buildChildModuleOutputs(node, moduleOutputValues, resolvedSources, cachedModuleSources)
 
 			outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, childOutputs)
 
@@ -486,16 +518,6 @@ func (s scopedResourceAttrs) forModule(modulePath string) map[string]map[string]
 	return nil
 }
 
-// findParentSourcePath finds the resolved source path of a component's parent module.
-func findParentSourcePath(node *componentNode, tree []*componentNode, resolvedSources map[string]string) string {
-	// Walk the tree to find the parent node that contains this node as a child
-	parent := findParentComponentNode(tree, node.resourceName)
-	if parent == nil {
-		return ""
-	}
-	return resolvedSources["module."+parent.name]
-}
-
 // findParentComponentNode finds the parent of a node by searching for which node has it as a child.
 func findParentComponentNode(tree []*componentNode, childResourceName string) *componentNode {
 	for _, node := range tree {
@@ -532,20 +554,69 @@ func parseCallSitesCached(dir string, cache map[string]map[string]*hclpkg.Module
 // buildChildModuleOutputs collects resolved outputs from child components of a given node.
 // For a parent module like "rdsdb" with children "db_instance", "db_option_group", etc.,
 // this returns {"db_instance": {output1: val1, ...}, "db_option_group": {...}}.
+//
+// For children not in moduleOutputValues (e.g., zero-instance or no managed resources),
+// the function parses output declarations from the child's resolved source and registers
+// them as empty strings so parent output expressions like module.child.name resolve.
+//
+// cachedModuleSources provides fallback resolution for children not in resolvedSources
+// (e.g., data-source-only modules that don't appear in the component tree).
 func buildChildModuleOutputs(
 	node *componentNode,
-	tree []*componentNode,
 	moduleOutputValues map[string]map[string]cty.Value,
+	resolvedSources map[string]string,
+	cachedModuleSources map[string]string,
 ) map[string]map[string]cty.Value {
-	if node.children == nil {
-		return nil
-	}
 	result := map[string]map[string]cty.Value{}
+
+	// Include outputs from children in the component tree
 	for _, child := range node.children {
 		if outputs, ok := moduleOutputValues[child.name]; ok {
 			result[child.name] = outputs
+			continue
 		}
+		sourcePath := resolvedSources["module."+child.name]
+		if sourcePath == "" {
+			continue
+		}
+		outputs, err := hclpkg.ParseModuleOutputs(sourcePath)
+		if err != nil || len(outputs) == 0 {
+			continue
+		}
+		emptyOutputs := map[string]cty.Value{}
+		for _, o := range outputs {
+			emptyOutputs[o.Name] = cty.StringVal("")
+		}
+		result[child.name] = emptyOutputs
 	}
+
+	// Also discover child modules from the module cache that don't appear in the
+	// component tree (e.g., data-source-only modules with no managed resources).
+	// The cache key pattern is "module.parent.module.child" for nested modules.
+	prefix := node.modulePath + ".module."
+	for cacheKey, dir := range cachedModuleSources {
+		if !strings.HasPrefix(cacheKey, prefix) {
+			continue
+		}
+		// Extract child module name from "module.parent.module.child"
+		childName := strings.TrimPrefix(cacheKey, prefix)
+		if strings.Contains(childName, ".") {
+			continue // skip deeper nesting (grandchildren)
+		}
+		if _, already := result[childName]; already {
+			continue
+		}
+		outputs, err := hclpkg.ParseModuleOutputs(dir)
+		if err != nil || len(outputs) == 0 {
+			continue
+		}
+		emptyOutputs := map[string]cty.Value{}
+		for _, o := range outputs {
+			emptyOutputs[o.Name] = cty.StringVal("")
+		}
+		result[childName] = emptyOutputs
+	}
+
 	if len(result) == 0 {
 		return nil
 	}
@@ -600,7 +671,13 @@ func registerMissingResourceTypes(
 		// Construct an object with the same attributes as a real instance, but
 		// all values set to null strings. This lets expressions like
 		// aws_resource.this.id resolve to "" instead of panicking.
-		template := buildNullAttributeTemplate(instances)
+		// Pick any missing name to use for HCL-based attribute discovery
+		var sampleName string
+		for name := range names {
+			sampleName = name
+			break
+		}
+		template := buildNullAttributeTemplate(instances, sourcePath, resType, sampleName)
 		for name := range names {
 			if _, exists := instances[name]; !exists {
 				fmt.Fprintf(os.Stderr, "Note: %s.%s not in state for module.%s (likely count=0), defaulting to null\n", resType, name, moduleName)
@@ -621,7 +698,10 @@ func registerMissingResourceTypes(
 // buildNullAttributeTemplate creates a cty object with the same attribute names as
 // existing instances but all values set to null strings. Used for missing resource
 // instances (count=0) so attribute access resolves to "" instead of panicking.
-func buildNullAttributeTemplate(instances map[string]cty.Value) cty.Value {
+//
+// When no instances exist, falls back to parsing the HCL source to discover attributes.
+// If that also fails, uses a minimal template with common attrs (id, arn, tags, name).
+func buildNullAttributeTemplate(instances map[string]cty.Value, sourcePath, resourceType, resourceName string) cty.Value {
 	// Find any existing instance to use as a template
 	for _, inst := range instances {
 		if inst.Type().IsObjectType() {
@@ -635,6 +715,19 @@ func buildNullAttributeTemplate(instances map[string]cty.Value) cty.Value {
 		}
 		break
 	}
+
+	// No existing instances — try parsing the resource block from HCL
+	if sourcePath != "" && resourceType != "" && resourceName != "" {
+		attrNames, err := hclpkg.ParseResourceBlockAttrs(sourcePath, resourceType, resourceName)
+		if err == nil && len(attrNames) > 0 {
+			nullAttrs := map[string]cty.Value{}
+			for _, name := range attrNames {
+				nullAttrs[name] = cty.StringVal("")
+			}
+			return cty.ObjectVal(nullAttrs)
+		}
+	}
+
 	return cty.EmptyObjectVal
 }
 
@@ -697,6 +790,16 @@ func interfaceToCty(v interface{}) cty.Value {
 		}
 		return val2
 	}
+}
+
+// findComponentByName finds a PulumiResource by its Name field.
+func findComponentByName(components []PulumiResource, name string) *PulumiResource {
+	for i := range components {
+		if components[i].Name == name {
+			return &components[i]
+		}
+	}
+	return nil
 }
 
 // findComponentNode finds the component node by resource name in the tree.

@@ -299,7 +299,7 @@ func TestBuildNullAttributeTemplate(t *testing.T) {
 			"vpc_id": cty.StringVal("vpc-456"),
 		}),
 	}
-	template := buildNullAttributeTemplate(instances)
+	template := buildNullAttributeTemplate(instances, "", "", "")
 	require.True(t, template.Type().IsObjectType())
 	require.Equal(t, cty.StringVal(""), template.GetAttr("id"))
 	require.Equal(t, cty.StringVal(""), template.GetAttr("arn"))
@@ -307,7 +307,22 @@ func TestBuildNullAttributeTemplate(t *testing.T) {
 }
 
 func TestBuildNullAttributeTemplate_NoInstances(t *testing.T) {
-	template := buildNullAttributeTemplate(map[string]cty.Value{})
+	// When no instances exist, buildNullAttributeTemplate should accept a sourcePath
+	// and resource type/name to discover attrs from HCL, rather than returning EmptyObjectVal.
+	template := buildNullAttributeTemplate(map[string]cty.Value{}, "hcl/testdata/pet_module", "random_pet", "this")
+	// Should NOT be EmptyObjectVal — that panics on attribute access
+	require.False(t, template.RawEquals(cty.EmptyObjectVal),
+		"should not use EmptyObjectVal — attribute access panics on it")
+	// Should have attrs discovered from the HCL resource block
+	require.True(t, template.Type().IsObjectType())
+	require.True(t, template.Type().HasAttribute("prefix"))
+	require.True(t, template.Type().HasAttribute("separator"))
+	require.True(t, template.Type().HasAttribute("length"))
+}
+
+func TestBuildNullAttributeTemplate_NoInstances_NoSource(t *testing.T) {
+	// When no source path is provided, falls back to EmptyObjectVal
+	template := buildNullAttributeTemplate(map[string]cty.Value{}, "", "", "")
 	require.True(t, template.RawEquals(cty.EmptyObjectVal))
 }
 
@@ -320,23 +335,66 @@ func TestBuildChildModuleOutputs(t *testing.T) {
 			{name: "db_subnet_group", resourceName: "db_subnet_group"},
 		},
 	}
-	tree := []*componentNode{parent}
-
 	moduleOutputValues := map[string]map[string]cty.Value{
 		"db_instance":     {"address": cty.StringVal("mydb.rds.amazonaws.com")},
 		"db_subnet_group": {"id": cty.StringVal("sg-123")},
 	}
 
-	childOutputs := buildChildModuleOutputs(parent, tree, moduleOutputValues)
+	childOutputs := buildChildModuleOutputs(parent, moduleOutputValues, nil, nil)
 	require.NotNil(t, childOutputs)
 	require.Len(t, childOutputs, 2)
 	require.Equal(t, cty.StringVal("mydb.rds.amazonaws.com"), childOutputs["db_instance"]["address"])
 	require.Equal(t, cty.StringVal("sg-123"), childOutputs["db_subnet_group"]["id"])
 }
 
+func TestBuildChildModuleOutputs_EmptyChildWithSource(t *testing.T) {
+	// When a child module has no outputs in moduleOutputValues (e.g., zero-instance
+	// or no managed resources in state) but HAS a resolved source with output
+	// declarations, it should still appear with output names as empty strings.
+	parent := &componentNode{
+		name:         "rdsdb",
+		resourceName: "rdsdb",
+		children: []*componentNode{
+			{name: "db_instance", resourceName: "db_instance"},
+		},
+	}
+	resolvedSources := map[string]string{
+		"module.db_instance": "testdata/../hcl/testdata/pet_module", // has outputs: name, separator
+	}
+
+	result := buildChildModuleOutputs(parent, map[string]map[string]cty.Value{}, resolvedSources, nil)
+	require.NotNil(t, result, "should have outputs even for empty children with known source")
+	require.Contains(t, result, "db_instance")
+	require.Contains(t, result["db_instance"], "name")
+	require.Contains(t, result["db_instance"], "separator")
+	// Values should be empty strings (placeholder)
+	require.Equal(t, cty.StringVal(""), result["db_instance"]["name"])
+}
+
+func TestBuildChildModuleOutputs_CacheFallbackForMissingChild(t *testing.T) {
+	// When a child module doesn't appear in the component tree (e.g., data-source-only
+	// module with no managed resources), but IS in the module cache, its outputs
+	// should still be discovered.
+	parent := &componentNode{
+		name:         "rdsdb",
+		resourceName: "rdsdb",
+		modulePath:   "module.rdsdb",
+		// No children — db_instance has no managed resources in state
+	}
+	cachedModuleSources := map[string]string{
+		"module.rdsdb.module.db_instance": "testdata/../hcl/testdata/pet_module", // has outputs: name, separator
+	}
+
+	result := buildChildModuleOutputs(parent, map[string]map[string]cty.Value{}, nil, cachedModuleSources)
+	require.NotNil(t, result, "should discover child outputs from module cache")
+	require.Contains(t, result, "db_instance")
+	require.Contains(t, result["db_instance"], "name")
+	require.Contains(t, result["db_instance"], "separator")
+}
+
 func TestBuildChildModuleOutputs_NoChildren(t *testing.T) {
 	node := &componentNode{name: "vpc", resourceName: "vpc"}
-	result := buildChildModuleOutputs(node, nil, nil)
+	result := buildChildModuleOutputs(node, nil, nil, nil)
 	require.Nil(t, result)
 }
 
@@ -353,6 +411,50 @@ func TestBuildMetaArgContext_AlwaysSetsEach(t *testing.T) {
 	require.False(t, hasCount)
 	require.Contains(t, vars2, "each")
 	require.Equal(t, cty.StringVal("us-east-1"), vars2["each"].GetAttr("key"))
+}
+
+func TestPopulateComponentsFromHCL_NestedCallSiteUsesParentVars(t *testing.T) {
+	// Test that nested module call sites are evaluated with the parent module's
+	// var scope, not the root tfvars. The fixture has:
+	//   root: var.database_identifier = "mydb", passes it to parent as db_name
+	//   parent: var.db_name (from root), passes var.db_name to child as "name"
+	//   child: var.name (from parent)
+	//
+	// Key: the root has NO var called "db_name" — only "database_identifier".
+	// If the child call site is evaluated with root tfvars, var.db_name is missing.
+	// It must be evaluated with the parent's input scope where db_name="mydb".
+	components := []PulumiResource{
+		{PulumiResourceID: PulumiResourceID{Name: "parent", Type: "terraform:module/parent:Parent"}},
+		{PulumiResourceID: PulumiResourceID{Name: "child", Type: "terraform:module/child:Child"}},
+	}
+	tree := []*componentNode{
+		{
+			name: "parent", resourceName: "parent", typeToken: "terraform:module/parent:Parent",
+			modulePath: "module.parent",
+			children: []*componentNode{
+				{name: "child", resourceName: "child", typeToken: "terraform:module/child:Child",
+					modulePath: "module.parent.module.child"},
+			},
+		},
+	}
+
+	metadata, err := populateComponentsFromHCL(
+		components, tree, nil, nil,
+		"hcl/testdata/parent_with_nested_module", true, nil, nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, metadata)
+
+	// Parent should get db_name="mydb" from root var.database_identifier
+	parentInputs := components[0].Inputs
+	require.NotNil(t, parentInputs, "parent should have inputs")
+	require.Equal(t, resource.NewStringProperty("mydb"), parentInputs["db_name"])
+
+	// Child should get name="mydb" — evaluated from parent's var.db_name, NOT root tfvars
+	childInputs := components[1].Inputs
+	require.NotNil(t, childInputs, "child should have inputs from parent var scope")
+	require.Contains(t, childInputs, resource.PropertyKey("name"))
+	require.Equal(t, resource.NewStringProperty("mydb"), childInputs["name"])
 }
 
 func TestInterfaceToCty(t *testing.T) {
