@@ -74,9 +74,6 @@ func populateComponentsFromHCL(
 	// Root-scoped resource attrs for input evaluation
 	resourceAttrs := scopedAttrs.forModule("")
 
-	// Parse locals from root TF directory
-	localDefs, _ := hclpkg.ParseLocals(tfSourceDir)
-
 	// Build a lookup from module name to call site
 	callSiteMap := map[string]*hclpkg.ModuleCallSite{}
 	for i := range callSites {
@@ -104,6 +101,9 @@ func populateComponentsFromHCL(
 		}
 		moduleResourceAttrs := scopedAttrs.forModule(node.modulePath)
 		outputEvalCtx := hclpkg.NewEvalContext(nil, moduleResourceAttrs, nil)
+
+		evaluateAndAddLocals(sourcePath, outputEvalCtx)
+
 		evaluated := map[string]cty.Value{}
 		for _, o := range outputs {
 			if o.Expression != nil {
@@ -173,12 +173,7 @@ func populateComponentsFromHCL(
 			}
 
 			// Evaluate and add local.* refs
-			if len(localDefs) > 0 {
-				localValues := evaluateLocals(localDefs, evalCtx)
-				if len(localValues) > 0 {
-					evalCtx.AddVariables(map[string]cty.Value{"local": cty.ObjectVal(localValues)})
-				}
-			}
+			evaluateAndAddLocals(tfSourceDir, evalCtx)
 
 			inputs := resource.PropertyMap{}
 			for argName, argExpr := range callSite.Arguments {
@@ -224,6 +219,8 @@ func populateComponentsFromHCL(
 				}
 
 				outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, nil)
+
+				evaluateAndAddLocals(sourcePath, outputEvalCtx)
 
 				outputMap := resource.PropertyMap{}
 				for _, o := range outputs {
@@ -320,6 +317,20 @@ func evaluateLocals(locals []hclpkg.LocalDefinition, evalCtx *hclpkg.EvalContext
 	}
 
 	return resolved
+}
+
+// evaluateAndAddLocals parses locals from sourcePath, evaluates them against
+// evalCtx, and adds the results as local.* variables in the eval context.
+func evaluateAndAddLocals(sourcePath string, evalCtx *hclpkg.EvalContext) {
+	defs, _ := hclpkg.ParseLocals(sourcePath)
+	if len(defs) == 0 {
+		return
+	}
+	vals := evaluateLocals(defs, evalCtx)
+	if len(vals) == 0 {
+		return
+	}
+	evalCtx.AddVariables(map[string]cty.Value{"local": cty.ObjectVal(vals)})
 }
 
 // buildDataSourceAttrMap builds a nested cty.Value for the "data" eval context variable.
