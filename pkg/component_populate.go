@@ -390,7 +390,13 @@ func resolveModuleSourcePath(
 	if callSite, ok := callSiteMap[node.name]; ok && hclpkg.IsLocalModuleSource(callSite.Source) {
 		return filepath.Join(tfSourceDir, callSite.Source)
 	}
+	// Try exact modulePath first (e.g., "module.vpc"), then base name without
+	// index/key for for_each/count instances (e.g., "module.ec2_private_app1"
+	// instead of "module.ec2_private_app1[\"0\"]").
 	if cached, ok := cachedModuleSources[node.modulePath]; ok {
+		return cached
+	}
+	if cached, ok := cachedModuleSources["module."+node.name]; ok {
 		return cached
 	}
 	return ""

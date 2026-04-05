@@ -51,6 +51,7 @@ type RequiredProviderExport struct {
 func TranslateAndWriteState(
 	ctx context.Context,
 	tfDir string,
+	stateFilePath string,
 	pulumiProgramDir string,
 	outputFilePath string,
 	requiredProvidersOutputFilePath string,
@@ -63,9 +64,15 @@ func TranslateAndWriteState(
 	stackNameOverride string,
 	projectNameOverride string,
 ) error {
-	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
+	loadOpts := tofu.LoadTerraformStateOptions{
 		ProjectDir: tfDir,
-	})
+	}
+	if stateFilePath != "" {
+		loadOpts = tofu.LoadTerraformStateOptions{
+			StateFilePath: stateFilePath,
+		}
+	}
+	tfState, err := tofu.LoadTerraformState(ctx, loadOpts)
 	if err != nil {
 		return err
 	}

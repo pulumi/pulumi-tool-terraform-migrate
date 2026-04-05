@@ -71,8 +71,10 @@ var moduleIndexRegex = regexp.MustCompile(`^([^\[]+)\[(?:"([^"]+)"|(\d+))\]$`)
 // parseModuleSegments extracts module path segments from a Terraform resource address.
 // Example: "module.vpc.module.subnets.aws_subnet.this" -> [{name:"vpc"}, {name:"subnets"}]
 // Returns nil for root-level resources (no module prefix).
+// Handles dots inside quoted for_each keys (e.g., module.region["ap.southeast.2"]).
 func parseModuleSegments(address string) []moduleSegment {
-	parts := strings.Split(address, ".")
+	// Split on dots that are NOT inside square brackets to handle keys with dots.
+	parts := splitAddressParts(address)
 	var segments []moduleSegment
 
 	for i := 0; i < len(parts); i++ {
@@ -100,6 +102,35 @@ func parseModuleSegments(address string) []moduleSegment {
 	}
 
 	return segments
+}
+
+// splitAddressParts splits a TF address on dots, respecting quoted brackets.
+// "module.region[\"ap.southeast.2\"].random_pet.this" splits correctly into
+// ["module", "region[\"ap.southeast.2\"]", "random_pet", "this"].
+func splitAddressParts(address string) []string {
+	var parts []string
+	var current strings.Builder
+	inBrackets := false
+
+	for _, ch := range address {
+		switch {
+		case ch == '[':
+			inBrackets = true
+			current.WriteRune(ch)
+		case ch == ']':
+			inBrackets = false
+			current.WriteRune(ch)
+		case ch == '.' && !inBrackets:
+			parts = append(parts, current.String())
+			current.Reset()
+		default:
+			current.WriteRune(ch)
+		}
+	}
+	if current.Len() > 0 {
+		parts = append(parts, current.String())
+	}
+	return parts
 }
 
 // componentNode represents a component resource in the tree.
