@@ -245,7 +245,11 @@ func populateComponentsFromHCL(
 					moduleVars = hclpkg.PulumiPropertyMapToCtyMap(components[i].Inputs)
 				}
 
-				outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, nil)
+				// Build child module output cross-refs for parent modules
+			// (e.g., rdsdb needs module.db_instance.* outputs to evaluate its own outputs)
+			childOutputs := buildChildModuleOutputs(node, componentTree, moduleOutputValues)
+
+			outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, childOutputs)
 
 				evaluateAndAddLocals(sourcePath, outputEvalCtx)
 
@@ -525,33 +529,113 @@ func parseCallSitesCached(dir string, cache map[string]map[string]*hclpkg.Module
 	return result
 }
 
+// buildChildModuleOutputs collects resolved outputs from child components of a given node.
+// For a parent module like "rdsdb" with children "db_instance", "db_option_group", etc.,
+// this returns {"db_instance": {output1: val1, ...}, "db_option_group": {...}}.
+func buildChildModuleOutputs(
+	node *componentNode,
+	tree []*componentNode,
+	moduleOutputValues map[string]map[string]cty.Value,
+) map[string]map[string]cty.Value {
+	if node.children == nil {
+		return nil
+	}
+	result := map[string]map[string]cty.Value{}
+	for _, child := range node.children {
+		if outputs, ok := moduleOutputValues[child.name]; ok {
+			result[child.name] = outputs
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
 // registerMissingResourceTypes scans the module HCL source for resource blocks and
-// registers any resource types not in the scoped attr map as empty tuple values.
+// registers any not in the scoped attr map with empty default values.
 // This handles conditional resources (count=0) that don't exist in state.
+// Registers as: type = {name = []} so expressions like aws_ebs_volume.this[0] resolve.
 func registerMissingResourceTypes(
 	sourcePath string,
 	moduleResourceAttrs map[string]map[string]cty.Value,
 	evalCtx *hclpkg.EvalContext,
 	moduleName string,
 ) {
-	resourceTypes, err := hclpkg.ParseResourceTypeNames(sourcePath)
+	resourceBlocks, err := hclpkg.ParseResourceBlocks(sourcePath)
 	if err != nil {
 		return
 	}
-	missingTypes := map[string]cty.Value{}
-	for _, resType := range resourceTypes {
+
+	// Group by type, collect instance names
+	typeInstances := map[string]map[string]bool{} // type → set of names
+	for _, rb := range resourceBlocks {
 		if moduleResourceAttrs != nil {
-			if _, ok := moduleResourceAttrs[resType]; ok {
-				continue // already in scoped attrs
+			if instances, ok := moduleResourceAttrs[rb.Type]; ok {
+				if _, hasName := instances[rb.Name]; hasName {
+					continue // this specific instance exists in state
+				}
 			}
 		}
-		// Resource type not in state — register as empty object with empty instances
-		fmt.Fprintf(os.Stderr, "Note: resource type %s not in state for module.%s (likely count=0), defaulting to empty\n", resType, moduleName)
-		missingTypes[resType] = cty.EmptyObjectVal
+		if _, ok := typeInstances[rb.Type]; !ok {
+			typeInstances[rb.Type] = map[string]bool{}
+		}
+		typeInstances[rb.Type][rb.Name] = true
 	}
-	if len(missingTypes) > 0 {
-		evalCtx.AddVariables(missingTypes)
+
+	missingVars := map[string]cty.Value{}
+	for resType, names := range typeInstances {
+		instances := map[string]cty.Value{}
+
+		// Keep existing instances from state
+		if moduleResourceAttrs != nil {
+			if existing, ok := moduleResourceAttrs[resType]; ok {
+				for k, v := range existing {
+					instances[k] = v
+				}
+			}
+		}
+
+		// Add missing instances using the attribute shape of existing instances.
+		// Construct an object with the same attributes as a real instance, but
+		// all values set to null strings. This lets expressions like
+		// aws_resource.this.id resolve to "" instead of panicking.
+		template := buildNullAttributeTemplate(instances)
+		for name := range names {
+			if _, exists := instances[name]; !exists {
+				fmt.Fprintf(os.Stderr, "Note: %s.%s not in state for module.%s (likely count=0), defaulting to null\n", resType, name, moduleName)
+				instances[name] = template
+			}
+		}
+
+		if len(instances) > 0 {
+			missingVars[resType] = cty.ObjectVal(instances)
+		}
 	}
+
+	if len(missingVars) > 0 {
+		evalCtx.AddVariables(missingVars)
+	}
+}
+
+// buildNullAttributeTemplate creates a cty object with the same attribute names as
+// existing instances but all values set to null strings. Used for missing resource
+// instances (count=0) so attribute access resolves to "" instead of panicking.
+func buildNullAttributeTemplate(instances map[string]cty.Value) cty.Value {
+	// Find any existing instance to use as a template
+	for _, inst := range instances {
+		if inst.Type().IsObjectType() {
+			nullAttrs := map[string]cty.Value{}
+			for name := range inst.Type().AttributeTypes() {
+				nullAttrs[name] = cty.StringVal("")
+			}
+			if len(nullAttrs) > 0 {
+				return cty.ObjectVal(nullAttrs)
+			}
+		}
+		break
+	}
+	return cty.EmptyObjectVal
 }
 
 // parseResourceAddress splits a TF resource address into module path, type, and name.
@@ -633,20 +717,19 @@ func findComponentNode(tree []*componentNode, resourceName string) *componentNod
 func buildMetaArgContext(key string) map[string]cty.Value {
 	vars := map[string]cty.Value{}
 
-	// Try parsing as integer (count index)
+	// Set both count and each — we can't always distinguish count from for_each
+	// (e.g., for_each = toset(["0", "1"]) uses numeric-looking string keys).
+	// Setting both is safe since TF expressions only reference one or the other.
 	var idx int
 	if _, err := fmt.Sscanf(key, "%d", &idx); err == nil {
-		// count-based: count = { index = N }
 		vars["count"] = cty.ObjectVal(map[string]cty.Value{
 			"index": cty.NumberIntVal(int64(idx)),
 		})
-	} else {
-		// for_each-based: each = { key = "K", value = "K" }
-		vars["each"] = cty.ObjectVal(map[string]cty.Value{
-			"key":   cty.StringVal(key),
-			"value": cty.StringVal(key),
-		})
 	}
+	vars["each"] = cty.ObjectVal(map[string]cty.Value{
+		"key":   cty.StringVal(key),
+		"value": cty.StringVal(key),
+	})
 
 	return vars
 }
