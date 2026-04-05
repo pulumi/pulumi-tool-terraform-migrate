@@ -151,8 +151,8 @@ func TestConvertDnsToDb_EvalWarningCount(t *testing.T) {
 	for i, w := range warnings {
 		t.Logf("  [%d] %s", i+1, w)
 	}
-	// Was 68 → 12 → 2 (only templatefile missing file warnings remain).
-	require.Less(t, len(warnings), 5, "eval warning count regressed (was 68, now 2; only templatefile warnings remain)")
+	// Was 68 → 12 → 2 → 0 (fixed by resolving file/templatefile paths relative to source dir).
+	require.Equal(t, 0, len(warnings), "eval warning count regressed")
 }
 
 func TestConvertDnsToDb(t *testing.T) {

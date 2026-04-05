@@ -40,10 +40,15 @@ func NewEvalContext(
 	variables map[string]cty.Value,
 	resources map[string]map[string]cty.Value,
 	moduleOutputs map[string]map[string]cty.Value,
+	baseDir ...string,
 ) *EvalContext {
+	dir := "."
+	if len(baseDir) > 0 && baseDir[0] != "" {
+		dir = baseDir[0]
+	}
 	ctx := &hcl.EvalContext{
 		Variables: map[string]cty.Value{},
-		Functions: buildFunctionTable(),
+		Functions: buildFunctionTable(dir),
 	}
 
 	if len(variables) > 0 {
@@ -93,7 +98,7 @@ func (e *EvalContext) EvaluateExpression(expr hcl.Expression) (val cty.Value, er
 
 // buildFunctionTable returns the full Terraform-compatible function table
 // using opentofu/lang.Scope which provides all standard + Terraform-specific functions.
-func buildFunctionTable() map[string]function.Function {
-	scope := &lang.Scope{BaseDir: ".", ConsoleMode: true}
+func buildFunctionTable(baseDir string) map[string]function.Function {
+	scope := &lang.Scope{BaseDir: baseDir, ConsoleMode: true}
 	return scope.Functions()
 }
