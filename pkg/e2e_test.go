@@ -513,11 +513,12 @@ func TestConvertTfvarsResolution(t *testing.T) {
 	require.GreaterOrEqual(t, len(components), 1, "should have at least 1 component")
 
 	// Component inputs should have prefix="staging" (from tfvars env="staging")
-	// and suffix="prod" (from variable default)
+	// suffix="prod" is a variable default — should NOT be in state (belongs in component-schemas.json)
 	comp := components[0]
 	require.NotNil(t, comp.Inputs, "component inputs should not be nil")
 	require.Equal(t, "staging", comp.Inputs["prefix"], "prefix should be 'staging' from tfvars")
-	require.Equal(t, "prod", comp.Inputs["suffix"], "suffix should be 'prod' from variable default")
+	_, hasSuffix := comp.Inputs["suffix"]
+	require.False(t, hasSuffix, "variable defaults should not be in state")
 }
 
 // --- Special key sanitization (Fixture 6) ---

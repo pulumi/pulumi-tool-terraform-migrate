@@ -52,8 +52,9 @@ func TestPopulateComponentsFromHCL_VariableDefaults(t *testing.T) {
 	require.Equal(t, resource.NewNumberProperty(3), inputs["length"])
 }
 
-func TestPopulateComponentsFromHCL_VariableDefaultsMerged(t *testing.T) {
-	// Use "pet" module call which only passes prefix — defaults for separator and length should merge.
+func TestPopulateComponentsFromHCL_VariableDefaultsNotMerged(t *testing.T) {
+	// Use "pet" module call which only passes prefix — defaults for separator and length
+	// should NOT be merged into state (they belong in component-schemas.json only).
 	// pet has count=2 so we test with pet-0 instance.
 	components := []PulumiResource{
 		{PulumiResourceID: PulumiResourceID{Name: "pet-0", Type: "terraform:module/pet:Pet"}},
@@ -73,13 +74,12 @@ func TestPopulateComponentsFromHCL_VariableDefaultsMerged(t *testing.T) {
 	require.Contains(t, inputs, resource.PropertyKey("prefix"))
 	require.Equal(t, resource.NewStringProperty("test-0"), inputs["prefix"])
 
-	// separator was NOT in call site, default is "-"
-	require.Contains(t, inputs, resource.PropertyKey("separator"))
-	require.Equal(t, resource.NewStringProperty("-"), inputs["separator"])
+	// separator and length were NOT in call site — they should NOT appear in state
+	require.NotContains(t, inputs, resource.PropertyKey("separator"))
+	require.NotContains(t, inputs, resource.PropertyKey("length"))
 
-	// length was NOT in call site, default is 2
-	require.Contains(t, inputs, resource.PropertyKey("length"))
-	require.Equal(t, resource.NewNumberProperty(2), inputs["length"])
+	// Only 1 input (prefix) should be present
+	require.Len(t, inputs, 1)
 }
 
 func TestPopulateComponentsFromHCL_NoInputsWhenFlagFalse(t *testing.T) {

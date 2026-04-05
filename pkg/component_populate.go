@@ -281,14 +281,6 @@ func populateComponentsFromHCL(
 				}
 				inputs[resource.PropertyKey(argName)] = hclpkg.CtyValueToPulumiPropertyValue(val)
 			}
-			// Merge variable defaults for any variable not already in call-site args
-			if vars, ok := parsedVariables[moduleName]; ok {
-				for _, v := range vars {
-					if _, alreadySet := inputs[resource.PropertyKey(v.Name)]; !alreadySet && v.Default != nil {
-						inputs[resource.PropertyKey(v.Name)] = hclpkg.CtyValueToPulumiPropertyValue(*v.Default)
-					}
-				}
-			}
 
 			if len(inputs) > 0 {
 				components[i].Inputs = inputs
@@ -313,6 +305,15 @@ func populateComponentsFromHCL(
 				moduleVars := map[string]cty.Value{}
 				if components[i].Inputs != nil {
 					moduleVars = hclpkg.PulumiPropertyMapToCtyMap(components[i].Inputs)
+				}
+				// Include variable defaults in the eval context (but not in state inputs)
+				// so that output expressions referencing unset variables can still resolve.
+				if vars, ok := parsedVariables[moduleName]; ok {
+					for _, v := range vars {
+						if _, alreadySet := moduleVars[v.Name]; !alreadySet && v.Default != nil {
+							moduleVars[v.Name] = *v.Default
+						}
+					}
 				}
 
 				// Build child module output cross-refs for parent modules
