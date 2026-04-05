@@ -240,17 +240,19 @@ func populateComponentsFromHCL(
 				metaVars = buildMetaArgContext(node.key)
 			}
 
-			evalCtx := hclpkg.NewEvalContext(evalVars, resourceAttrs, moduleOutputValues)
+			absSourceDir, _ := filepath.Abs(tfSourceDir)
+			evalCtx := hclpkg.NewEvalContext(evalVars, resourceAttrs, moduleOutputValues, tfSourceDir)
 			if metaVars != nil {
 				evalCtx.AddVariables(metaVars)
 			}
 
-			// Add path.* refs
+			// Add path.* refs using absolute paths so file()/templatefile()
+			// produce absolute paths that aren't double-prefixed by BaseDir.
 			evalCtx.AddVariables(map[string]cty.Value{
 				"path": cty.ObjectVal(map[string]cty.Value{
-					"module": cty.StringVal(tfSourceDir),
-					"root":   cty.StringVal(tfSourceDir),
-					"cwd":    cty.StringVal(tfSourceDir),
+					"module": cty.StringVal(absSourceDir),
+					"root":   cty.StringVal(absSourceDir),
+					"cwd":    cty.StringVal(absSourceDir),
 				}),
 			})
 
@@ -320,7 +322,7 @@ func populateComponentsFromHCL(
 				// (e.g., rdsdb needs module.db_instance.* outputs to evaluate its own outputs)
 				childOutputs := buildChildModuleOutputs(node, moduleOutputValues, resolvedSources, cachedModuleSources)
 
-				outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, childOutputs)
+				outputEvalCtx := hclpkg.NewEvalContext(moduleVars, moduleResourceAttrs, childOutputs, sourcePath)
 
 				// Register missing resource types BEFORE locals evaluation so
 				// locals referencing conditional resources (count=0) resolve.
@@ -478,7 +480,7 @@ func evaluatePrePassOutputs(
 		return
 	}
 	moduleResourceAttrs := scopedAttrs.forModule(node.modulePath)
-	outputEvalCtx := hclpkg.NewEvalContext(nil, moduleResourceAttrs, childOutputs)
+	outputEvalCtx := hclpkg.NewEvalContext(nil, moduleResourceAttrs, childOutputs, sourcePath)
 
 	evaluateAndAddLocals(sourcePath, outputEvalCtx)
 
