@@ -118,6 +118,11 @@ func populateComponentsFromHCL(
 		}
 	}
 
+	// Cache parsed call sites per directory (root already parsed)
+	callSiteCache := map[string]map[string]*hclpkg.ModuleCallSite{
+		tfSourceDir: callSiteMap,
+	}
+
 	// Collect parsed variables/outputs for metadata (when populateInputs=false)
 	parsedVariables := map[string][]hclpkg.ModuleVariable{}
 	parsedOutputs := map[string][]hclpkg.ModuleOutput{}
@@ -142,6 +147,19 @@ func populateComponentsFromHCL(
 
 		// Populate inputs from call site argument evaluation (only when populateInputs=true)
 		callSite, hasCallSite := callSiteMap[moduleName]
+
+		// For nested modules, try parsing call sites from the parent module's source dir
+		if !hasCallSite {
+			parentSource := findParentSourcePath(node, componentTree, resolvedSources)
+			if parentSource != "" {
+				parentCallSites := parseCallSitesCached(parentSource, callSiteCache)
+				if cs, ok := parentCallSites[moduleName]; ok {
+					callSite = cs
+					hasCallSite = true
+				}
+			}
+		}
+
 		if populateInputs && hasCallSite && len(callSite.Arguments) > 0 {
 			evalVars := map[string]cty.Value{}
 			maps.Copy(evalVars, tfvars)
@@ -425,6 +443,49 @@ func (s scopedResourceAttrs) forModule(modulePath string) map[string]map[string]
 		}
 	}
 	return nil
+}
+
+// findParentSourcePath finds the resolved source path of a component's parent module.
+func findParentSourcePath(node *componentNode, tree []*componentNode, resolvedSources map[string]string) string {
+	// Walk the tree to find the parent node that contains this node as a child
+	parent := findParentComponentNode(tree, node.resourceName)
+	if parent == nil {
+		return ""
+	}
+	return resolvedSources["module."+parent.name]
+}
+
+// findParentComponentNode finds the parent of a node by searching for which node has it as a child.
+func findParentComponentNode(tree []*componentNode, childResourceName string) *componentNode {
+	for _, node := range tree {
+		for _, child := range node.children {
+			if child.resourceName == childResourceName {
+				return node
+			}
+		}
+		if found := findParentComponentNode(node.children, childResourceName); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+// parseCallSitesCached parses module call sites from a directory, using a cache to avoid re-parsing.
+func parseCallSitesCached(dir string, cache map[string]map[string]*hclpkg.ModuleCallSite) map[string]*hclpkg.ModuleCallSite {
+	if cached, ok := cache[dir]; ok {
+		return cached
+	}
+	calls, err := hclpkg.ParseModuleCallSites(dir)
+	if err != nil {
+		cache[dir] = map[string]*hclpkg.ModuleCallSite{}
+		return cache[dir]
+	}
+	result := map[string]*hclpkg.ModuleCallSite{}
+	for i := range calls {
+		result[calls[i].Name] = &calls[i]
+	}
+	cache[dir] = result
+	return result
 }
 
 // parseResourceAddress splits a TF resource address into module path, type, and name.
