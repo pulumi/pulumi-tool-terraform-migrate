@@ -44,7 +44,7 @@ func populateComponentsFromHCL(
 	schemaOverrides map[string]string,
 	tfSourceDir string,
 	populateInputs bool,
-	resourceAttrs map[string]map[string]cty.Value,
+	scopedAttrs scopedResourceAttrs,
 	tfState *tfjson.State,
 ) (*ComponentSchemaMetadata, error) {
 	if tfSourceDir == "" {
@@ -70,6 +70,9 @@ func populateComponentsFromHCL(
 
 	// Build data source attr map for the "data" eval context variable
 	dataSourceAttrs := buildDataSourceAttrMap(tfState)
+
+	// Root-scoped resource attrs for input evaluation
+	resourceAttrs := scopedAttrs.forModule("")
 
 	// Parse locals from root TF directory
 	localDefs, _ := hclpkg.ParseLocals(tfSourceDir)
@@ -99,7 +102,7 @@ func populateComponentsFromHCL(
 		if err != nil || len(outputs) == 0 {
 			continue
 		}
-		moduleResourceAttrs := buildModuleScopedResourceAttrs(resourceAttrs, node.modulePath)
+		moduleResourceAttrs := scopedAttrs.forModule(node.modulePath)
 		outputEvalCtx := hclpkg.NewEvalContext(nil, moduleResourceAttrs, nil)
 		evaluated := map[string]cty.Value{}
 		for _, o := range outputs {
@@ -212,7 +215,7 @@ func populateComponentsFromHCL(
 				// Build module-scoped eval context: output expressions reference
 				// child resources (e.g., random_pet.this.id), so we need resource
 				// attrs scoped to this module's address.
-				moduleResourceAttrs := buildModuleScopedResourceAttrs(resourceAttrs, node.modulePath)
+				moduleResourceAttrs := scopedAttrs.forModule(node.modulePath)
 
 				// Also include var.* from the module's inputs (for outputs that reference inputs)
 				moduleVars := map[string]cty.Value{}
@@ -359,59 +362,76 @@ func buildDataSourceAttrMap(tfState *tfjson.State) map[string]cty.Value {
 	return result
 }
 
-// buildModuleScopedResourceAttrs filters the global resource attr map to only include
-// resources that belong to a specific module. Output expressions like `random_pet.this.id`
-// reference child resources within the module scope, so we need attrs for resources
-// with addresses like `module.pet[0].random_pet.this`.
-func buildModuleScopedResourceAttrs(allAttrs map[string]map[string]cty.Value, modulePath string) map[string]map[string]cty.Value {
-	if allAttrs == nil || modulePath == "" {
-		return nil
-	}
+// scopedResourceAttrs is a module-scoped resource attribute map.
+// Maps modulePath → resourceType → resourceName → cty.ObjectVal(attributes).
+// Root module resources have modulePath "".
+type scopedResourceAttrs map[string]map[string]map[string]cty.Value
 
-	// The allAttrs map is keyed by short resource type (last two parts of address).
-	// We need to build a new map scoped to this module. Since buildResourceAttrMap
-	// strips module prefixes, resources from different modules with the same type/name
-	// would collide. For now, return the full map — this works for single-module cases.
-	// TODO: scope properly by rebuilding from full addresses when needed.
-	return allAttrs
-}
-
-// buildResourceAttrMap builds a map of resource type → resource name → attributes (as cty.Value)
-// from the TF state JSON. This allows HCL expressions like aws_vpc.this.id to resolve.
-func buildResourceAttrMap(tfState *tfjson.State) map[string]map[string]cty.Value {
-	result := map[string]map[string]cty.Value{}
+// buildScopedResourceAttrMap builds a module-scoped resource attribute map from TF state.
+func buildScopedResourceAttrMap(tfState *tfjson.State) scopedResourceAttrs {
+	result := scopedResourceAttrs{}
 	if tfState == nil {
 		return result
 	}
 
 	tofu.VisitResources(tfState, func(r *tfjson.StateResource) error {
-		// Parse resource type and name from address (strip module prefix)
-		addr := r.Address
-		// For module resources like "module.vpc.aws_vpc.this", we want "aws_vpc" and "this"
-		parts := strings.Split(addr, ".")
-		if len(parts) < 2 {
+		if r.AttributeValues == nil {
 			return nil
 		}
-		// Take the last two parts as type.name
-		resType := parts[len(parts)-2]
-		resName := parts[len(parts)-1]
-
-		// Convert attribute values (map[string]interface{}) to cty.Value
-		if r.AttributeValues != nil {
-			attrs := map[string]cty.Value{}
-			for k, v := range r.AttributeValues {
-				attrs[k] = interfaceToCty(v)
-			}
-			if _, ok := result[resType]; !ok {
-				result[resType] = map[string]cty.Value{}
-			}
-			result[resType][resName] = cty.ObjectVal(attrs)
+		modulePath, resType, resName := parseResourceAddress(r.Address)
+		attrs := map[string]cty.Value{}
+		for k, v := range r.AttributeValues {
+			attrs[k] = interfaceToCty(v)
 		}
+		if _, ok := result[modulePath]; !ok {
+			result[modulePath] = map[string]map[string]cty.Value{}
+		}
+		if _, ok := result[modulePath][resType]; !ok {
+			result[modulePath][resType] = map[string]cty.Value{}
+		}
+		result[modulePath][resType][resName] = cty.ObjectVal(attrs)
 		return nil
 	}, &tofu.VisitOptions{})
 
 	return result
 }
+
+// forModule returns the resource attrs scoped to a specific module path.
+// For for_each instances like "module.vpc[\"us-east-1\"]", also tries the
+// base module name "module.vpc".
+func (s scopedResourceAttrs) forModule(modulePath string) map[string]map[string]cty.Value {
+	if s == nil {
+		return nil
+	}
+	if scoped, ok := s[modulePath]; ok {
+		return scoped
+	}
+	// Try stripping index/key for for_each instances
+	if idx := strings.Index(modulePath, "["); idx > 0 {
+		base := modulePath[:idx]
+		if scoped, ok := s[base]; ok {
+			return scoped
+		}
+	}
+	return nil
+}
+
+// parseResourceAddress splits a TF resource address into module path, type, and name.
+// "module.vpc.aws_vpc.this" → ("module.vpc", "aws_vpc", "this")
+// "aws_s3_bucket.mybucket" → ("", "aws_s3_bucket", "mybucket")
+func parseResourceAddress(address string) (modulePath, resType, resName string) {
+	parts := strings.Split(address, ".")
+	if len(parts) < 2 {
+		return "", address, ""
+	}
+	resName = parts[len(parts)-1]
+	resType = parts[len(parts)-2]
+	if len(parts) > 2 {
+		modulePath = strings.Join(parts[:len(parts)-2], ".")
+	}
+	return
+}
+
 
 // interfaceToCty converts a Go interface{} (from JSON state) to a cty.Value.
 func interfaceToCty(v interface{}) cty.Value {
