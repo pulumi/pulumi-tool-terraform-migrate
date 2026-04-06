@@ -1,8 +1,8 @@
 # DNS-to-DB Manual Test Results
 
-**Date:** 2026-04-05
-**Branch:** `feat/mc-23-remove-null-defaults` (stacked on mc-22-discovery-acceptance)
-**Commit:** 7d6ed66
+**Date:** 2026-04-06 (updated from mc-24)
+**Branch:** `feat/mc-24-templatefile-basedir` (top of stack)
+**Commit:** fb65bde
 
 ## Command
 
@@ -20,10 +20,10 @@ go run . stack \
 
 | File | Size | Description |
 |------|------|-------------|
-| `pulumi-state.json` | 217 KB | Translated Pulumi stack state (111 resources) |
+| `pulumi-state.json` | 218 KB | Translated Pulumi stack state (111 resources) |
 | `component-schemas.json` | 457 KB | Component interface metadata (15 components) |
 | `required-plugins.json` | 70 B | Required Pulumi plugins (aws@7.23.0, null@0.0.15) |
-| `stderr.log` | 29 KB | Full stderr output |
+| `stderr.log` | 28 KB | Full stderr output |
 
 ## Results Summary
 
@@ -36,7 +36,7 @@ go run . stack \
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| Warnings | 2 | Both are `templatefile("app3-ums-install.tmpl")` — fixture file missing from testdata (not a code bug) |
+| Warnings | 0 | None — all expressions evaluate successfully |
 | Notes | 244 | Informational: missing resources defaulted to null (count=0 conditional resources) |
 
 ### Warning Progression
@@ -46,7 +46,8 @@ go run . stack \
 | Before eval context work (mc-12) | 68 |
 | After nested var scope (mc-20) | ~12 |
 | After remaining eval gaps (mc-21) | 2 |
-| After null-defaults removal (mc-23) | **2** (unchanged) |
+| After null-defaults removal (mc-23) | 2 (unchanged) |
+| After templatefile basedir fix (mc-24) | **0** |
 
 ## mc-23: Variable Default Removal from State
 
