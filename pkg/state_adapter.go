@@ -54,6 +54,8 @@ func TranslateAndWriteState(
 	outputFilePath string,
 	requiredProvidersOutputFilePath string,
 	strict bool,
+	stackNameOverride string,
+	projectNameOverride string,
 ) error {
 	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
 		ProjectDir: tfDir,
@@ -69,7 +71,30 @@ func TranslateAndWriteState(
 		providerVersions = tofu.TofuVersionOutput{}
 	}
 
-	res, err := TranslateState(ctx, tfState, providerVersions.ProviderSelections, pulumiProgramDir)
+	// Resolve stack and project names from overrides or workspace fallback
+	var stackName string
+	if stackNameOverride != "" {
+		stackName = stackNameOverride
+	} else {
+		var err error
+		stackName, err = getStackName(pulumiProgramDir)
+		if err != nil {
+			return fmt.Errorf("failed to get stack name: %w", err)
+		}
+	}
+
+	var projectName string
+	if projectNameOverride != "" {
+		projectName = projectNameOverride
+	} else {
+		var err error
+		projectName, err = getProjectName(pulumiProgramDir)
+		if err != nil {
+			return fmt.Errorf("failed to get project name: %w", err)
+		}
+	}
+
+	res, err := TranslateState(ctx, tfState, providerVersions.ProviderSelections, stackName, projectName)
 	if err != nil {
 		return err
 	}
@@ -117,7 +142,7 @@ type TranslateStateResult struct {
 	ErrorMessages     []ErroredResource
 }
 
-func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions map[string]string, pulumiProgramDir string) (*TranslateStateResult, error) {
+func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions map[string]string, stackName, projectName string) (*TranslateStateResult, error) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, providerVersions)
 	if err != nil {
 		return nil, err
@@ -128,12 +153,7 @@ func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions
 		return nil, fmt.Errorf("failed to convert state: %w", err)
 	}
 
-	deployment, err := GetDeployment(pulumiProgramDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get deployment: %w", err)
-	}
-
-	editedDeployment, err := InsertResourcesIntoDeployment(pulumiState, deployment.StackName, deployment.ProjectName, deployment.Deployment)
+	editedDeployment, err := InsertResourcesIntoDeployment(pulumiState, stackName, projectName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert resources into deployment: %w", err)
 	}
