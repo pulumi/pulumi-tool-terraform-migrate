@@ -1,0 +1,32 @@
+{
+  "name": "myproject",
+  "version": "0.1.0",
+  "resources": {
+    "myproject:index:VpcComponent": {
+      "isComponent": true,
+      "inputProperties": {
+        "cidr": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "requiredInputs": ["cidr", "name"],
+      "properties": {
+        "vpcId": {
+          "type": "string"
+        }
+      },
+      "required": ["vpcId"]
+    },
+    "myproject:index:NotAComponent": {
+      "isComponent": false,
+      "inputProperties": {
+        "foo": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

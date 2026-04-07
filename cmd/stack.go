@@ -33,6 +33,7 @@ func newStackCmd() *cobra.Command {
 	var moduleTypeMaps []string
 	var pulumiStack string
 	var pulumiProject string
+	var moduleSchemas []string
 
 	cmd := &cobra.Command{
 		Use:   "stack",
@@ -83,6 +84,16 @@ See also:
 				typeOverrides[parts[0]] = parts[1]
 			}
 
+			schemaOverrides := map[string]string{}
+			for _, mapping := range moduleSchemas {
+				parts := strings.SplitN(mapping, "=", 2)
+				if len(parts) != 2 {
+					return fmt.Errorf("invalid --module-schema format %q, expected module.name=./path/to/schema.json", mapping)
+				}
+				schemaOverrides[parts[0]] = parts[1]
+			}
+			_ = schemaOverrides // TODO: wire into pipeline in Phase 2 (PR 9)
+
 			enableComponents := !noModuleComponents
 			if noModuleComponents && len(moduleTypeMaps) > 0 {
 				fmt.Fprintf(os.Stderr, "Warning: --module-type-map is ignored when --no-module-components is set\n")
@@ -108,6 +119,8 @@ See also:
 		"Override component type token for a module (repeatable, format: module.name=pkg:mod:Type)")
 	cmd.Flags().StringVar(&pulumiStack, "pulumi-stack", "", "Override Pulumi stack name (skip auto-detection)")
 	cmd.Flags().StringVar(&pulumiProject, "pulumi-project", "", "Override Pulumi project name (skip auto-detection)")
+	cmd.Flags().StringArrayVar(&moduleSchemas, "module-schema", nil,
+		"Pulumi package schema for component validation (repeatable, format: module.name=./path/to/schema.json)")
 
 	cmd.MarkFlagRequired("from")
 	cmd.MarkFlagRequired("to")
