@@ -84,7 +84,7 @@ func TranslateResourceInstance(
 	return pkg.PulumiResource{
 		PulumiResourceID: pkg.PulumiResourceID{
 			ID:   props["id"].StringValue(),
-			Name: pkg.PulumiNameFromTerraformAddress(res.Addr.Instance(key).String(), resourceType, false),
+			Name: pkg.PulumiNameFromTerraformAddress(res.Addr.Instance(key).String(), resourceType),
 			Type: string(pulumiTypeToken),
 		},
 		Inputs:  inputs,

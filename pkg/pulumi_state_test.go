@@ -17,7 +17,6 @@ package pkg
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/hexops/autogold/v2"
@@ -225,7 +224,7 @@ func TestInsertResourcesIntoDeployment_EmptyProjectName(t *testing.T) {
 	require.Contains(t, err.Error(), "projectName")
 }
 
-func TestInsertResourcesIntoDeployment_WithComponents(t *testing.T) {
+func TestInsertResourcesIntoDeployment_FlatState(t *testing.T) {
 	stackName := "dev"
 	projectName := "testproject"
 
@@ -234,17 +233,10 @@ func TestInsertResourcesIntoDeployment_WithComponents(t *testing.T) {
 		Providers: []PulumiResource{
 			{PulumiResourceID: providerID, Inputs: resource.PropertyMap{}, Outputs: resource.PropertyMap{}},
 		},
-		Components: []PulumiResource{
-			{
-				PulumiResourceID: PulumiResourceID{Name: "vpc", Type: "terraform:module/vpc:Vpc"},
-				Parent:           "",
-			},
-		},
 		Resources: []PulumiResource{
 			{
 				PulumiResourceID: PulumiResourceID{ID: "subnet-123", Name: "this", Type: "aws:ec2/subnet:Subnet"},
 				Provider:         &providerID,
-				Parent:           "terraform:module/vpc:Vpc",
 				Inputs:           resource.PropertyMap{},
 				Outputs:          resource.PropertyMap{},
 			},
@@ -254,28 +246,20 @@ func TestInsertResourcesIntoDeployment_WithComponents(t *testing.T) {
 	result, err := InsertResourcesIntoDeployment(state, stackName, projectName)
 	require.NoError(t, err)
 
-	// Stack + provider + component + resource = 4
-	require.Len(t, result.Resources, 4)
+	// Stack + provider + resource = 3
+	require.Len(t, result.Resources, 3)
 
-	// Verify ordering: Stack, provider, component, resource
+	// Verify ordering: Stack, provider, resource
 	require.Equal(t, tokens.Type("pulumi:pulumi:Stack"), result.Resources[0].Type)
-	require.True(t, result.Resources[1].Custom)  // provider
-	require.False(t, result.Resources[2].Custom) // component
-	require.True(t, result.Resources[3].Custom)  // resource
+	require.True(t, result.Resources[1].Custom) // provider
+	require.True(t, result.Resources[2].Custom) // resource
 
-	// Verify component resource
-	component := result.Resources[2]
-	require.False(t, component.Custom)
-	require.Equal(t, tokens.Type("terraform:module/vpc:Vpc"), component.Type)
-	require.Empty(t, component.ID)
-	require.Empty(t, component.Provider)
-
-	// Verify resource is parented to component
-	res := result.Resources[3]
-	require.Contains(t, string(res.Parent), "terraform:module/vpc:Vpc")
+	// Verify resource is parented to Stack (flat state)
+	res := result.Resources[2]
+	require.Contains(t, string(res.Parent), "pulumi:pulumi:Stack")
 }
 
-func TestInsertResourcesIntoDeployment_NestedComponents(t *testing.T) {
+func TestInsertResourcesIntoDeployment_FlatState_MultipleResources(t *testing.T) {
 	stackName := "dev"
 	projectName := "testproject"
 
@@ -284,21 +268,10 @@ func TestInsertResourcesIntoDeployment_NestedComponents(t *testing.T) {
 		Providers: []PulumiResource{
 			{PulumiResourceID: providerID, Inputs: resource.PropertyMap{}, Outputs: resource.PropertyMap{}},
 		},
-		Components: []PulumiResource{
-			{
-				PulumiResourceID: PulumiResourceID{Name: "vpc", Type: "terraform:module/vpc:Vpc"},
-				Parent:           "",
-			},
-			{
-				PulumiResourceID: PulumiResourceID{Name: "subnets", Type: "terraform:module/subnets:Subnets"},
-				Parent:           "terraform:module/vpc:Vpc",
-			},
-		},
 		Resources: []PulumiResource{
 			{
 				PulumiResourceID: PulumiResourceID{ID: "subnet-1", Name: "this", Type: "aws:ec2/subnet:Subnet"},
 				Provider:         &providerID,
-				Parent:           "terraform:module/vpc:Vpc$terraform:module/subnets:Subnets",
 				Inputs:           resource.PropertyMap{},
 				Outputs:          resource.PropertyMap{},
 			},
@@ -307,19 +280,11 @@ func TestInsertResourcesIntoDeployment_NestedComponents(t *testing.T) {
 
 	result, err := InsertResourcesIntoDeployment(state, stackName, projectName)
 	require.NoError(t, err)
-	require.Len(t, result.Resources, 5) // Stack + provider + 2 components + resource
+	require.Len(t, result.Resources, 3) // Stack + provider + resource
 
-	// subnets component should be parented to vpc component
-	subnets := result.Resources[3]
-	require.False(t, subnets.Custom)
-	require.Contains(t, string(subnets.Parent), "terraform:module/vpc:Vpc")
-
-	// resource should be parented to subnets component
-	res := result.Resources[4]
-	require.Contains(t, string(res.Parent), "terraform:module/subnets:Subnets")
-
-	// URN should encode parent type chain with $ delimiter
-	require.True(t, strings.Contains(string(res.URN), "terraform:module/vpc:Vpc$terraform:module/subnets:Subnets$aws:ec2/subnet:Subnet"))
+	// resource should be parented to Stack (flat state)
+	res := result.Resources[2]
+	require.Contains(t, string(res.Parent), "pulumi:pulumi:Stack")
 }
 
 func TestInsertResourcesIntoDeployment_NoComponents_BackwardCompat(t *testing.T) {
@@ -331,7 +296,6 @@ func TestInsertResourcesIntoDeployment_NoComponents_BackwardCompat(t *testing.T)
 		Providers: []PulumiResource{
 			{PulumiResourceID: providerID, Inputs: resource.PropertyMap{}, Outputs: resource.PropertyMap{}},
 		},
-		Components: nil,
 		Resources: []PulumiResource{
 			{
 				PulumiResourceID: PulumiResourceID{ID: "abc", Name: "test", Type: "random:index/randomPet:RandomPet"},

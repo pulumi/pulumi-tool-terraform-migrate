@@ -170,32 +170,6 @@ func TestToComponents_DepthFirst(t *testing.T) {
 	require.Equal(t, "terraform:module/vpc:Vpc", components[1].Parent) // child of vpc
 }
 
-func TestComponentParentForResource(t *testing.T) {
-	tree, err := buildComponentTree(
-		[]string{
-			"module.vpc.module.subnets.aws_subnet.this",
-			"module.vpc.aws_vpc.main",
-		},
-		nil,
-	)
-	require.NoError(t, err)
-
-	// Resource in nested module
-	segments := parseModuleSegments("module.vpc.module.subnets.aws_subnet.this")
-	parent := componentParentForResource(tree, segments)
-	require.Equal(t, "terraform:module/vpc:Vpc$terraform:module/subnets:Subnets", parent)
-
-	// Resource in top-level module
-	segments = parseModuleSegments("module.vpc.aws_vpc.main")
-	parent = componentParentForResource(tree, segments)
-	require.Equal(t, "terraform:module/vpc:Vpc", parent)
-
-	// Root resource (no module)
-	segments = parseModuleSegments("aws_s3_bucket.this")
-	parent = componentParentForResource(tree, segments)
-	require.Equal(t, "", parent)
-}
-
 func TestParseModuleSegments(t *testing.T) {
 	tests := []struct {
 		address  string
