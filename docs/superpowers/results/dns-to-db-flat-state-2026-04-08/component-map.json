@@ -3,14 +3,13 @@
     "acm": {
       "terraformPath": "module.acm",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/acm",
-      "suggestedType": "terraform:module/acm:Acm",
       "resources": {
         "aws_acm_certificate.this": {
           "pulumiType": "aws:acm/certificate:Certificate",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:acm/certificate:Certificate::acm_this[0]",
               "flatName": "acm_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -19,8 +18,8 @@
           "pulumiType": "aws:acm/certificateValidation:CertificateValidation",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:acm/certificateValidation:CertificateValidation::acm_this[0]",
               "flatName": "acm_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -29,8 +28,8 @@
           "pulumiType": "aws:route53/record:Record",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:route53/record:Record::acm_validation[0]",
               "flatName": "acm_validation[0]",
-              "shortName": "validation[0]",
               "indexKey": "0"
             }
           ]
@@ -240,14 +239,13 @@
     "alb": {
       "terraformPath": "module.alb",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/alb",
-      "suggestedType": "terraform:module/alb:Alb",
       "resources": {
         "aws_lb.this": {
           "pulumiType": "aws:lb/loadBalancer:LoadBalancer",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:lb/loadBalancer:LoadBalancer::alb_this[0]",
               "flatName": "alb_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -256,13 +254,13 @@
           "pulumiType": "aws:lb/listener:Listener",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:lb/listener:Listener::alb_this[\"my-http-https-redirect\"]",
               "flatName": "alb_this[\"my-http-https-redirect\"]",
-              "shortName": "this[\"my-http-https-redirect\"]",
               "indexKey": "my-http-https-redirect"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:lb/listener:Listener::alb_this[\"my-https-listener\"]",
               "flatName": "alb_this[\"my-https-listener\"]",
-              "shortName": "this[\"my-https-listener\"]",
               "indexKey": "my-https-listener"
             }
           ]
@@ -271,18 +269,18 @@
           "pulumiType": "aws:lb/listenerRule:ListenerRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:lb/listenerRule:ListenerRule::alb_this[\"my-https-listener/myapp1-rule\"]",
               "flatName": "alb_this[\"my-https-listener/myapp1-rule\"]",
-              "shortName": "this[\"my-https-listener/myapp1-rule\"]",
               "indexKey": "my-https-listener/myapp1-rule"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:lb/listenerRule:ListenerRule::alb_this[\"my-https-listener/myapp2-rule\"]",
               "flatName": "alb_this[\"my-https-listener/myapp2-rule\"]",
-              "shortName": "this[\"my-https-listener/myapp2-rule\"]",
               "indexKey": "my-https-listener/myapp2-rule"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:lb/listenerRule:ListenerRule::alb_this[\"my-https-listener/myapp3-rule\"]",
               "flatName": "alb_this[\"my-https-listener/myapp3-rule\"]",
-              "shortName": "this[\"my-https-listener/myapp3-rule\"]",
               "indexKey": "my-https-listener/myapp3-rule"
             }
           ]
@@ -291,18 +289,18 @@
           "pulumiType": "aws:lb/targetGroup:TargetGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:lb/targetGroup:TargetGroup::alb_this[\"mytg1\"]",
               "flatName": "alb_this[\"mytg1\"]",
-              "shortName": "this[\"mytg1\"]",
               "indexKey": "mytg1"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:lb/targetGroup:TargetGroup::alb_this[\"mytg2\"]",
               "flatName": "alb_this[\"mytg2\"]",
-              "shortName": "this[\"mytg2\"]",
               "indexKey": "mytg2"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:lb/targetGroup:TargetGroup::alb_this[\"mytg3\"]",
               "flatName": "alb_this[\"mytg3\"]",
-              "shortName": "this[\"mytg3\"]",
               "indexKey": "mytg3"
             }
           ]
@@ -311,8 +309,8 @@
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::alb_this[0]",
               "flatName": "alb_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -814,72 +812,6 @@
             "evaluatedValue": [
               {
                 "alpn_policy": null,
-                "arn": "arn:aws:elasticloadbalancing:us-east-1:616138583583:listener/app/sap-dev-alb/28aabe97ab7ea902/036c07320273a68f",
-                "certificate_arn": null,
-                "default_action": [
-                  {
-                    "authenticate_cognito": [],
-                    "authenticate_oidc": [],
-                    "fixed_response": [],
-                    "forward": [],
-                    "order": 1,
-                    "redirect": [
-                      {
-                        "host": "#{host}",
-                        "path": "/#{path}",
-                        "port": "443",
-                        "protocol": "HTTPS",
-                        "query": "#{query}",
-                        "status_code": "HTTP_301"
-                      }
-                    ],
-                    "target_group_arn": "",
-                    "type": "redirect"
-                  }
-                ],
-                "id": "arn:aws:elasticloadbalancing:us-east-1:616138583583:listener/app/sap-dev-alb/28aabe97ab7ea902/036c07320273a68f",
-                "load_balancer_arn": "arn:aws:elasticloadbalancing:us-east-1:616138583583:loadbalancer/app/sap-dev-alb/28aabe97ab7ea902",
-                "mutual_authentication": [],
-                "port": 80,
-                "protocol": "HTTP",
-                "region": "us-east-1",
-                "routing_http_request_x_amzn_mtls_clientcert_header_name": null,
-                "routing_http_request_x_amzn_mtls_clientcert_issuer_header_name": null,
-                "routing_http_request_x_amzn_mtls_clientcert_leaf_header_name": null,
-                "routing_http_request_x_amzn_mtls_clientcert_serial_number_header_name": null,
-                "routing_http_request_x_amzn_mtls_clientcert_subject_header_name": null,
-                "routing_http_request_x_amzn_mtls_clientcert_validity_header_name": null,
-                "routing_http_request_x_amzn_tls_cipher_suite_header_name": null,
-                "routing_http_request_x_amzn_tls_version_header_name": null,
-                "routing_http_response_access_control_allow_credentials_header_value": "",
-                "routing_http_response_access_control_allow_headers_header_value": "",
-                "routing_http_response_access_control_allow_methods_header_value": "",
-                "routing_http_response_access_control_allow_origin_header_value": "",
-                "routing_http_response_access_control_expose_headers_header_value": "",
-                "routing_http_response_access_control_max_age_header_value": "",
-                "routing_http_response_content_security_policy_header_value": "",
-                "routing_http_response_server_enabled": true,
-                "routing_http_response_strict_transport_security_header_value": "",
-                "routing_http_response_x_content_type_options_header_value": "",
-                "routing_http_response_x_frame_options_header_value": "",
-                "ssl_policy": "",
-                "tags": {
-                  "Owner": "anton",
-                  "environment": "dev",
-                  "owners": "sap",
-                  "terraform-aws-modules": "alb"
-                },
-                "tags_all": {
-                  "Owner": "anton",
-                  "environment": "dev",
-                  "owners": "sap",
-                  "terraform-aws-modules": "alb"
-                },
-                "tcp_idle_timeout_seconds": null,
-                "timeouts": null
-              },
-              {
-                "alpn_policy": null,
                 "arn": "arn:aws:elasticloadbalancing:us-east-1:616138583583:listener/app/sap-dev-alb/28aabe97ab7ea902/56c35e744fcd8beb",
                 "certificate_arn": "arn:aws:acm:us-east-1:616138583583:certificate/587a6e95-a6a4-447f-9716-ab32e4d3ebd1",
                 "default_action": [
@@ -933,6 +865,72 @@
                 "routing_http_response_x_content_type_options_header_value": "",
                 "routing_http_response_x_frame_options_header_value": "",
                 "ssl_policy": "ELBSecurityPolicy-TLS13-1-2-Res-2021-06",
+                "tags": {
+                  "Owner": "anton",
+                  "environment": "dev",
+                  "owners": "sap",
+                  "terraform-aws-modules": "alb"
+                },
+                "tags_all": {
+                  "Owner": "anton",
+                  "environment": "dev",
+                  "owners": "sap",
+                  "terraform-aws-modules": "alb"
+                },
+                "tcp_idle_timeout_seconds": null,
+                "timeouts": null
+              },
+              {
+                "alpn_policy": null,
+                "arn": "arn:aws:elasticloadbalancing:us-east-1:616138583583:listener/app/sap-dev-alb/28aabe97ab7ea902/036c07320273a68f",
+                "certificate_arn": null,
+                "default_action": [
+                  {
+                    "authenticate_cognito": [],
+                    "authenticate_oidc": [],
+                    "fixed_response": [],
+                    "forward": [],
+                    "order": 1,
+                    "redirect": [
+                      {
+                        "host": "#{host}",
+                        "path": "/#{path}",
+                        "port": "443",
+                        "protocol": "HTTPS",
+                        "query": "#{query}",
+                        "status_code": "HTTP_301"
+                      }
+                    ],
+                    "target_group_arn": "",
+                    "type": "redirect"
+                  }
+                ],
+                "id": "arn:aws:elasticloadbalancing:us-east-1:616138583583:listener/app/sap-dev-alb/28aabe97ab7ea902/036c07320273a68f",
+                "load_balancer_arn": "arn:aws:elasticloadbalancing:us-east-1:616138583583:loadbalancer/app/sap-dev-alb/28aabe97ab7ea902",
+                "mutual_authentication": [],
+                "port": 80,
+                "protocol": "HTTP",
+                "region": "us-east-1",
+                "routing_http_request_x_amzn_mtls_clientcert_header_name": null,
+                "routing_http_request_x_amzn_mtls_clientcert_issuer_header_name": null,
+                "routing_http_request_x_amzn_mtls_clientcert_leaf_header_name": null,
+                "routing_http_request_x_amzn_mtls_clientcert_serial_number_header_name": null,
+                "routing_http_request_x_amzn_mtls_clientcert_subject_header_name": null,
+                "routing_http_request_x_amzn_mtls_clientcert_validity_header_name": null,
+                "routing_http_request_x_amzn_tls_cipher_suite_header_name": null,
+                "routing_http_request_x_amzn_tls_version_header_name": null,
+                "routing_http_response_access_control_allow_credentials_header_value": "",
+                "routing_http_response_access_control_allow_headers_header_value": "",
+                "routing_http_response_access_control_allow_methods_header_value": "",
+                "routing_http_response_access_control_allow_origin_header_value": "",
+                "routing_http_response_access_control_expose_headers_header_value": "",
+                "routing_http_response_access_control_max_age_header_value": "",
+                "routing_http_response_content_security_policy_header_value": "",
+                "routing_http_response_server_enabled": true,
+                "routing_http_response_strict_transport_security_header_value": "",
+                "routing_http_response_x_content_type_options_header_value": "",
+                "routing_http_response_x_frame_options_header_value": "",
+                "ssl_policy": "",
                 "tags": {
                   "Owner": "anton",
                   "environment": "dev",
@@ -1153,93 +1151,6 @@
             "description": "Map of target groups created and their attributes",
             "evaluatedValue": [
               {
-                "arn": "arn:aws:elasticloadbalancing:us-east-1:616138583583:targetgroup/mytg1-2026011516035494170000000e/3723010e81b9675e",
-                "arn_suffix": "targetgroup/mytg1-2026011516035494170000000e/3723010e81b9675e",
-                "connection_termination": null,
-                "deregistration_delay": "10",
-                "health_check": [
-                  {
-                    "enabled": true,
-                    "healthy_threshold": 3,
-                    "interval": 30,
-                    "matcher": "200-399",
-                    "path": "/app1/index.html",
-                    "port": "traffic-port",
-                    "protocol": "HTTP",
-                    "timeout": 6,
-                    "unhealthy_threshold": 3
-                  }
-                ],
-                "id": "arn:aws:elasticloadbalancing:us-east-1:616138583583:targetgroup/mytg1-2026011516035494170000000e/3723010e81b9675e",
-                "ip_address_type": "ipv4",
-                "lambda_multi_value_headers_enabled": false,
-                "load_balancer_arns": [
-                  "arn:aws:elasticloadbalancing:us-east-1:616138583583:loadbalancer/app/sap-dev-alb/28aabe97ab7ea902"
-                ],
-                "load_balancing_algorithm_type": "round_robin",
-                "load_balancing_anomaly_mitigation": "off",
-                "load_balancing_cross_zone_enabled": "false",
-                "name": "mytg1-2026011516035494170000000e",
-                "name_prefix": "mytg1-",
-                "port": 80,
-                "preserve_client_ip": null,
-                "protocol": "HTTP",
-                "protocol_version": "HTTP1",
-                "proxy_protocol_v2": false,
-                "region": "us-east-1",
-                "slow_start": 0,
-                "stickiness": [
-                  {
-                    "cookie_duration": 86400,
-                    "cookie_name": "",
-                    "enabled": false,
-                    "type": "lb_cookie"
-                  }
-                ],
-                "tags": {
-                  "Owner": "anton",
-                  "environment": "dev",
-                  "owners": "sap",
-                  "terraform-aws-modules": "alb"
-                },
-                "tags_all": {
-                  "Owner": "anton",
-                  "environment": "dev",
-                  "owners": "sap",
-                  "terraform-aws-modules": "alb"
-                },
-                "target_failover": [
-                  {
-                    "on_deregistration": null,
-                    "on_unhealthy": null
-                  }
-                ],
-                "target_group_health": [
-                  {
-                    "dns_failover": [
-                      {
-                        "minimum_healthy_targets_count": "1",
-                        "minimum_healthy_targets_percentage": "off"
-                      }
-                    ],
-                    "unhealthy_state_routing": [
-                      {
-                        "minimum_healthy_targets_count": 1,
-                        "minimum_healthy_targets_percentage": "off"
-                      }
-                    ]
-                  }
-                ],
-                "target_health_state": [
-                  {
-                    "enable_unhealthy_connection_termination": null,
-                    "unhealthy_draining_interval": null
-                  }
-                ],
-                "target_type": "instance",
-                "vpc_id": "vpc-0df7e7a61196cf6dd"
-              },
-              {
                 "arn": "arn:aws:elasticloadbalancing:us-east-1:616138583583:targetgroup/mytg2-2026011516035419700000000c/e0a83b28ab17c262",
                 "arn_suffix": "targetgroup/mytg2-2026011516035419700000000c/e0a83b28ab17c262",
                 "connection_termination": null,
@@ -1412,6 +1323,93 @@
                 ],
                 "target_type": "instance",
                 "vpc_id": "vpc-0df7e7a61196cf6dd"
+              },
+              {
+                "arn": "arn:aws:elasticloadbalancing:us-east-1:616138583583:targetgroup/mytg1-2026011516035494170000000e/3723010e81b9675e",
+                "arn_suffix": "targetgroup/mytg1-2026011516035494170000000e/3723010e81b9675e",
+                "connection_termination": null,
+                "deregistration_delay": "10",
+                "health_check": [
+                  {
+                    "enabled": true,
+                    "healthy_threshold": 3,
+                    "interval": 30,
+                    "matcher": "200-399",
+                    "path": "/app1/index.html",
+                    "port": "traffic-port",
+                    "protocol": "HTTP",
+                    "timeout": 6,
+                    "unhealthy_threshold": 3
+                  }
+                ],
+                "id": "arn:aws:elasticloadbalancing:us-east-1:616138583583:targetgroup/mytg1-2026011516035494170000000e/3723010e81b9675e",
+                "ip_address_type": "ipv4",
+                "lambda_multi_value_headers_enabled": false,
+                "load_balancer_arns": [
+                  "arn:aws:elasticloadbalancing:us-east-1:616138583583:loadbalancer/app/sap-dev-alb/28aabe97ab7ea902"
+                ],
+                "load_balancing_algorithm_type": "round_robin",
+                "load_balancing_anomaly_mitigation": "off",
+                "load_balancing_cross_zone_enabled": "false",
+                "name": "mytg1-2026011516035494170000000e",
+                "name_prefix": "mytg1-",
+                "port": 80,
+                "preserve_client_ip": null,
+                "protocol": "HTTP",
+                "protocol_version": "HTTP1",
+                "proxy_protocol_v2": false,
+                "region": "us-east-1",
+                "slow_start": 0,
+                "stickiness": [
+                  {
+                    "cookie_duration": 86400,
+                    "cookie_name": "",
+                    "enabled": false,
+                    "type": "lb_cookie"
+                  }
+                ],
+                "tags": {
+                  "Owner": "anton",
+                  "environment": "dev",
+                  "owners": "sap",
+                  "terraform-aws-modules": "alb"
+                },
+                "tags_all": {
+                  "Owner": "anton",
+                  "environment": "dev",
+                  "owners": "sap",
+                  "terraform-aws-modules": "alb"
+                },
+                "target_failover": [
+                  {
+                    "on_deregistration": null,
+                    "on_unhealthy": null
+                  }
+                ],
+                "target_group_health": [
+                  {
+                    "dns_failover": [
+                      {
+                        "minimum_healthy_targets_count": "1",
+                        "minimum_healthy_targets_percentage": "off"
+                      }
+                    ],
+                    "unhealthy_state_routing": [
+                      {
+                        "minimum_healthy_targets_count": 1,
+                        "minimum_healthy_targets_percentage": "off"
+                      }
+                    ]
+                  }
+                ],
+                "target_health_state": [
+                  {
+                    "enable_unhealthy_connection_termination": null,
+                    "unhealthy_draining_interval": null
+                  }
+                ],
+                "target_type": "instance",
+                "vpc_id": "vpc-0df7e7a61196cf6dd"
               }
             ]
           },
@@ -1435,7 +1433,6 @@
     "ec2_private_app1[0]": {
       "terraformPath": "module.ec2_private_app1[0]",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/ec2_private_app1",
-      "suggestedType": "terraform:module/ec2PrivateApp1:Ec2PrivateApp1",
       "indexKey": "0",
       "indexType": "count",
       "resources": {
@@ -1443,8 +1440,8 @@
           "pulumiType": "aws:ec2/instance:Instance",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/instance:Instance::ec2_private_app1[\"0\"]_this[0]",
               "flatName": "ec2_private_app1[\"0\"]_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -1453,8 +1450,8 @@
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::ec2_private_app1[\"0\"]_this[0]",
               "flatName": "ec2_private_app1[\"0\"]_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -1463,13 +1460,13 @@
           "pulumiType": "aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app1[\"0\"]_this[\"ipv4_default\"]",
               "flatName": "ec2_private_app1[\"0\"]_this[\"ipv4_default\"]",
-              "shortName": "this[\"ipv4_default\"]",
               "indexKey": "ipv4_default"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app1[\"0\"]_this[\"ipv6_default\"]",
               "flatName": "ec2_private_app1[\"0\"]_this[\"ipv6_default\"]",
-              "shortName": "this[\"ipv6_default\"]",
               "indexKey": "ipv6_default"
             }
           ]
@@ -1724,7 +1721,7 @@
             "name": "subnet_id",
             "type": "string",
             "description": "The VPC Subnet ID to launch in",
-            "evaluatedValue": "subnet-0bc293c1ff7e71598"
+            "evaluatedValue": "subnet-05370bec0a3006f38"
           },
           {
             "name": "tags",
@@ -2108,7 +2105,6 @@
     "ec2_private_app1[1]": {
       "terraformPath": "module.ec2_private_app1[1]",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/ec2_private_app1",
-      "suggestedType": "terraform:module/ec2PrivateApp1:Ec2PrivateApp1",
       "indexKey": "1",
       "indexType": "count",
       "resources": {
@@ -2116,8 +2112,8 @@
           "pulumiType": "aws:ec2/instance:Instance",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/instance:Instance::ec2_private_app1[\"1\"]_this[0]",
               "flatName": "ec2_private_app1[\"1\"]_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -2126,8 +2122,8 @@
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::ec2_private_app1[\"1\"]_this[0]",
               "flatName": "ec2_private_app1[\"1\"]_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -2136,13 +2132,13 @@
           "pulumiType": "aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app1[\"1\"]_this[\"ipv4_default\"]",
               "flatName": "ec2_private_app1[\"1\"]_this[\"ipv4_default\"]",
-              "shortName": "this[\"ipv4_default\"]",
               "indexKey": "ipv4_default"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app1[\"1\"]_this[\"ipv6_default\"]",
               "flatName": "ec2_private_app1[\"1\"]_this[\"ipv6_default\"]",
-              "shortName": "this[\"ipv6_default\"]",
               "indexKey": "ipv6_default"
             }
           ]
@@ -2397,7 +2393,7 @@
             "name": "subnet_id",
             "type": "string",
             "description": "The VPC Subnet ID to launch in",
-            "evaluatedValue": "subnet-05370bec0a3006f38"
+            "evaluatedValue": "subnet-0bc293c1ff7e71598"
           },
           {
             "name": "tags",
@@ -2781,7 +2777,6 @@
     "ec2_private_app2[0]": {
       "terraformPath": "module.ec2_private_app2[0]",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/ec2_private_app2",
-      "suggestedType": "terraform:module/ec2PrivateApp2:Ec2PrivateApp2",
       "indexKey": "0",
       "indexType": "count",
       "resources": {
@@ -2789,8 +2784,8 @@
           "pulumiType": "aws:ec2/instance:Instance",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/instance:Instance::ec2_private_app2[\"0\"]_this[0]",
               "flatName": "ec2_private_app2[\"0\"]_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -2799,8 +2794,8 @@
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::ec2_private_app2[\"0\"]_this[0]",
               "flatName": "ec2_private_app2[\"0\"]_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -2809,13 +2804,13 @@
           "pulumiType": "aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app2[\"0\"]_this[\"ipv4_default\"]",
               "flatName": "ec2_private_app2[\"0\"]_this[\"ipv4_default\"]",
-              "shortName": "this[\"ipv4_default\"]",
               "indexKey": "ipv4_default"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app2[\"0\"]_this[\"ipv6_default\"]",
               "flatName": "ec2_private_app2[\"0\"]_this[\"ipv6_default\"]",
-              "shortName": "this[\"ipv6_default\"]",
               "indexKey": "ipv6_default"
             }
           ]
@@ -3070,7 +3065,7 @@
             "name": "subnet_id",
             "type": "string",
             "description": "The VPC Subnet ID to launch in",
-            "evaluatedValue": "subnet-0bc293c1ff7e71598"
+            "evaluatedValue": "subnet-05370bec0a3006f38"
           },
           {
             "name": "tags",
@@ -3454,7 +3449,6 @@
     "ec2_private_app2[1]": {
       "terraformPath": "module.ec2_private_app2[1]",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/ec2_private_app2",
-      "suggestedType": "terraform:module/ec2PrivateApp2:Ec2PrivateApp2",
       "indexKey": "1",
       "indexType": "count",
       "resources": {
@@ -3462,8 +3456,8 @@
           "pulumiType": "aws:ec2/instance:Instance",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/instance:Instance::ec2_private_app2[\"1\"]_this[0]",
               "flatName": "ec2_private_app2[\"1\"]_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -3472,8 +3466,8 @@
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::ec2_private_app2[\"1\"]_this[0]",
               "flatName": "ec2_private_app2[\"1\"]_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -3482,13 +3476,13 @@
           "pulumiType": "aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app2[\"1\"]_this[\"ipv4_default\"]",
               "flatName": "ec2_private_app2[\"1\"]_this[\"ipv4_default\"]",
-              "shortName": "this[\"ipv4_default\"]",
               "indexKey": "ipv4_default"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app2[\"1\"]_this[\"ipv6_default\"]",
               "flatName": "ec2_private_app2[\"1\"]_this[\"ipv6_default\"]",
-              "shortName": "this[\"ipv6_default\"]",
               "indexKey": "ipv6_default"
             }
           ]
@@ -3743,7 +3737,7 @@
             "name": "subnet_id",
             "type": "string",
             "description": "The VPC Subnet ID to launch in",
-            "evaluatedValue": "subnet-05370bec0a3006f38"
+            "evaluatedValue": "subnet-0bc293c1ff7e71598"
           },
           {
             "name": "tags",
@@ -4127,7 +4121,6 @@
     "ec2_private_app3[0]": {
       "terraformPath": "module.ec2_private_app3[0]",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/ec2_private_app3",
-      "suggestedType": "terraform:module/ec2PrivateApp3:Ec2PrivateApp3",
       "indexKey": "0",
       "indexType": "count",
       "resources": {
@@ -4135,8 +4128,8 @@
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::ec2_private_app3[\"0\"]_this[0]",
               "flatName": "ec2_private_app3[\"0\"]_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -4145,13 +4138,675 @@
           "pulumiType": "aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app3[\"0\"]_this[\"ipv4_default\"]",
               "flatName": "ec2_private_app3[\"0\"]_this[\"ipv4_default\"]",
-              "shortName": "this[\"ipv4_default\"]",
               "indexKey": "ipv4_default"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app3[\"0\"]_this[\"ipv6_default\"]",
               "flatName": "ec2_private_app3[\"0\"]_this[\"ipv6_default\"]",
-              "shortName": "this[\"ipv6_default\"]",
+              "indexKey": "ipv6_default"
+            }
+          ]
+        }
+      },
+      "interface": {
+        "inputs": [
+          {
+            "name": "create",
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to create an instance"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "default": "",
+            "description": "Name to be used on EC2 instance created",
+            "evaluatedValue": "dev-app3"
+          },
+          {
+            "name": "region",
+            "type": "string",
+            "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration"
+          },
+          {
+            "name": "ami",
+            "type": "string",
+            "description": "ID of AMI to use for the instance",
+            "evaluatedValue": "ami-0771b6766e1e61632"
+          },
+          {
+            "name": "ami_ssm_parameter",
+            "type": "string",
+            "default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64",
+            "description": "SSM parameter name for the AMI ID. For Amazon Linux AMI SSM parameters see [reference](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-public-parameters-ami.html)"
+          },
+          {
+            "name": "ignore_ami_changes",
+            "type": "boolean",
+            "default": false,
+            "description": "Whether changes to the AMI ID changes should be ignored by Terraform. Note - changing this value will result in the replacement of the instance"
+          },
+          {
+            "name": "associate_public_ip_address",
+            "type": "boolean",
+            "description": "Whether to associate a public IP address with an instance in a VPC"
+          },
+          {
+            "name": "availability_zone",
+            "type": "string",
+            "description": "AZ to start the instance in"
+          },
+          {
+            "name": "capacity_reservation_specification",
+            "type": {
+              "type": "object"
+            },
+            "description": "Describes an instance's Capacity Reservation targeting option"
+          },
+          {
+            "name": "cpu_options",
+            "type": {
+              "type": "object"
+            },
+            "description": "Defines CPU options to apply to the instance at launch time."
+          },
+          {
+            "name": "cpu_credits",
+            "type": "string",
+            "description": "The credit option for CPU usage (unlimited or standard)"
+          },
+          {
+            "name": "disable_api_termination",
+            "type": "boolean",
+            "description": "If true, enables EC2 Instance Termination Protection"
+          },
+          {
+            "name": "disable_api_stop",
+            "type": "boolean",
+            "description": "If true, enables EC2 Instance Stop Protection"
+          },
+          {
+            "name": "ebs_optimized",
+            "type": "boolean",
+            "description": "If true, the launched EC2 instance will be EBS-optimized"
+          },
+          {
+            "name": "enclave_options_enabled",
+            "type": "boolean",
+            "description": "Whether Nitro Enclaves will be enabled on the instance. Defaults to `false`"
+          },
+          {
+            "name": "enable_primary_ipv6",
+            "type": "boolean",
+            "description": "Whether to assign a primary IPv6 Global Unicast Address (GUA) to the instance when launched in a dual-stack or IPv6-only subnet"
+          },
+          {
+            "name": "ephemeral_block_device",
+            "type": {
+              "additionalProperties": {
+                "type": "object"
+              },
+              "type": "object"
+            },
+            "description": "Customize Ephemeral (also known as Instance Store) volumes on the instance"
+          },
+          {
+            "name": "get_password_data",
+            "type": "boolean",
+            "description": "If true, wait for password data to become available and retrieve it"
+          },
+          {
+            "name": "hibernation",
+            "type": "boolean",
+            "description": "If true, the launched EC2 instance will support hibernation"
+          },
+          {
+            "name": "host_id",
+            "type": "string",
+            "description": "ID of a dedicated host that the instance will be assigned to. Use when an instance is to be launched on a specific dedicated host"
+          },
+          {
+            "name": "host_resource_group_arn",
+            "type": "string",
+            "description": "ARN of the host resource group in which to launch the instances. If you specify an ARN, omit the `tenancy` parameter or set it to `host`"
+          },
+          {
+            "name": "iam_instance_profile",
+            "type": "string",
+            "description": "IAM Instance Profile to launch the instance with. Specified as the name of the Instance Profile"
+          },
+          {
+            "name": "instance_initiated_shutdown_behavior",
+            "type": "string",
+            "description": "Shutdown behavior for the instance. Amazon defaults this to stop for EBS-backed instances and terminate for instance-store instances. Cannot be set on instance-store instance"
+          },
+          {
+            "name": "instance_market_options",
+            "type": {
+              "type": "object"
+            },
+            "description": "The market (purchasing) option for the instance. If set, overrides the `create_spot_instance` variable"
+          },
+          {
+            "name": "instance_type",
+            "type": "string",
+            "default": "t3.micro",
+            "description": "The type of instance to start",
+            "evaluatedValue": "t3.micro"
+          },
+          {
+            "name": "ipv6_address_count",
+            "type": "number",
+            "description": "A number of IPv6 addresses to associate with the primary network interface. Amazon EC2 chooses the IPv6 addresses from the range of your subnet"
+          },
+          {
+            "name": "ipv6_addresses",
+            "type": {
+              "items": "string",
+              "type": "array"
+            },
+            "description": "Specify one or more IPv6 addresses from the range of the subnet to associate with the primary network interface"
+          },
+          {
+            "name": "key_name",
+            "type": "string",
+            "description": "Key name of the Key Pair to use for the instance; which can be managed using the `aws_key_pair` resource",
+            "evaluatedValue": "anton-20251005-terraform-key"
+          },
+          {
+            "name": "launch_template",
+            "type": {
+              "type": "object"
+            },
+            "description": "Specifies a Launch Template to configure the instance. Parameters configured on this resource will override the corresponding parameters in the Launch Template"
+          },
+          {
+            "name": "maintenance_options",
+            "type": {
+              "type": "object"
+            },
+            "description": "The maintenance options for the instance"
+          },
+          {
+            "name": "metadata_options",
+            "default": {
+              "http_endpoint": "enabled",
+              "http_put_response_hop_limit": 1,
+              "http_tokens": "required"
+            },
+            "description": "Customize the metadata options of the instance"
+          },
+          {
+            "name": "monitoring",
+            "type": "boolean",
+            "description": "If true, the launched EC2 instance will have detailed monitoring enabled"
+          },
+          {
+            "name": "network_interface",
+            "type": {
+              "additionalProperties": {
+                "type": "object"
+              },
+              "type": "object"
+            },
+            "description": "Customize network interfaces to be attached at instance boot time"
+          },
+          {
+            "name": "placement_group",
+            "type": "string",
+            "description": "The Placement Group to start the instance in"
+          },
+          {
+            "name": "placement_partition_number",
+            "type": "number",
+            "description": "Number of the partition the instance is in. Valid only if the `aws_placement_group` resource's `strategy` argument is set to `partition`"
+          },
+          {
+            "name": "private_dns_name_options",
+            "type": {
+              "type": "object"
+            },
+            "description": "Customize the private DNS name options of the instance"
+          },
+          {
+            "name": "private_ip",
+            "type": "string",
+            "description": "Private IP address to associate with the instance in a VPC"
+          },
+          {
+            "name": "root_block_device",
+            "type": {
+              "type": "object"
+            },
+            "description": "Customize details about the root block device of the instance. See Block Devices below for details"
+          },
+          {
+            "name": "secondary_private_ips",
+            "type": {
+              "items": "string",
+              "type": "array"
+            },
+            "description": "A list of secondary private IPv4 addresses to assign to the instance's primary network interface (eth0) in a VPC. Can only be assigned to the primary network interface (eth0) attached at instance creation, not a pre-existing network interface i.e. referenced in a `network_interface block`"
+          },
+          {
+            "name": "source_dest_check",
+            "type": "boolean",
+            "description": "Controls if traffic is routed to the instance when the destination address does not match the instance. Used for NAT or VPNs"
+          },
+          {
+            "name": "subnet_id",
+            "type": "string",
+            "description": "The VPC Subnet ID to launch in",
+            "evaluatedValue": "subnet-05370bec0a3006f38"
+          },
+          {
+            "name": "tags",
+            "type": {
+              "additionalProperties": "string",
+              "type": "object"
+            },
+            "default": {},
+            "description": "A mapping of tags to assign to the resource",
+            "evaluatedValue": {
+              "Owner": "anton",
+              "environment": "dev",
+              "owners": "sap"
+            }
+          },
+          {
+            "name": "instance_tags",
+            "type": {
+              "additionalProperties": "string",
+              "type": "object"
+            },
+            "default": {},
+            "description": "Additional tags for the instance"
+          },
+          {
+            "name": "tenancy",
+            "type": "string",
+            "description": "The tenancy of the instance (if the instance is running in a VPC). Available values: default, dedicated, host"
+          },
+          {
+            "name": "user_data",
+            "type": "string",
+            "description": "The user data to provide when launching the instance. Do not pass gzip-compressed data via this argument; see user_data_base64 instead",
+            "evaluatedValue": "#! /bin/bash\nsudo amazon-linux-extras enable java-openjdk11\nsudo yum clean metadata \u0026\u0026 sudo yum -y install java-11-openjdk\nmkdir /home/ec2-user/app3-usermgmt \u0026\u0026 cd /home/ec2-user/app3-usermgmt\nwget https://github.com/stacksimplify/temp1/releases/download/1.0.0/usermgmt-webapp.war -P /home/ec2-user/app3-usermgmt \nexport DB_HOSTNAME=\nexport DB_PORT=3306\nexport DB_NAME=webappdb\nexport DB_USERNAME=dbadmin\nexport DB_PASSWORD=dbpassword11\njava -jar /home/ec2-user/app3-usermgmt/usermgmt-webapp.war \u003e /home/ec2-user/app3-usermgmt/ums-start.log \u0026\n"
+          },
+          {
+            "name": "user_data_base64",
+            "type": "string",
+            "description": "Can be used instead of user_data to pass base64-encoded binary data directly. Use this instead of user_data whenever the value is not a valid UTF-8 string. For example, gzip-encoded user data must be base64-encoded and passed via this argument to avoid corruption"
+          },
+          {
+            "name": "user_data_replace_on_change",
+            "type": "boolean",
+            "description": "When used in combination with user_data or user_data_base64 will trigger a destroy and recreate when set to true. Defaults to false if not set"
+          },
+          {
+            "name": "volume_tags",
+            "type": {
+              "additionalProperties": "string",
+              "type": "object"
+            },
+            "default": {},
+            "description": "A mapping of tags to assign to the devices created by the instance at launch time"
+          },
+          {
+            "name": "enable_volume_tags",
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to enable volume tags (if enabled it conflicts with root_block_device tags)"
+          },
+          {
+            "name": "vpc_security_group_ids",
+            "type": {
+              "items": "string",
+              "type": "array"
+            },
+            "default": null,
+            "description": "A list of security group IDs to associate with",
+            "evaluatedValue": [
+              ""
+            ]
+          },
+          {
+            "name": "timeouts",
+            "type": {
+              "additionalProperties": "string",
+              "type": "object"
+            },
+            "default": {},
+            "description": "Define maximum timeout for creating, updating, and deleting EC2 instance resources"
+          },
+          {
+            "name": "create_spot_instance",
+            "type": "boolean",
+            "default": false,
+            "description": "Depicts if the instance is a spot instance"
+          },
+          {
+            "name": "spot_instance_interruption_behavior",
+            "type": "string",
+            "description": "Indicates Spot instance behavior when it is interrupted. Valid values are `terminate`, `stop`, or `hibernate`"
+          },
+          {
+            "name": "spot_launch_group",
+            "type": "string",
+            "description": "A launch group is a group of spot instances that launch together and terminate together. If left empty instances are launched and terminated individually"
+          },
+          {
+            "name": "spot_price",
+            "type": "string",
+            "description": "The maximum price to request on the spot market. Defaults to on-demand price"
+          },
+          {
+            "name": "spot_type",
+            "type": "string",
+            "description": "If set to one-time, after the instance is terminated, the spot request will be closed. Default `persistent`"
+          },
+          {
+            "name": "spot_wait_for_fulfillment",
+            "type": "boolean",
+            "description": "If set, Terraform will wait for the Spot Request to be fulfilled, and will throw an error if the timeout of 10m is reached"
+          },
+          {
+            "name": "spot_valid_from",
+            "type": "string",
+            "description": "The start date and time of the request, in UTC RFC3339 format(for example, YYYY-MM-DDTHH:MM:SSZ)"
+          },
+          {
+            "name": "spot_valid_until",
+            "type": "string",
+            "description": "The end date and time of the request, in UTC RFC3339 format(for example, YYYY-MM-DDTHH:MM:SSZ)"
+          },
+          {
+            "name": "ebs_volumes",
+            "description": "Additional EBS volumes to attach to the instance"
+          },
+          {
+            "name": "create_iam_instance_profile",
+            "type": "boolean",
+            "default": false,
+            "description": "Determines whether an IAM instance profile is created or to use an existing IAM instance profile"
+          },
+          {
+            "name": "iam_role_name",
+            "type": "string",
+            "description": "Name to use on IAM role created"
+          },
+          {
+            "name": "iam_role_use_name_prefix",
+            "type": "boolean",
+            "default": true,
+            "description": "Determines whether the IAM role name (`iam_role_name` or `name`) is used as a prefix"
+          },
+          {
+            "name": "iam_role_path",
+            "type": "string",
+            "description": "IAM role path"
+          },
+          {
+            "name": "iam_role_description",
+            "type": "string",
+            "description": "Description of the role"
+          },
+          {
+            "name": "iam_role_permissions_boundary",
+            "type": "string",
+            "description": "ARN of the policy that is used to set the permissions boundary for the IAM role"
+          },
+          {
+            "name": "iam_role_policies",
+            "type": {
+              "additionalProperties": "string",
+              "type": "object"
+            },
+            "default": {},
+            "description": "Policies attached to the IAM role"
+          },
+          {
+            "name": "iam_role_tags",
+            "type": {
+              "additionalProperties": "string",
+              "type": "object"
+            },
+            "default": {},
+            "description": "A map of additional tags to add to the IAM role/profile created"
+          },
+          {
+            "name": "create_security_group",
+            "type": "boolean",
+            "default": true,
+            "description": "Determines whether a security group will be created"
+          },
+          {
+            "name": "security_group_name",
+            "type": "string",
+            "description": "Name to use on security group created"
+          },
+          {
+            "name": "security_group_use_name_prefix",
+            "type": "boolean",
+            "default": true,
+            "description": "Determines whether the security group name (`security_group_name` or `name`) is used as a prefix"
+          },
+          {
+            "name": "security_group_description",
+            "type": "string",
+            "description": "Description of the security group"
+          },
+          {
+            "name": "security_group_vpc_id",
+            "type": "string",
+            "description": "VPC ID to create the security group in. If not set, the security group will be created in the default VPC"
+          },
+          {
+            "name": "security_group_tags",
+            "type": {
+              "additionalProperties": "string",
+              "type": "object"
+            },
+            "default": {},
+            "description": "A map of additional tags to add to the security group created"
+          },
+          {
+            "name": "security_group_egress_rules",
+            "default": {
+              "ipv4_default": {
+                "cidr_ipv4": "0.0.0.0/0",
+                "description": "Allow all IPv4 traffic",
+                "ip_protocol": "-1"
+              },
+              "ipv6_default": {
+                "cidr_ipv6": "::/0",
+                "description": "Allow all IPv6 traffic",
+                "ip_protocol": "-1"
+              }
+            },
+            "description": "Egress rules to add to the security group"
+          },
+          {
+            "name": "security_group_ingress_rules",
+            "description": "Egress rules to add to the security group"
+          },
+          {
+            "name": "create_eip",
+            "type": "boolean",
+            "default": false,
+            "description": "Determines whether a public EIP will be created and associated with the instance."
+          },
+          {
+            "name": "eip_domain",
+            "type": "string",
+            "default": "vpc",
+            "description": "Indicates if this EIP is for use in VPC"
+          },
+          {
+            "name": "eip_tags",
+            "type": {
+              "additionalProperties": "string",
+              "type": "object"
+            },
+            "default": {},
+            "description": "A map of additional tags to add to the eip"
+          },
+          {
+            "name": "putin_khuylo",
+            "type": "boolean",
+            "default": true,
+            "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "id",
+            "description": "The ID of the instance"
+          },
+          {
+            "name": "arn",
+            "description": "The ARN of the instance"
+          },
+          {
+            "name": "capacity_reservation_specification",
+            "description": "Capacity reservation specification of the instance"
+          },
+          {
+            "name": "instance_state",
+            "description": "The state of the instance"
+          },
+          {
+            "name": "outpost_arn",
+            "description": "The ARN of the Outpost the instance is assigned to"
+          },
+          {
+            "name": "password_data",
+            "description": "Base-64 encoded encrypted password data for the instance. Useful for getting the administrator password for instances running Microsoft Windows. This attribute is only exported if `get_password_data` is true"
+          },
+          {
+            "name": "primary_network_interface_id",
+            "description": "The ID of the instance's primary network interface"
+          },
+          {
+            "name": "private_dns",
+            "description": "The private DNS name assigned to the instance. Can only be used inside the Amazon EC2, and only available if you've enabled DNS hostnames for your VPC"
+          },
+          {
+            "name": "public_dns",
+            "description": "The public DNS name assigned to the instance. For EC2-VPC, this is only available if you've enabled DNS hostnames for your VPC"
+          },
+          {
+            "name": "public_ip",
+            "description": "The public IP address assigned to the instance, if applicable."
+          },
+          {
+            "name": "private_ip",
+            "description": "The private IP address assigned to the instance"
+          },
+          {
+            "name": "ipv6_addresses",
+            "description": "The IPv6 address assigned to the instance, if applicable",
+            "evaluatedValue": []
+          },
+          {
+            "name": "tags_all",
+            "description": "A map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
+            "evaluatedValue": {}
+          },
+          {
+            "name": "spot_bid_status",
+            "description": "The current bid status of the Spot Instance Request"
+          },
+          {
+            "name": "spot_request_state",
+            "description": "The current request state of the Spot Instance Request"
+          },
+          {
+            "name": "spot_instance_id",
+            "description": "The Instance ID (if any) that is currently fulfilling the Spot Instance request"
+          },
+          {
+            "name": "ami",
+            "description": "AMI ID that was used to create the instance"
+          },
+          {
+            "name": "availability_zone",
+            "description": "The availability zone of the created instance"
+          },
+          {
+            "name": "ebs_volumes",
+            "description": "Map of EBS volumes created and their attributes",
+            "evaluatedValue": []
+          },
+          {
+            "name": "iam_role_name",
+            "description": "The name of the IAM role"
+          },
+          {
+            "name": "iam_role_arn",
+            "description": "The Amazon Resource Name (ARN) specifying the IAM role"
+          },
+          {
+            "name": "iam_role_unique_id",
+            "description": "Stable and unique string identifying the IAM role"
+          },
+          {
+            "name": "iam_instance_profile_arn",
+            "description": "ARN assigned by AWS to the instance profile"
+          },
+          {
+            "name": "iam_instance_profile_id",
+            "description": "Instance profile's ID"
+          },
+          {
+            "name": "iam_instance_profile_unique",
+            "description": "Stable and unique string identifying the IAM instance profile"
+          },
+          {
+            "name": "root_block_device",
+            "description": "Root block device information"
+          },
+          {
+            "name": "ebs_block_device",
+            "description": "EBS block device information"
+          },
+          {
+            "name": "ephemeral_block_device",
+            "description": "Ephemeral block device information"
+          }
+        ]
+      },
+      "modules": {}
+    },
+    "ec2_private_app3[1]": {
+      "terraformPath": "module.ec2_private_app3[1]",
+      "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/ec2_private_app3",
+      "indexKey": "1",
+      "indexType": "count",
+      "resources": {
+        "aws_security_group.this": {
+          "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
+          "instances": [
+            {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::ec2_private_app3[\"1\"]_this[0]",
+              "flatName": "ec2_private_app3[\"1\"]_this[0]",
+              "indexKey": "0"
+            }
+          ]
+        },
+        "aws_vpc_security_group_egress_rule.this": {
+          "pulumiType": "aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule",
+          "instances": [
+            {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app3[\"1\"]_this[\"ipv4_default\"]",
+              "flatName": "ec2_private_app3[\"1\"]_this[\"ipv4_default\"]",
+              "indexKey": "ipv4_default"
+            },
+            {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_private_app3[\"1\"]_this[\"ipv6_default\"]",
+              "flatName": "ec2_private_app3[\"1\"]_this[\"ipv6_default\"]",
               "indexKey": "ipv6_default"
             }
           ]
@@ -4787,680 +5442,16 @@
       },
       "modules": {}
     },
-    "ec2_private_app3[1]": {
-      "terraformPath": "module.ec2_private_app3[1]",
-      "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/ec2_private_app3",
-      "suggestedType": "terraform:module/ec2PrivateApp3:Ec2PrivateApp3",
-      "indexKey": "1",
-      "indexType": "count",
-      "resources": {
-        "aws_security_group.this": {
-          "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
-          "instances": [
-            {
-              "flatName": "ec2_private_app3[\"1\"]_this[0]",
-              "shortName": "this[0]",
-              "indexKey": "0"
-            }
-          ]
-        },
-        "aws_vpc_security_group_egress_rule.this": {
-          "pulumiType": "aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule",
-          "instances": [
-            {
-              "flatName": "ec2_private_app3[\"1\"]_this[\"ipv4_default\"]",
-              "shortName": "this[\"ipv4_default\"]",
-              "indexKey": "ipv4_default"
-            },
-            {
-              "flatName": "ec2_private_app3[\"1\"]_this[\"ipv6_default\"]",
-              "shortName": "this[\"ipv6_default\"]",
-              "indexKey": "ipv6_default"
-            }
-          ]
-        }
-      },
-      "interface": {
-        "inputs": [
-          {
-            "name": "create",
-            "type": "boolean",
-            "default": true,
-            "description": "Whether to create an instance"
-          },
-          {
-            "name": "name",
-            "type": "string",
-            "default": "",
-            "description": "Name to be used on EC2 instance created",
-            "evaluatedValue": "dev-app3"
-          },
-          {
-            "name": "region",
-            "type": "string",
-            "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration"
-          },
-          {
-            "name": "ami",
-            "type": "string",
-            "description": "ID of AMI to use for the instance",
-            "evaluatedValue": "ami-0771b6766e1e61632"
-          },
-          {
-            "name": "ami_ssm_parameter",
-            "type": "string",
-            "default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64",
-            "description": "SSM parameter name for the AMI ID. For Amazon Linux AMI SSM parameters see [reference](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-public-parameters-ami.html)"
-          },
-          {
-            "name": "ignore_ami_changes",
-            "type": "boolean",
-            "default": false,
-            "description": "Whether changes to the AMI ID changes should be ignored by Terraform. Note - changing this value will result in the replacement of the instance"
-          },
-          {
-            "name": "associate_public_ip_address",
-            "type": "boolean",
-            "description": "Whether to associate a public IP address with an instance in a VPC"
-          },
-          {
-            "name": "availability_zone",
-            "type": "string",
-            "description": "AZ to start the instance in"
-          },
-          {
-            "name": "capacity_reservation_specification",
-            "type": {
-              "type": "object"
-            },
-            "description": "Describes an instance's Capacity Reservation targeting option"
-          },
-          {
-            "name": "cpu_options",
-            "type": {
-              "type": "object"
-            },
-            "description": "Defines CPU options to apply to the instance at launch time."
-          },
-          {
-            "name": "cpu_credits",
-            "type": "string",
-            "description": "The credit option for CPU usage (unlimited or standard)"
-          },
-          {
-            "name": "disable_api_termination",
-            "type": "boolean",
-            "description": "If true, enables EC2 Instance Termination Protection"
-          },
-          {
-            "name": "disable_api_stop",
-            "type": "boolean",
-            "description": "If true, enables EC2 Instance Stop Protection"
-          },
-          {
-            "name": "ebs_optimized",
-            "type": "boolean",
-            "description": "If true, the launched EC2 instance will be EBS-optimized"
-          },
-          {
-            "name": "enclave_options_enabled",
-            "type": "boolean",
-            "description": "Whether Nitro Enclaves will be enabled on the instance. Defaults to `false`"
-          },
-          {
-            "name": "enable_primary_ipv6",
-            "type": "boolean",
-            "description": "Whether to assign a primary IPv6 Global Unicast Address (GUA) to the instance when launched in a dual-stack or IPv6-only subnet"
-          },
-          {
-            "name": "ephemeral_block_device",
-            "type": {
-              "additionalProperties": {
-                "type": "object"
-              },
-              "type": "object"
-            },
-            "description": "Customize Ephemeral (also known as Instance Store) volumes on the instance"
-          },
-          {
-            "name": "get_password_data",
-            "type": "boolean",
-            "description": "If true, wait for password data to become available and retrieve it"
-          },
-          {
-            "name": "hibernation",
-            "type": "boolean",
-            "description": "If true, the launched EC2 instance will support hibernation"
-          },
-          {
-            "name": "host_id",
-            "type": "string",
-            "description": "ID of a dedicated host that the instance will be assigned to. Use when an instance is to be launched on a specific dedicated host"
-          },
-          {
-            "name": "host_resource_group_arn",
-            "type": "string",
-            "description": "ARN of the host resource group in which to launch the instances. If you specify an ARN, omit the `tenancy` parameter or set it to `host`"
-          },
-          {
-            "name": "iam_instance_profile",
-            "type": "string",
-            "description": "IAM Instance Profile to launch the instance with. Specified as the name of the Instance Profile"
-          },
-          {
-            "name": "instance_initiated_shutdown_behavior",
-            "type": "string",
-            "description": "Shutdown behavior for the instance. Amazon defaults this to stop for EBS-backed instances and terminate for instance-store instances. Cannot be set on instance-store instance"
-          },
-          {
-            "name": "instance_market_options",
-            "type": {
-              "type": "object"
-            },
-            "description": "The market (purchasing) option for the instance. If set, overrides the `create_spot_instance` variable"
-          },
-          {
-            "name": "instance_type",
-            "type": "string",
-            "default": "t3.micro",
-            "description": "The type of instance to start",
-            "evaluatedValue": "t3.micro"
-          },
-          {
-            "name": "ipv6_address_count",
-            "type": "number",
-            "description": "A number of IPv6 addresses to associate with the primary network interface. Amazon EC2 chooses the IPv6 addresses from the range of your subnet"
-          },
-          {
-            "name": "ipv6_addresses",
-            "type": {
-              "items": "string",
-              "type": "array"
-            },
-            "description": "Specify one or more IPv6 addresses from the range of the subnet to associate with the primary network interface"
-          },
-          {
-            "name": "key_name",
-            "type": "string",
-            "description": "Key name of the Key Pair to use for the instance; which can be managed using the `aws_key_pair` resource",
-            "evaluatedValue": "anton-20251005-terraform-key"
-          },
-          {
-            "name": "launch_template",
-            "type": {
-              "type": "object"
-            },
-            "description": "Specifies a Launch Template to configure the instance. Parameters configured on this resource will override the corresponding parameters in the Launch Template"
-          },
-          {
-            "name": "maintenance_options",
-            "type": {
-              "type": "object"
-            },
-            "description": "The maintenance options for the instance"
-          },
-          {
-            "name": "metadata_options",
-            "default": {
-              "http_endpoint": "enabled",
-              "http_put_response_hop_limit": 1,
-              "http_tokens": "required"
-            },
-            "description": "Customize the metadata options of the instance"
-          },
-          {
-            "name": "monitoring",
-            "type": "boolean",
-            "description": "If true, the launched EC2 instance will have detailed monitoring enabled"
-          },
-          {
-            "name": "network_interface",
-            "type": {
-              "additionalProperties": {
-                "type": "object"
-              },
-              "type": "object"
-            },
-            "description": "Customize network interfaces to be attached at instance boot time"
-          },
-          {
-            "name": "placement_group",
-            "type": "string",
-            "description": "The Placement Group to start the instance in"
-          },
-          {
-            "name": "placement_partition_number",
-            "type": "number",
-            "description": "Number of the partition the instance is in. Valid only if the `aws_placement_group` resource's `strategy` argument is set to `partition`"
-          },
-          {
-            "name": "private_dns_name_options",
-            "type": {
-              "type": "object"
-            },
-            "description": "Customize the private DNS name options of the instance"
-          },
-          {
-            "name": "private_ip",
-            "type": "string",
-            "description": "Private IP address to associate with the instance in a VPC"
-          },
-          {
-            "name": "root_block_device",
-            "type": {
-              "type": "object"
-            },
-            "description": "Customize details about the root block device of the instance. See Block Devices below for details"
-          },
-          {
-            "name": "secondary_private_ips",
-            "type": {
-              "items": "string",
-              "type": "array"
-            },
-            "description": "A list of secondary private IPv4 addresses to assign to the instance's primary network interface (eth0) in a VPC. Can only be assigned to the primary network interface (eth0) attached at instance creation, not a pre-existing network interface i.e. referenced in a `network_interface block`"
-          },
-          {
-            "name": "source_dest_check",
-            "type": "boolean",
-            "description": "Controls if traffic is routed to the instance when the destination address does not match the instance. Used for NAT or VPNs"
-          },
-          {
-            "name": "subnet_id",
-            "type": "string",
-            "description": "The VPC Subnet ID to launch in",
-            "evaluatedValue": "subnet-05370bec0a3006f38"
-          },
-          {
-            "name": "tags",
-            "type": {
-              "additionalProperties": "string",
-              "type": "object"
-            },
-            "default": {},
-            "description": "A mapping of tags to assign to the resource",
-            "evaluatedValue": {
-              "Owner": "anton",
-              "environment": "dev",
-              "owners": "sap"
-            }
-          },
-          {
-            "name": "instance_tags",
-            "type": {
-              "additionalProperties": "string",
-              "type": "object"
-            },
-            "default": {},
-            "description": "Additional tags for the instance"
-          },
-          {
-            "name": "tenancy",
-            "type": "string",
-            "description": "The tenancy of the instance (if the instance is running in a VPC). Available values: default, dedicated, host"
-          },
-          {
-            "name": "user_data",
-            "type": "string",
-            "description": "The user data to provide when launching the instance. Do not pass gzip-compressed data via this argument; see user_data_base64 instead",
-            "evaluatedValue": "#! /bin/bash\nsudo amazon-linux-extras enable java-openjdk11\nsudo yum clean metadata \u0026\u0026 sudo yum -y install java-11-openjdk\nmkdir /home/ec2-user/app3-usermgmt \u0026\u0026 cd /home/ec2-user/app3-usermgmt\nwget https://github.com/stacksimplify/temp1/releases/download/1.0.0/usermgmt-webapp.war -P /home/ec2-user/app3-usermgmt \nexport DB_HOSTNAME=\nexport DB_PORT=3306\nexport DB_NAME=webappdb\nexport DB_USERNAME=dbadmin\nexport DB_PASSWORD=dbpassword11\njava -jar /home/ec2-user/app3-usermgmt/usermgmt-webapp.war \u003e /home/ec2-user/app3-usermgmt/ums-start.log \u0026\n"
-          },
-          {
-            "name": "user_data_base64",
-            "type": "string",
-            "description": "Can be used instead of user_data to pass base64-encoded binary data directly. Use this instead of user_data whenever the value is not a valid UTF-8 string. For example, gzip-encoded user data must be base64-encoded and passed via this argument to avoid corruption"
-          },
-          {
-            "name": "user_data_replace_on_change",
-            "type": "boolean",
-            "description": "When used in combination with user_data or user_data_base64 will trigger a destroy and recreate when set to true. Defaults to false if not set"
-          },
-          {
-            "name": "volume_tags",
-            "type": {
-              "additionalProperties": "string",
-              "type": "object"
-            },
-            "default": {},
-            "description": "A mapping of tags to assign to the devices created by the instance at launch time"
-          },
-          {
-            "name": "enable_volume_tags",
-            "type": "boolean",
-            "default": true,
-            "description": "Whether to enable volume tags (if enabled it conflicts with root_block_device tags)"
-          },
-          {
-            "name": "vpc_security_group_ids",
-            "type": {
-              "items": "string",
-              "type": "array"
-            },
-            "default": null,
-            "description": "A list of security group IDs to associate with",
-            "evaluatedValue": [
-              ""
-            ]
-          },
-          {
-            "name": "timeouts",
-            "type": {
-              "additionalProperties": "string",
-              "type": "object"
-            },
-            "default": {},
-            "description": "Define maximum timeout for creating, updating, and deleting EC2 instance resources"
-          },
-          {
-            "name": "create_spot_instance",
-            "type": "boolean",
-            "default": false,
-            "description": "Depicts if the instance is a spot instance"
-          },
-          {
-            "name": "spot_instance_interruption_behavior",
-            "type": "string",
-            "description": "Indicates Spot instance behavior when it is interrupted. Valid values are `terminate`, `stop`, or `hibernate`"
-          },
-          {
-            "name": "spot_launch_group",
-            "type": "string",
-            "description": "A launch group is a group of spot instances that launch together and terminate together. If left empty instances are launched and terminated individually"
-          },
-          {
-            "name": "spot_price",
-            "type": "string",
-            "description": "The maximum price to request on the spot market. Defaults to on-demand price"
-          },
-          {
-            "name": "spot_type",
-            "type": "string",
-            "description": "If set to one-time, after the instance is terminated, the spot request will be closed. Default `persistent`"
-          },
-          {
-            "name": "spot_wait_for_fulfillment",
-            "type": "boolean",
-            "description": "If set, Terraform will wait for the Spot Request to be fulfilled, and will throw an error if the timeout of 10m is reached"
-          },
-          {
-            "name": "spot_valid_from",
-            "type": "string",
-            "description": "The start date and time of the request, in UTC RFC3339 format(for example, YYYY-MM-DDTHH:MM:SSZ)"
-          },
-          {
-            "name": "spot_valid_until",
-            "type": "string",
-            "description": "The end date and time of the request, in UTC RFC3339 format(for example, YYYY-MM-DDTHH:MM:SSZ)"
-          },
-          {
-            "name": "ebs_volumes",
-            "description": "Additional EBS volumes to attach to the instance"
-          },
-          {
-            "name": "create_iam_instance_profile",
-            "type": "boolean",
-            "default": false,
-            "description": "Determines whether an IAM instance profile is created or to use an existing IAM instance profile"
-          },
-          {
-            "name": "iam_role_name",
-            "type": "string",
-            "description": "Name to use on IAM role created"
-          },
-          {
-            "name": "iam_role_use_name_prefix",
-            "type": "boolean",
-            "default": true,
-            "description": "Determines whether the IAM role name (`iam_role_name` or `name`) is used as a prefix"
-          },
-          {
-            "name": "iam_role_path",
-            "type": "string",
-            "description": "IAM role path"
-          },
-          {
-            "name": "iam_role_description",
-            "type": "string",
-            "description": "Description of the role"
-          },
-          {
-            "name": "iam_role_permissions_boundary",
-            "type": "string",
-            "description": "ARN of the policy that is used to set the permissions boundary for the IAM role"
-          },
-          {
-            "name": "iam_role_policies",
-            "type": {
-              "additionalProperties": "string",
-              "type": "object"
-            },
-            "default": {},
-            "description": "Policies attached to the IAM role"
-          },
-          {
-            "name": "iam_role_tags",
-            "type": {
-              "additionalProperties": "string",
-              "type": "object"
-            },
-            "default": {},
-            "description": "A map of additional tags to add to the IAM role/profile created"
-          },
-          {
-            "name": "create_security_group",
-            "type": "boolean",
-            "default": true,
-            "description": "Determines whether a security group will be created"
-          },
-          {
-            "name": "security_group_name",
-            "type": "string",
-            "description": "Name to use on security group created"
-          },
-          {
-            "name": "security_group_use_name_prefix",
-            "type": "boolean",
-            "default": true,
-            "description": "Determines whether the security group name (`security_group_name` or `name`) is used as a prefix"
-          },
-          {
-            "name": "security_group_description",
-            "type": "string",
-            "description": "Description of the security group"
-          },
-          {
-            "name": "security_group_vpc_id",
-            "type": "string",
-            "description": "VPC ID to create the security group in. If not set, the security group will be created in the default VPC"
-          },
-          {
-            "name": "security_group_tags",
-            "type": {
-              "additionalProperties": "string",
-              "type": "object"
-            },
-            "default": {},
-            "description": "A map of additional tags to add to the security group created"
-          },
-          {
-            "name": "security_group_egress_rules",
-            "default": {
-              "ipv4_default": {
-                "cidr_ipv4": "0.0.0.0/0",
-                "description": "Allow all IPv4 traffic",
-                "ip_protocol": "-1"
-              },
-              "ipv6_default": {
-                "cidr_ipv6": "::/0",
-                "description": "Allow all IPv6 traffic",
-                "ip_protocol": "-1"
-              }
-            },
-            "description": "Egress rules to add to the security group"
-          },
-          {
-            "name": "security_group_ingress_rules",
-            "description": "Egress rules to add to the security group"
-          },
-          {
-            "name": "create_eip",
-            "type": "boolean",
-            "default": false,
-            "description": "Determines whether a public EIP will be created and associated with the instance."
-          },
-          {
-            "name": "eip_domain",
-            "type": "string",
-            "default": "vpc",
-            "description": "Indicates if this EIP is for use in VPC"
-          },
-          {
-            "name": "eip_tags",
-            "type": {
-              "additionalProperties": "string",
-              "type": "object"
-            },
-            "default": {},
-            "description": "A map of additional tags to add to the eip"
-          },
-          {
-            "name": "putin_khuylo",
-            "type": "boolean",
-            "default": true,
-            "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!"
-          }
-        ],
-        "outputs": [
-          {
-            "name": "id",
-            "description": "The ID of the instance"
-          },
-          {
-            "name": "arn",
-            "description": "The ARN of the instance"
-          },
-          {
-            "name": "capacity_reservation_specification",
-            "description": "Capacity reservation specification of the instance"
-          },
-          {
-            "name": "instance_state",
-            "description": "The state of the instance"
-          },
-          {
-            "name": "outpost_arn",
-            "description": "The ARN of the Outpost the instance is assigned to"
-          },
-          {
-            "name": "password_data",
-            "description": "Base-64 encoded encrypted password data for the instance. Useful for getting the administrator password for instances running Microsoft Windows. This attribute is only exported if `get_password_data` is true"
-          },
-          {
-            "name": "primary_network_interface_id",
-            "description": "The ID of the instance's primary network interface"
-          },
-          {
-            "name": "private_dns",
-            "description": "The private DNS name assigned to the instance. Can only be used inside the Amazon EC2, and only available if you've enabled DNS hostnames for your VPC"
-          },
-          {
-            "name": "public_dns",
-            "description": "The public DNS name assigned to the instance. For EC2-VPC, this is only available if you've enabled DNS hostnames for your VPC"
-          },
-          {
-            "name": "public_ip",
-            "description": "The public IP address assigned to the instance, if applicable."
-          },
-          {
-            "name": "private_ip",
-            "description": "The private IP address assigned to the instance"
-          },
-          {
-            "name": "ipv6_addresses",
-            "description": "The IPv6 address assigned to the instance, if applicable",
-            "evaluatedValue": []
-          },
-          {
-            "name": "tags_all",
-            "description": "A map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
-            "evaluatedValue": {}
-          },
-          {
-            "name": "spot_bid_status",
-            "description": "The current bid status of the Spot Instance Request"
-          },
-          {
-            "name": "spot_request_state",
-            "description": "The current request state of the Spot Instance Request"
-          },
-          {
-            "name": "spot_instance_id",
-            "description": "The Instance ID (if any) that is currently fulfilling the Spot Instance request"
-          },
-          {
-            "name": "ami",
-            "description": "AMI ID that was used to create the instance"
-          },
-          {
-            "name": "availability_zone",
-            "description": "The availability zone of the created instance"
-          },
-          {
-            "name": "ebs_volumes",
-            "description": "Map of EBS volumes created and their attributes",
-            "evaluatedValue": []
-          },
-          {
-            "name": "iam_role_name",
-            "description": "The name of the IAM role"
-          },
-          {
-            "name": "iam_role_arn",
-            "description": "The Amazon Resource Name (ARN) specifying the IAM role"
-          },
-          {
-            "name": "iam_role_unique_id",
-            "description": "Stable and unique string identifying the IAM role"
-          },
-          {
-            "name": "iam_instance_profile_arn",
-            "description": "ARN assigned by AWS to the instance profile"
-          },
-          {
-            "name": "iam_instance_profile_id",
-            "description": "Instance profile's ID"
-          },
-          {
-            "name": "iam_instance_profile_unique",
-            "description": "Stable and unique string identifying the IAM instance profile"
-          },
-          {
-            "name": "root_block_device",
-            "description": "Root block device information"
-          },
-          {
-            "name": "ebs_block_device",
-            "description": "EBS block device information"
-          },
-          {
-            "name": "ephemeral_block_device",
-            "description": "Ephemeral block device information"
-          }
-        ]
-      },
-      "modules": {}
-    },
     "ec2_public": {
       "terraformPath": "module.ec2_public",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/ec2_public",
-      "suggestedType": "terraform:module/ec2Public:Ec2Public",
       "resources": {
         "aws_instance.this": {
           "pulumiType": "aws:ec2/instance:Instance",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/instance:Instance::ec2_public_this[0]",
               "flatName": "ec2_public_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -5469,8 +5460,8 @@
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::ec2_public_this[0]",
               "flatName": "ec2_public_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -5479,13 +5470,13 @@
           "pulumiType": "aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_public_this[\"ipv4_default\"]",
               "flatName": "ec2_public_this[\"ipv4_default\"]",
-              "shortName": "this[\"ipv4_default\"]",
               "indexKey": "ipv4_default"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:vpc/securityGroupEgressRule:SecurityGroupEgressRule::ec2_public_this[\"ipv6_default\"]",
               "flatName": "ec2_public_this[\"ipv6_default\"]",
-              "shortName": "this[\"ipv6_default\"]",
               "indexKey": "ipv6_default"
             }
           ]
@@ -6124,14 +6115,13 @@
     "loadbalancer_sg": {
       "terraformPath": "module.loadbalancer_sg",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/loadbalancer_sg",
-      "suggestedType": "terraform:module/loadbalancerSg:LoadbalancerSg",
       "resources": {
         "aws_security_group.this_name_prefix": {
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::loadbalancer_sg_this_name_prefix[0]",
               "flatName": "loadbalancer_sg_this_name_prefix[0]",
-              "shortName": "this_name_prefix[0]",
               "indexKey": "0"
             }
           ]
@@ -6140,8 +6130,8 @@
           "pulumiType": "aws:ec2/securityGroupRule:SecurityGroupRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::loadbalancer_sg_egress_rules[0]",
               "flatName": "loadbalancer_sg_egress_rules[0]",
-              "shortName": "egress_rules[0]",
               "indexKey": "0"
             }
           ]
@@ -6150,13 +6140,13 @@
           "pulumiType": "aws:ec2/securityGroupRule:SecurityGroupRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::loadbalancer_sg_ingress_rules[0]",
               "flatName": "loadbalancer_sg_ingress_rules[0]",
-              "shortName": "ingress_rules[0]",
               "indexKey": "0"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::loadbalancer_sg_ingress_rules[1]",
               "flatName": "loadbalancer_sg_ingress_rules[1]",
-              "shortName": "ingress_rules[1]",
               "indexKey": "1"
             }
           ]
@@ -6165,8 +6155,8 @@
           "pulumiType": "aws:ec2/securityGroupRule:SecurityGroupRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::loadbalancer_sg_ingress_with_cidr_blocks[0]",
               "flatName": "loadbalancer_sg_ingress_with_cidr_blocks[0]",
-              "shortName": "ingress_with_cidr_blocks[0]",
               "indexKey": "0"
             }
           ]
@@ -8399,14 +8389,13 @@
     "private_sg": {
       "terraformPath": "module.private_sg",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/private_sg",
-      "suggestedType": "terraform:module/privateSg:PrivateSg",
       "resources": {
         "aws_security_group.this_name_prefix": {
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::private_sg_this_name_prefix[0]",
               "flatName": "private_sg_this_name_prefix[0]",
-              "shortName": "this_name_prefix[0]",
               "indexKey": "0"
             }
           ]
@@ -8415,8 +8404,8 @@
           "pulumiType": "aws:ec2/securityGroupRule:SecurityGroupRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::private_sg_egress_rules[0]",
               "flatName": "private_sg_egress_rules[0]",
-              "shortName": "egress_rules[0]",
               "indexKey": "0"
             }
           ]
@@ -8425,18 +8414,18 @@
           "pulumiType": "aws:ec2/securityGroupRule:SecurityGroupRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::private_sg_ingress_rules[0]",
               "flatName": "private_sg_ingress_rules[0]",
-              "shortName": "ingress_rules[0]",
               "indexKey": "0"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::private_sg_ingress_rules[1]",
               "flatName": "private_sg_ingress_rules[1]",
-              "shortName": "ingress_rules[1]",
               "indexKey": "1"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::private_sg_ingress_rules[2]",
               "flatName": "private_sg_ingress_rules[2]",
-              "shortName": "ingress_rules[2]",
               "indexKey": "2"
             }
           ]
@@ -10661,14 +10650,13 @@
     "public_bastion_sg": {
       "terraformPath": "module.public_bastion_sg",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/public_bastion_sg",
-      "suggestedType": "terraform:module/publicBastionSg:PublicBastionSg",
       "resources": {
         "aws_security_group.this_name_prefix": {
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::public_bastion_sg_this_name_prefix[0]",
               "flatName": "public_bastion_sg_this_name_prefix[0]",
-              "shortName": "this_name_prefix[0]",
               "indexKey": "0"
             }
           ]
@@ -10677,8 +10665,8 @@
           "pulumiType": "aws:ec2/securityGroupRule:SecurityGroupRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::public_bastion_sg_egress_rules[0]",
               "flatName": "public_bastion_sg_egress_rules[0]",
-              "shortName": "egress_rules[0]",
               "indexKey": "0"
             }
           ]
@@ -10687,8 +10675,8 @@
           "pulumiType": "aws:ec2/securityGroupRule:SecurityGroupRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::public_bastion_sg_ingress_rules[0]",
               "flatName": "public_bastion_sg_ingress_rules[0]",
-              "shortName": "ingress_rules[0]",
               "indexKey": "0"
             }
           ]
@@ -12911,7 +12899,6 @@
     "rdsdb": {
       "terraformPath": "module.rdsdb",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/rdsdb",
-      "suggestedType": "terraform:module/rdsdb:Rdsdb",
       "resources": {},
       "interface": {
         "inputs": [
@@ -13661,14 +13648,13 @@
         "db_option_group": {
           "terraformPath": "module.rdsdb.module.db_option_group",
           "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/rdsdb/modules/db_option_group",
-          "suggestedType": "terraform:module/dbOptionGroup:DbOptionGroup",
           "resources": {
             "aws_db_option_group.this": {
               "pulumiType": "aws:rds/optionGroup:OptionGroup",
               "instances": [
                 {
+                  "urn": "urn:pulumi:dev::dns-to-db::aws:rds/optionGroup:OptionGroup::rdsdb_db_option_group_this[0]",
                   "flatName": "rdsdb_db_option_group_this[0]",
-                  "shortName": "this[0]",
                   "indexKey": "0"
                 }
               ]
@@ -13764,14 +13750,13 @@
         "db_parameter_group": {
           "terraformPath": "module.rdsdb.module.db_parameter_group",
           "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/rdsdb/modules/db_parameter_group",
-          "suggestedType": "terraform:module/dbParameterGroup:DbParameterGroup",
           "resources": {
             "aws_db_parameter_group.this": {
               "pulumiType": "aws:rds/parameterGroup:ParameterGroup",
               "instances": [
                 {
+                  "urn": "urn:pulumi:dev::dns-to-db::aws:rds/parameterGroup:ParameterGroup::rdsdb_db_parameter_group_this[0]",
                   "flatName": "rdsdb_db_parameter_group_this[0]",
-                  "shortName": "this[0]",
                   "indexKey": "0"
                 }
               ]
@@ -13866,14 +13851,13 @@
         "db_subnet_group": {
           "terraformPath": "module.rdsdb.module.db_subnet_group",
           "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/rdsdb/modules/db_subnet_group",
-          "suggestedType": "terraform:module/dbSubnetGroup:DbSubnetGroup",
           "resources": {
             "aws_db_subnet_group.this": {
               "pulumiType": "aws:rds/subnetGroup:SubnetGroup",
               "instances": [
                 {
+                  "urn": "urn:pulumi:dev::dns-to-db::aws:rds/subnetGroup:SubnetGroup::rdsdb_db_subnet_group_this[0]",
                   "flatName": "rdsdb_db_subnet_group_this[0]",
-                  "shortName": "this[0]",
                   "indexKey": "0"
                 }
               ]
@@ -13955,14 +13939,13 @@
     "rdsdb_sg": {
       "terraformPath": "module.rdsdb_sg",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/rdsdb_sg",
-      "suggestedType": "terraform:module/rdsdbSg:RdsdbSg",
       "resources": {
         "aws_security_group.this_name_prefix": {
           "pulumiType": "aws:ec2/securityGroup:SecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroup:SecurityGroup::rdsdb_sg_this_name_prefix[0]",
               "flatName": "rdsdb_sg_this_name_prefix[0]",
-              "shortName": "this_name_prefix[0]",
               "indexKey": "0"
             }
           ]
@@ -13971,8 +13954,8 @@
           "pulumiType": "aws:ec2/securityGroupRule:SecurityGroupRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::rdsdb_sg_egress_rules[0]",
               "flatName": "rdsdb_sg_egress_rules[0]",
-              "shortName": "egress_rules[0]",
               "indexKey": "0"
             }
           ]
@@ -13981,8 +13964,8 @@
           "pulumiType": "aws:ec2/securityGroupRule:SecurityGroupRule",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/securityGroupRule:SecurityGroupRule::rdsdb_sg_ingress_with_cidr_blocks[0]",
               "flatName": "rdsdb_sg_ingress_with_cidr_blocks[0]",
-              "shortName": "ingress_with_cidr_blocks[0]",
               "indexKey": "0"
             }
           ]
@@ -16208,14 +16191,13 @@
     "vpc": {
       "terraformPath": "module.vpc",
       "source": "pkg/testdata/tf_dns_to_db/.terraform/modules/vpc",
-      "suggestedType": "terraform:module/vpc:Vpc",
       "resources": {
         "aws_db_subnet_group.database": {
           "pulumiType": "aws:rds/subnetGroup:SubnetGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:rds/subnetGroup:SubnetGroup::vpc_database[0]",
               "flatName": "vpc_database[0]",
-              "shortName": "database[0]",
               "indexKey": "0"
             }
           ]
@@ -16224,8 +16206,8 @@
           "pulumiType": "aws:ec2/defaultNetworkAcl:DefaultNetworkAcl",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/defaultNetworkAcl:DefaultNetworkAcl::vpc_this[0]",
               "flatName": "vpc_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -16234,8 +16216,8 @@
           "pulumiType": "aws:ec2/defaultRouteTable:DefaultRouteTable",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/defaultRouteTable:DefaultRouteTable::vpc_default[0]",
               "flatName": "vpc_default[0]",
-              "shortName": "default[0]",
               "indexKey": "0"
             }
           ]
@@ -16244,8 +16226,8 @@
           "pulumiType": "aws:ec2/defaultSecurityGroup:DefaultSecurityGroup",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/defaultSecurityGroup:DefaultSecurityGroup::vpc_this[0]",
               "flatName": "vpc_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -16254,8 +16236,8 @@
           "pulumiType": "aws:ec2/eip:Eip",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/eip:Eip::vpc_nat[0]",
               "flatName": "vpc_nat[0]",
-              "shortName": "nat[0]",
               "indexKey": "0"
             }
           ]
@@ -16264,8 +16246,8 @@
           "pulumiType": "aws:ec2/internetGateway:InternetGateway",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/internetGateway:InternetGateway::vpc_this[0]",
               "flatName": "vpc_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -16274,8 +16256,8 @@
           "pulumiType": "aws:ec2/natGateway:NatGateway",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/natGateway:NatGateway::vpc_this[0]",
               "flatName": "vpc_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -16284,8 +16266,8 @@
           "pulumiType": "aws:ec2/route:Route",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/route:Route::vpc_private_nat_gateway[0]",
               "flatName": "vpc_private_nat_gateway[0]",
-              "shortName": "private_nat_gateway[0]",
               "indexKey": "0"
             }
           ]
@@ -16294,8 +16276,8 @@
           "pulumiType": "aws:ec2/route:Route",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/route:Route::vpc_public_internet_gateway[0]",
               "flatName": "vpc_public_internet_gateway[0]",
-              "shortName": "public_internet_gateway[0]",
               "indexKey": "0"
             }
           ]
@@ -16304,8 +16286,8 @@
           "pulumiType": "aws:ec2/routeTable:RouteTable",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/routeTable:RouteTable::vpc_database[0]",
               "flatName": "vpc_database[0]",
-              "shortName": "database[0]",
               "indexKey": "0"
             }
           ]
@@ -16314,8 +16296,8 @@
           "pulumiType": "aws:ec2/routeTable:RouteTable",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/routeTable:RouteTable::vpc_private[0]",
               "flatName": "vpc_private[0]",
-              "shortName": "private[0]",
               "indexKey": "0"
             }
           ]
@@ -16324,8 +16306,8 @@
           "pulumiType": "aws:ec2/routeTable:RouteTable",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/routeTable:RouteTable::vpc_public[0]",
               "flatName": "vpc_public[0]",
-              "shortName": "public[0]",
               "indexKey": "0"
             }
           ]
@@ -16334,13 +16316,13 @@
           "pulumiType": "aws:ec2/routeTableAssociation:RouteTableAssociation",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/routeTableAssociation:RouteTableAssociation::vpc_database[0]",
               "flatName": "vpc_database[0]",
-              "shortName": "database[0]",
               "indexKey": "0"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/routeTableAssociation:RouteTableAssociation::vpc_database[1]",
               "flatName": "vpc_database[1]",
-              "shortName": "database[1]",
               "indexKey": "1"
             }
           ]
@@ -16349,13 +16331,13 @@
           "pulumiType": "aws:ec2/routeTableAssociation:RouteTableAssociation",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/routeTableAssociation:RouteTableAssociation::vpc_private[0]",
               "flatName": "vpc_private[0]",
-              "shortName": "private[0]",
               "indexKey": "0"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/routeTableAssociation:RouteTableAssociation::vpc_private[1]",
               "flatName": "vpc_private[1]",
-              "shortName": "private[1]",
               "indexKey": "1"
             }
           ]
@@ -16364,13 +16346,13 @@
           "pulumiType": "aws:ec2/routeTableAssociation:RouteTableAssociation",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/routeTableAssociation:RouteTableAssociation::vpc_public[0]",
               "flatName": "vpc_public[0]",
-              "shortName": "public[0]",
               "indexKey": "0"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/routeTableAssociation:RouteTableAssociation::vpc_public[1]",
               "flatName": "vpc_public[1]",
-              "shortName": "public[1]",
               "indexKey": "1"
             }
           ]
@@ -16379,13 +16361,13 @@
           "pulumiType": "aws:ec2/subnet:Subnet",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/subnet:Subnet::vpc_database[0]",
               "flatName": "vpc_database[0]",
-              "shortName": "database[0]",
               "indexKey": "0"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/subnet:Subnet::vpc_database[1]",
               "flatName": "vpc_database[1]",
-              "shortName": "database[1]",
               "indexKey": "1"
             }
           ]
@@ -16394,13 +16376,13 @@
           "pulumiType": "aws:ec2/subnet:Subnet",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/subnet:Subnet::vpc_private[0]",
               "flatName": "vpc_private[0]",
-              "shortName": "private[0]",
               "indexKey": "0"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/subnet:Subnet::vpc_private[1]",
               "flatName": "vpc_private[1]",
-              "shortName": "private[1]",
               "indexKey": "1"
             }
           ]
@@ -16409,13 +16391,13 @@
           "pulumiType": "aws:ec2/subnet:Subnet",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/subnet:Subnet::vpc_public[0]",
               "flatName": "vpc_public[0]",
-              "shortName": "public[0]",
               "indexKey": "0"
             },
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/subnet:Subnet::vpc_public[1]",
               "flatName": "vpc_public[1]",
-              "shortName": "public[1]",
               "indexKey": "1"
             }
           ]
@@ -16424,8 +16406,8 @@
           "pulumiType": "aws:ec2/vpc:Vpc",
           "instances": [
             {
+              "urn": "urn:pulumi:dev::dns-to-db::aws:ec2/vpc:Vpc::vpc_this[0]",
               "flatName": "vpc_this[0]",
-              "shortName": "this[0]",
               "indexKey": "0"
             }
           ]
@@ -18401,24 +18383,24 @@
             "name": "private_subnets",
             "description": "List of IDs of private subnets",
             "evaluatedValue": [
-              "subnet-0bc293c1ff7e71598",
-              "subnet-05370bec0a3006f38"
+              "subnet-05370bec0a3006f38",
+              "subnet-0bc293c1ff7e71598"
             ]
           },
           {
             "name": "private_subnet_arns",
             "description": "List of ARNs of private subnets",
             "evaluatedValue": [
-              "arn:aws:ec2:us-east-1:616138583583:subnet/subnet-0bc293c1ff7e71598",
-              "arn:aws:ec2:us-east-1:616138583583:subnet/subnet-05370bec0a3006f38"
+              "arn:aws:ec2:us-east-1:616138583583:subnet/subnet-05370bec0a3006f38",
+              "arn:aws:ec2:us-east-1:616138583583:subnet/subnet-0bc293c1ff7e71598"
             ]
           },
           {
             "name": "private_subnets_cidr_blocks",
             "description": "List of cidr_blocks of private subnets",
             "evaluatedValue": [
-              "10.0.2.0/24",
-              "10.0.1.0/24"
+              "10.0.1.0/24",
+              "10.0.2.0/24"
             ]
           },
           {
@@ -18449,8 +18431,8 @@
             "name": "private_route_table_association_ids",
             "description": "List of IDs of the private route table association",
             "evaluatedValue": [
-              "rtbassoc-005904bf9edc36674",
-              "rtbassoc-040ec4bbc1363f66a"
+              "rtbassoc-040ec4bbc1363f66a",
+              "rtbassoc-005904bf9edc36674"
             ]
           },
           {
