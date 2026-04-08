@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg"
@@ -29,13 +28,11 @@ func newStackCmd() *cobra.Command {
 	var to string
 	var plugins string
 	var strict bool
-	var noModuleComponents bool
 	var moduleTypeMaps []string
 	var pulumiStack string
 	var pulumiProject string
 	var moduleSchemas []string
 	var stateFile string
-	var componentInputs bool
 	var moduleSourceMaps []string
 
 	cmd := &cobra.Command{
@@ -105,13 +102,7 @@ See also:
 				sourceOverrides[parts[0]] = parts[1]
 			}
 
-			enableComponents := !noModuleComponents
-			if noModuleComponents && len(moduleTypeMaps) > 0 {
-				fmt.Fprintf(os.Stderr, "Warning: --module-type-map is ignored when --no-module-components is set\n")
-				typeOverrides = nil
-			}
-
-			err := pkg.TranslateAndWriteState(cmd.Context(), from, stateFile, to, out, plugins, strict, enableComponents, componentInputs, typeOverrides, sourceOverrides, schemaOverrides, pulumiStack, pulumiProject)
+			err := pkg.TranslateAndWriteState(cmd.Context(), from, stateFile, to, out, plugins, strict, typeOverrides, sourceOverrides, schemaOverrides, pulumiStack, pulumiProject)
 			if err != nil {
 				return fmt.Errorf("failed to convert and write Terraform state: %w", err)
 			}
@@ -124,16 +115,12 @@ See also:
 	cmd.Flags().StringVarP(&out, "out", "o", "", "Where to emit the translated Pulumi stack file")
 	cmd.Flags().StringVarP(&plugins, "plugins", "p", "", "Where to emit plugin requirements")
 	cmd.Flags().BoolVarP(&strict, "strict", "s", false, "Fail if any resources fail to be translated")
-	cmd.Flags().BoolVar(&noModuleComponents, "no-module-components", false,
-		"Disable creation of component resources for Terraform modules (flat mode)")
 	cmd.Flags().StringArrayVar(&moduleTypeMaps, "module-type-map", nil,
 		"Override component type token for a module (repeatable, format: module.name=pkg:mod:Type)")
 	cmd.Flags().StringVar(&pulumiStack, "pulumi-stack", "", "Override Pulumi stack name (skip auto-detection)")
 	cmd.Flags().StringVar(&pulumiProject, "pulumi-project", "", "Override Pulumi project name (skip auto-detection)")
 	cmd.Flags().StringArrayVar(&moduleSchemas, "module-schema", nil,
 		"Pulumi package schema for component validation (repeatable, format: module.name=./path/to/schema.json)")
-	cmd.Flags().BoolVar(&componentInputs, "component-inputs", true,
-		"Populate component inputs in state (true for component providers, false for single-language components)")
 	cmd.Flags().StringVar(&stateFile, "state-file", "",
 		"Path to a pre-captured state file (tofu show -json output or terraform.tfstate). Bypasses running tofu commands.")
 	cmd.Flags().StringArrayVar(&moduleSourceMaps, "module-source-map", nil,

@@ -56,8 +56,6 @@ func TranslateAndWriteState(
 	outputFilePath string,
 	requiredProvidersOutputFilePath string,
 	strict bool,
-	enableComponents bool,
-	populateComponentInputs bool,
 	typeOverrides map[string]string,
 	sourceOverrides map[string]string,
 	schemaOverrides map[string]string,
@@ -107,7 +105,7 @@ func TranslateAndWriteState(
 		}
 	}
 
-	res, err := TranslateState(ctx, tfState, providerVersions.ProviderSelections, stackName, projectName, enableComponents, populateComponentInputs, typeOverrides, sourceOverrides, schemaOverrides, tfDir)
+	res, err := TranslateState(ctx, tfState, providerVersions.ProviderSelections, stackName, projectName, typeOverrides, sourceOverrides, schemaOverrides, tfDir)
 	if err != nil {
 		return err
 	}
@@ -133,6 +131,21 @@ func TranslateAndWriteState(
 		metadataPath := filepath.Join(filepath.Dir(outputFilePath), "component-schemas.json")
 		if err := WriteComponentSchemaMetadata(res.ComponentMetadata, metadataPath); err != nil {
 			return fmt.Errorf("failed to write component schema metadata: %w", err)
+		}
+	}
+
+	// Write component-map.json sidecar file
+	if res.ComponentMapData != nil {
+		cm := buildComponentMap(
+			res.ComponentMapData.Tree,
+			tfState,
+			res.ComponentMapData.Metadata,
+			res.ComponentMapData.Components,
+			res.PulumiProviders,
+		)
+		mapPath := filepath.Join(filepath.Dir(outputFilePath), "component-map.json")
+		if err := WriteComponentMap(cm, mapPath); err != nil {
+			return fmt.Errorf("failed to write component map: %w", err)
 		}
 	}
 
@@ -163,15 +176,19 @@ type TranslateStateResult struct {
 	ErrorMessages     []ErroredResource
 	// ComponentMetadata is non-nil when HCL sources were available and parsed.
 	ComponentMetadata *ComponentSchemaMetadata
+	// ComponentMapData holds the intermediate data needed to build the component-map.json sidecar.
+	ComponentMapData *ComponentMapData
+	// PulumiProviders is the resolved provider map, exposed so callers can build the component map.
+	PulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata
 }
 
-func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions map[string]string, stackName, projectName string, enableComponents bool, populateComponentInputs bool, typeOverrides map[string]string, sourceOverrides map[string]string, schemaOverrides map[string]string, tfSourceDir string) (*TranslateStateResult, error) {
+func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions map[string]string, stackName, projectName string, typeOverrides map[string]string, sourceOverrides map[string]string, schemaOverrides map[string]string, tfSourceDir string) (*TranslateStateResult, error) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, providerVersions)
 	if err != nil {
 		return nil, err
 	}
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, enableComponents, populateComponentInputs, typeOverrides, sourceOverrides, schemaOverrides, tfSourceDir)
+	pulumiState, errorMessages, componentMapData, err := convertState(tfState, pulumiProviders, typeOverrides, sourceOverrides, schemaOverrides, tfSourceDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert state: %w", err)
 	}
@@ -191,6 +208,8 @@ func TranslateState(ctx context.Context, tfState *tfjson.State, providerVersions
 		RequiredProviders: requiredProviders,
 		ErrorMessages:     errorMessages,
 		ComponentMetadata: pulumiState.ComponentMetadata,
+		ComponentMapData:  componentMapData,
+		PulumiProviders:   pulumiProviders,
 	}, nil
 }
 
@@ -201,7 +220,7 @@ type ErroredResource struct {
 	ErrorMessage     string `json:"error_message"`
 }
 
-func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata, enableComponents bool, populateComponentInputs bool, typeOverrides map[string]string, sourceOverrides map[string]string, schemaOverrides map[string]string, tfSourceDir string) (*PulumiState, []ErroredResource, error) {
+func convertState(tfState *tfjson.State, pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata, typeOverrides map[string]string, sourceOverrides map[string]string, schemaOverrides map[string]string, tfSourceDir string) (*PulumiState, []ErroredResource, *ComponentMapData, error) {
 	pulumiState := &PulumiState{}
 
 	// TODO[pulumi/pulumi-service#35512]: This assumes one Pulumi provider per Terraform provider.
@@ -211,7 +230,7 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 	for tfProviderName, provider := range pulumiProviders {
 		inputs, err := GetProviderInputs(provider.Name)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to get provider inputs: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to get provider inputs: %w", err)
 		}
 		uuid := uuid.NewString()
 		providerResource := PulumiResource{
@@ -228,30 +247,31 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 		providerTable[tfProviderName] = providerResource.PulumiResourceID
 	}
 
-	// Build component tree from module hierarchy if enabled
-	var componentTree []*componentNode
-	if enableComponents {
-		var resourceAddresses []string
-		tofu.VisitResources(tfState, func(r *tfjson.StateResource) error {
-			resourceAddresses = append(resourceAddresses, r.Address)
-			return nil
-		}, &tofu.VisitOptions{})
+	// Build component tree from module hierarchy when source dir is available
+	var componentMapData *ComponentMapData
+	var resourceAddresses []string
+	tofu.VisitResources(tfState, func(r *tfjson.StateResource) error {
+		resourceAddresses = append(resourceAddresses, r.Address)
+		return nil
+	}, &tofu.VisitOptions{})
 
-		if len(resourceAddresses) > 0 {
-			var err error
-			componentTree, err = buildComponentTree(resourceAddresses, typeOverrides)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to build component tree: %w", err)
-			}
-			pulumiState.Components = toComponents(componentTree, "")
-
-			// Populate component inputs/outputs from HCL when source is available
-			scopedAttrs := buildScopedResourceAttrMap(tfState)
-			metadata, err := populateComponentsFromHCL(pulumiState.Components, componentTree, sourceOverrides, schemaOverrides, tfSourceDir, populateComponentInputs, scopedAttrs, tfState)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to populate component state from HCL: %w", err)
-			}
-			pulumiState.ComponentMetadata = metadata
+	if len(resourceAddresses) > 0 && tfSourceDir != "" {
+		componentTree, err := buildComponentTree(resourceAddresses, typeOverrides)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to build component tree: %w", err)
+		}
+		tempComponents := toComponents(componentTree, "")
+		scopedAttrs := buildScopedResourceAttrMap(tfState)
+		metadata, err := populateComponentsFromHCL(tempComponents, componentTree,
+			sourceOverrides, schemaOverrides, tfSourceDir, true, scopedAttrs, tfState)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to populate component metadata from HCL: %w", err)
+		}
+		pulumiState.ComponentMetadata = metadata
+		componentMapData = &ComponentMapData{
+			Tree:       componentTree,
+			Components: tempComponents,
+			Metadata:   metadata,
 		}
 	}
 
@@ -282,21 +302,14 @@ func convertState(tfState *tfjson.State, pulumiProviders map[providermap.Terrafo
 		}
 		pulumiResource.Provider = &providerLink
 
-		// When components are enabled, use short name and set parent
-		if enableComponents {
-			pulumiResource.Name = PulumiNameFromTerraformAddress(resource.Address, resource.Type, true)
-			segments := parseModuleSegments(resource.Address)
-			pulumiResource.Parent = componentParentForResource(componentTree, segments)
-		}
-
 		pulumiState.Resources = append(pulumiState.Resources, pulumiResource)
 		return nil
 	}, &tofu.VisitOptions{})
 	if err != nil {
-		return nil, errorMessages, fmt.Errorf("failed to visit resources: %w", err)
+		return nil, errorMessages, nil, fmt.Errorf("failed to visit resources: %w", err)
 	}
 
-	return pulumiState, errorMessages, nil
+	return pulumiState, errorMessages, componentMapData, nil
 }
 
 func convertResourceStateExceptProviderLink(
@@ -346,7 +359,7 @@ func convertResourceStateExceptProviderLink(
 	return PulumiResource{
 		PulumiResourceID: PulumiResourceID{
 			ID:   props["id"].StringValue(),
-			Name: PulumiNameFromTerraformAddress(res.Address, res.Type, false),
+			Name: PulumiNameFromTerraformAddress(res.Address, res.Type),
 			Type: string(pulumiTypeToken),
 		},
 		Inputs:  inputs,
@@ -375,21 +388,11 @@ func formatDynamicProviderName(tfAddr string) string {
 //   - Submodule: module.<module_name>.<resource_type>.<name> e.g., "module.s3_bucket.aws_s3_bucket.this"
 //   - Nested: module.<mod1>.module.<mod2>.<resource_type>.<name>
 //
-// When useShortName is true, only the resource name after the type is returned (module path is
-// expressed via the parent component chain instead). When false, module path is baked into the name.
-func PulumiNameFromTerraformAddress(address, resourceType string, useShortName bool) string {
+// The module path is baked into the returned name to produce a globally unique flat name.
+func PulumiNameFromTerraformAddress(address, resourceType string) string {
 	parts := strings.Split(address, ".")
 
-	if useShortName {
-		// Return only the resource name part (after the type)
-		for i := 0; i < len(parts); i++ {
-			if parts[i] == resourceType {
-				return strings.Join(parts[i+1:], "_")
-			}
-		}
-	}
-
-	// Original behavior: include module path in name
+	// Include module path in name
 	var nameParts []string
 	for i := 0; i < len(parts); i++ {
 		if parts[i] == resourceType {

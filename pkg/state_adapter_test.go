@@ -16,11 +16,9 @@ package pkg
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/stretchr/testify/require"
@@ -57,8 +55,8 @@ func TestConvertInvolved(t *testing.T) {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
 
-	// 24 original resources + 1 component for module.data_lake_bucket
-	require.Len(t, data.Export.Deployment.Resources, 25)
+	// 24 original resources (flat state — no component resources)
+	require.Len(t, data.Export.Deployment.Resources, 24)
 }
 
 func TestConvertTwoModules(t *testing.T) {
@@ -87,8 +85,8 @@ func TestConvertTwoModules_FlatMode(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// enableComponents=false: flat mode, no component resources
-	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", false, true, nil, nil, nil, "")
+	// State is always flat — no component resources
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", nil, nil, nil, "")
 	require.NoError(t, err)
 
 	// No component resources in flat mode
@@ -125,19 +123,12 @@ func TestConvertIndexedModules(t *testing.T) {
 	data, err := translateStateFromJson(ctx, "testdata/tofu_state_indexed_modules.json")
 	require.NoError(t, err)
 
-	var components []apitype.ResourceV3
+	// No component resources in flat state
 	for _, r := range data.Export.Deployment.Resources {
 		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
-			components = append(components, r)
+			t.Fatalf("unexpected component resource in flat state: %s", r.Type)
 		}
 	}
-	require.Len(t, components, 2, "expected 2 component resources (pet-0, pet-1)")
-	// Same type token for both instances
-	require.Equal(t, components[0].Type, components[1].Type)
-	// Different URNs
-	require.NotEqual(t, string(components[0].URN), string(components[1].URN))
-	// Type token is derived from module name
-	require.Equal(t, tokens.Type("terraform:module/pet:Pet"), components[0].Type)
 }
 
 func TestConvertKeyedModules(t *testing.T) {
@@ -146,31 +137,12 @@ func TestConvertKeyedModules(t *testing.T) {
 	data, err := translateStateFromJson(ctx, "testdata/tofu_state_keyed_modules.json")
 	require.NoError(t, err)
 
-	var components []apitype.ResourceV3
+	// No component resources in flat state
 	for _, r := range data.Export.Deployment.Resources {
 		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
-			components = append(components, r)
+			t.Fatalf("unexpected component resource in flat state: %s", r.Type)
 		}
 	}
-	require.Len(t, components, 2, "expected 2 component resources (pet-alpha, pet-beta)")
-	// Same type token
-	require.Equal(t, components[0].Type, components[1].Type)
-	// Different URNs
-	require.NotEqual(t, string(components[0].URN), string(components[1].URN))
-
-	// Check both keys are represented in URNs
-	alphaFound, betaFound := false, false
-	for _, c := range components {
-		urn := string(c.URN)
-		if strings.Contains(urn, "alpha") {
-			alphaFound = true
-		}
-		if strings.Contains(urn, "beta") {
-			betaFound = true
-		}
-	}
-	require.True(t, alphaFound, "expected component with 'alpha' key")
-	require.True(t, betaFound, "expected component with 'beta' key")
 }
 
 func TestConvertNestedModules(t *testing.T) {
@@ -213,30 +185,32 @@ func TestConvertWithHCLPopulation(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Pass tfSourceDir so HCL parsing populates component inputs
-	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, true, nil, nil, nil, "testdata/tf_indexed_modules")
+	// Pass tfSourceDir so HCL parsing populates component map data
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", nil, nil, nil, "testdata/tf_indexed_modules")
 	require.NoError(t, err)
 
-	// Find component resources
-	var components []apitype.ResourceV3
+	// No component resources in flat state
 	for _, r := range data.Export.Deployment.Resources {
 		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
-			components = append(components, r)
+			t.Fatalf("unexpected component resource in flat state: %s", r.Type)
 		}
 	}
-	require.Len(t, components, 2)
 
-	// Components should have inputs populated — prefix uses count.index
-	// which is now resolved from the component's key (0, 1)
-	for _, comp := range components {
-		require.NotNil(t, comp.Inputs, "component %s should have inputs", comp.URN)
-		require.Contains(t, comp.Inputs, "prefix", "component %s should have prefix input", comp.URN)
+	// ComponentMapData should have the component information
+	require.NotNil(t, data.ComponentMapData)
+	require.NotNil(t, data.ComponentMapData.Tree)
+	require.Len(t, data.ComponentMapData.Tree, 2) // pet[0] and pet[1]
+
+	// Components should have inputs populated
+	for _, comp := range data.ComponentMapData.Components {
+		require.NotNil(t, comp.Inputs, "component %s should have inputs", comp.Name)
+		require.Contains(t, comp.Inputs, resource.PropertyKey("prefix"), "component %s should have prefix input", comp.Name)
 	}
 
 	// Components should also have outputs populated from module output declarations
-	for _, comp := range components {
-		require.NotNil(t, comp.Outputs, "component %s should have outputs", comp.URN)
-		require.Contains(t, comp.Outputs, "name", "component %s should have name output", comp.URN)
+	for _, comp := range data.ComponentMapData.Components {
+		require.NotNil(t, comp.Outputs, "component %s should have outputs", comp.Name)
+		require.Contains(t, comp.Outputs, resource.PropertyKey("name"), "component %s should have name output", comp.Name)
 	}
 }
 
@@ -244,22 +218,18 @@ func TestConvertWithHCLPopulation_NoSource(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	// Without tfSourceDir, components should have empty inputs/outputs (no error)
+	// Without tfSourceDir, ComponentMapData should be nil
 	data, err := translateStateFromJson(ctx, "testdata/tofu_state_indexed_modules.json")
 	require.NoError(t, err)
 
-	var components []apitype.ResourceV3
+	// No component resources in flat state
 	for _, r := range data.Export.Deployment.Resources {
 		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
-			components = append(components, r)
+			t.Fatalf("unexpected component resource in flat state: %s", r.Type)
 		}
 	}
-	require.Len(t, components, 2)
 
-	// Without HCL source, inputs should be empty
-	for _, comp := range components {
-		require.Empty(t, comp.Inputs, "component %s should have empty inputs without HCL source", comp.URN)
-	}
+	require.Nil(t, data.ComponentMapData, "should not have component map data without HCL source")
 }
 
 func TestConvertWithSchemaValidation(t *testing.T) {
@@ -275,21 +245,14 @@ func TestConvertWithSchemaValidation(t *testing.T) {
 		"module.pet": "testdata/schemas/pet_component_schema.json",
 	}
 
-	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, true, nil, nil, schemaOverrides, "testdata/tf_indexed_modules")
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", nil, nil, schemaOverrides, "testdata/tf_indexed_modules")
 	require.NoError(t, err)
 
-	// Find component resources and verify they have populated inputs/outputs
-	var components []apitype.ResourceV3
-	for _, r := range data.Export.Deployment.Resources {
-		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
-			components = append(components, r)
-		}
-	}
-	require.Len(t, components, 2)
-
-	for _, comp := range components {
-		require.Contains(t, comp.Inputs, "prefix", "component %s should have prefix input", comp.URN)
-		require.Contains(t, comp.Outputs, "name", "component %s should have name output", comp.URN)
+	// ComponentMapData should have the component information
+	require.NotNil(t, data.ComponentMapData)
+	for _, comp := range data.ComponentMapData.Components {
+		require.Contains(t, comp.Inputs, resource.PropertyKey("prefix"))
+		require.Contains(t, comp.Outputs, resource.PropertyKey("name"))
 	}
 }
 
@@ -309,22 +272,15 @@ func TestConvertWithSchemaValidation_CustomTypeToken(t *testing.T) {
 		"module.pet": "testdata/schemas/pet_custom_component_schema.json",
 	}
 
-	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", true, true, typeOverrides, nil, schemaOverrides, "testdata/tf_indexed_modules")
+	data, err := TranslateState(ctx, tfState, nil, "dev", "test-project", typeOverrides, nil, schemaOverrides, "testdata/tf_indexed_modules")
 	require.NoError(t, err)
 
-	var components []apitype.ResourceV3
-	for _, r := range data.Export.Deployment.Resources {
-		if !r.Custom && string(r.Type) != "pulumi:pulumi:Stack" {
-			components = append(components, r)
-		}
-	}
-	require.Len(t, components, 2)
-
-	// Components should use the custom type token
-	for _, comp := range components {
+	// ComponentMapData should have the component information with custom type
+	require.NotNil(t, data.ComponentMapData)
+	for _, comp := range data.ComponentMapData.Components {
 		require.Contains(t, string(comp.Type), "myproject:index:PetComponent")
-		require.Contains(t, comp.Inputs, "prefix")
-		require.Contains(t, comp.Outputs, "name")
+		require.Contains(t, comp.Inputs, resource.PropertyKey("prefix"))
+		require.Contains(t, comp.Outputs, resource.PropertyKey("name"))
 	}
 }
 
@@ -341,7 +297,7 @@ func TestConvertWithSchemaValidation_Mismatch(t *testing.T) {
 		"module.pet": "testdata/schemas/pet_component_schema_mismatch.json",
 	}
 
-	_, err = TranslateState(ctx, tfState, nil, "dev", "test-project", true, true, nil, nil, schemaOverrides, "testdata/tf_indexed_modules")
+	_, err = TranslateState(ctx, tfState, nil, "dev", "test-project", nil, nil, schemaOverrides, "testdata/tf_indexed_modules")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "region")
 	require.Contains(t, err.Error(), "required by schema")
@@ -354,7 +310,7 @@ func translateStateFromJson(ctx context.Context, tfStateJson string) (*Translate
 	if err != nil {
 		return nil, err
 	}
-	return TranslateState(ctx, tfState, nil, "dev", "test-project", true, true, nil, nil, nil, "")
+	return TranslateState(ctx, tfState, nil, "dev", "test-project", nil, nil, nil, "")
 }
 
 func Test_convertState_simple(t *testing.T) {
@@ -369,7 +325,7 @@ func Test_convertState_simple(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, true, nil, nil, nil, "")
+	pulumiState, errorMessages, _, err := convertState(tfState, pulumiProviders, nil, nil, nil, "")
 	require.NoError(t, err, "failed to convert state")
 	require.Equal(t, 0, len(errorMessages), "expected no error messages")
 
@@ -396,7 +352,7 @@ func Test_convertState_multi_provider(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, true, nil, nil, nil, "")
+	pulumiState, errorMessages, _, err := convertState(tfState, pulumiProviders, nil, nil, nil, "")
 	require.NoError(t, err, "failed to convert state")
 	require.Equal(t, 0, len(errorMessages), "expected no error messages")
 
@@ -451,7 +407,7 @@ func Test_convertState_corrupted_state(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	_, errorMessages, err := convertState(tfState, pulumiProviders, false, true, nil, nil, nil, "")
+	_, errorMessages, _, err := convertState(tfState, pulumiProviders, nil, nil, nil, "")
 	require.NoError(t, err, "failed to convert state")
 	require.Equal(t, 1, len(errorMessages), "expected 1 error message")
 	require.Equal(t, "password", errorMessages[0].ResourceName)
@@ -474,7 +430,7 @@ func Test_convertState_unknown_provider(t *testing.T) {
 
 	require.Len(t, pulumiProviders, 1, "should only have 1 provider (random)")
 
-	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders, false, true, nil, nil, nil, "")
+	pulumiState, errorMessages, _, err := convertState(tfState, pulumiProviders, nil, nil, nil, "")
 	require.NoError(t, err, "failed to convert state")
 
 	require.Len(t, errorMessages, 1, "expected 1 error message for unknown_resource")
@@ -526,48 +482,6 @@ func TestFormatDynamicProviderName(t *testing.T) {
 	}
 }
 
-func TestPulumiNameFromTerraformAddress_ShortName(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name         string
-		address      string
-		resourceType string
-		expected     string
-	}{
-		{
-			name:         "root module resource",
-			address:      "aws_s3_bucket.mybucket",
-			resourceType: "aws_s3_bucket",
-			expected:     "mybucket",
-		},
-		{
-			name:         "single module resource",
-			address:      "module.vpc.aws_subnet.this",
-			resourceType: "aws_subnet",
-			expected:     "this",
-		},
-		{
-			name:         "indexed module resource",
-			address:      "module.vpc[0].aws_subnet.this",
-			resourceType: "aws_subnet",
-			expected:     "this",
-		},
-		{
-			name:         "nested module resource",
-			address:      "module.vpc.module.subnets.aws_subnet.this",
-			resourceType: "aws_subnet",
-			expected:     "this",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := PulumiNameFromTerraformAddress(tc.address, tc.resourceType, true)
-			require.Equal(t, tc.expected, result)
-		})
-	}
-}
-
 func TestPulumiNameFromTerraformAddress(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -610,7 +524,7 @@ func TestPulumiNameFromTerraformAddress(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := PulumiNameFromTerraformAddress(tc.address, tc.resourceType, false)
+			result := PulumiNameFromTerraformAddress(tc.address, tc.resourceType)
 			require.Equal(t, tc.expected, result)
 		})
 	}

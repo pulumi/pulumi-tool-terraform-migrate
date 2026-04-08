@@ -316,34 +316,3 @@ func toComponents(nodes []*componentNode, parentTypeChain string) []PulumiResour
 	return result
 }
 
-// componentParentForResource returns the parent type chain for a resource at the given module path.
-func componentParentForResource(nodes []*componentNode, segments []moduleSegment) string {
-	if len(segments) == 0 {
-		return ""
-	}
-
-	current := nodes
-	var typeChain string
-	for _, seg := range segments {
-		targetName := seg.name
-		if seg.key != "" {
-			targetName = sanitizeModuleInstanceName(seg.name, seg.key)
-		}
-		found := false
-		for _, node := range current {
-			if node.resourceName == targetName {
-				if typeChain != "" {
-					typeChain += "$"
-				}
-				typeChain += node.typeToken
-				current = node.children
-				found = true
-				break
-			}
-		}
-		if !found {
-			return ""
-		}
-	}
-	return typeChain
-}
