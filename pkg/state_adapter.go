@@ -142,6 +142,7 @@ func TranslateAndWriteState(
 			res.ComponentMapData.Metadata,
 			res.ComponentMapData.Components,
 			res.PulumiProviders,
+			stackName, projectName,
 		)
 		mapPath := filepath.Join(filepath.Dir(outputFilePath), "component-map.json")
 		if err := WriteComponentMap(cm, mapPath); err != nil {

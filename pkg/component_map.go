@@ -55,6 +55,7 @@ type ResourceMapEntry struct {
 
 // ResourceInstance describes a single instance of a resource within a module.
 type ResourceInstance struct {
+	URN      string `json:"urn"`
 	FlatName string `json:"flatName"`
 	IndexKey string `json:"indexKey,omitempty"`
 }
@@ -100,6 +101,7 @@ func buildComponentMap(
 	metadata *ComponentSchemaMetadata,
 	components []PulumiResource,
 	pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata,
+	stackName, projectName string,
 ) *ComponentMap {
 	var allResources []stateResourceInfo
 	tofu.VisitResources(tfState, func(r *tfjson.StateResource) error {
@@ -118,7 +120,7 @@ func buildComponentMap(
 
 	for _, node := range tree {
 		key := moduleMapKey(node)
-		cm.Modules[key] = buildModuleMapEntry(node, allResources, metadata, components, pulumiProviders)
+		cm.Modules[key] = buildModuleMapEntry(node, allResources, metadata, components, pulumiProviders, stackName, projectName)
 	}
 
 	return cm
@@ -131,6 +133,7 @@ func buildModuleMapEntry(
 	metadata *ComponentSchemaMetadata,
 	components []PulumiResource,
 	pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata,
+	stackName, projectName string,
 ) *ModuleMapEntry {
 	entry := &ModuleMapEntry{
 		TerraformPath: node.modulePath,
@@ -187,8 +190,11 @@ func buildModuleMapEntry(
 		// Extract instance index key from the address
 		indexKey := extractResourceIndexKey(res.Address, res.Type, res.Name)
 
+		flatName := PulumiNameFromTerraformAddress(res.Address, res.Type)
+		urn := fmt.Sprintf("urn:pulumi:%s::%s::%s::%s", stackName, projectName, existing.PulumiType, flatName)
 		existing.Instances = append(existing.Instances, ResourceInstance{
-			FlatName: PulumiNameFromTerraformAddress(res.Address, res.Type),
+			URN:      urn,
+			FlatName: flatName,
 			IndexKey: indexKey,
 		})
 	}
@@ -249,7 +255,7 @@ func buildModuleMapEntry(
 	// Recurse into children
 	for _, child := range node.children {
 		key := moduleMapKey(child)
-		entry.Modules[key] = buildModuleMapEntry(child, allResources, metadata, components, pulumiProviders)
+		entry.Modules[key] = buildModuleMapEntry(child, allResources, metadata, components, pulumiProviders, stackName, projectName)
 	}
 
 	return entry
