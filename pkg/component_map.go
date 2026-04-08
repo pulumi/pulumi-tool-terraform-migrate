@@ -46,11 +46,19 @@ type ModuleMapEntry struct {
 	Modules       map[string]*ModuleMapEntry   `json:"modules"`
 }
 
-// ResourceMapEntry describes a single resource within a module.
+// ResourceMapEntry describes a resource type within a module.
+// A single type.name in TF (e.g. aws_lb_listener.this) may have multiple
+// instances (via count or for_each), each with its own flat-state name.
 type ResourceMapEntry struct {
-	FlatName   string `json:"flatName"`
-	PulumiType string `json:"pulumiType"`
-	ShortName  string `json:"shortName"`
+	PulumiType string              `json:"pulumiType"`
+	Instances  []ResourceInstance  `json:"instances"`
+}
+
+// ResourceInstance describes a single instance of a resource within a module.
+type ResourceInstance struct {
+	FlatName  string `json:"flatName"`
+	ShortName string `json:"shortName"`
+	IndexKey  string `json:"indexKey,omitempty"`
 }
 
 // ModuleInterface describes the inputs and outputs of a component.
@@ -151,7 +159,7 @@ func buildModuleMapEntry(
 		}
 	}
 
-	// Match resources from state to this module
+	// Match resources from state to this module, accumulating instances per type.name
 	for _, res := range allResources {
 		segments := parseModuleSegments(res.Address)
 		resModulePath := buildModulePath(segments)
@@ -162,21 +170,31 @@ func buildModuleMapEntry(
 		// Build the resource map key: "resourceType.resourceName"
 		resMapKey := res.Type + "." + res.Name
 
-		// Determine PulumiType by looking up the provider
-		pulumiType := ""
-		prov, ok := pulumiProviders[providermap.TerraformProviderName(res.ProviderName)]
-		if ok {
-			tok, err := bridge.PulumiTypeToken(res.Type, prov.Provider)
-			if err == nil {
-				pulumiType = string(tok)
+		existing, ok := entry.Resources[resMapKey]
+		if !ok {
+			// Determine PulumiType by looking up the provider
+			pulumiType := ""
+			prov, provOk := pulumiProviders[providermap.TerraformProviderName(res.ProviderName)]
+			if provOk {
+				tok, err := bridge.PulumiTypeToken(res.Type, prov.Provider)
+				if err == nil {
+					pulumiType = string(tok)
+				}
 			}
+			existing = &ResourceMapEntry{
+				PulumiType: pulumiType,
+			}
+			entry.Resources[resMapKey] = existing
 		}
 
-		entry.Resources[resMapKey] = &ResourceMapEntry{
-			FlatName:   PulumiNameFromTerraformAddress(res.Address, res.Type),
-			PulumiType: pulumiType,
-			ShortName:  shortResourceName(res.Address, res.Type),
-		}
+		// Extract instance index key from the address
+		indexKey := extractResourceIndexKey(res.Address, res.Type, res.Name)
+
+		existing.Instances = append(existing.Instances, ResourceInstance{
+			FlatName:  PulumiNameFromTerraformAddress(res.Address, res.Type),
+			ShortName: shortResourceName(res.Address, res.Type),
+			IndexKey:  indexKey,
+		})
 	}
 
 	// Interface from metadata + component evaluated values
@@ -321,6 +339,29 @@ func shortResourceName(address, resourceType string) string {
 		}
 	}
 	return address
+}
+
+// extractResourceIndexKey extracts the instance index key from a fully qualified
+// resource address. For "module.vpc.aws_subnet.public[0]" it returns "0".
+// For "module.alb.aws_lb_listener.this[\"my-https-listener\"]" it returns "my-https-listener".
+// Returns "" if the resource has no index.
+func extractResourceIndexKey(address, resourceType, resourceName string) string {
+	// The resource portion is everything after the module path: "type.name" or "type.name[key]"
+	suffix := resourceType + "." + resourceName
+	idx := strings.LastIndex(address, suffix)
+	if idx == -1 {
+		return ""
+	}
+	after := address[idx+len(suffix):]
+	if !strings.HasPrefix(after, "[") || !strings.HasSuffix(after, "]") {
+		return ""
+	}
+	key := after[1 : len(after)-1]
+	// Strip surrounding quotes if present
+	if len(key) >= 2 && key[0] == '"' && key[len(key)-1] == '"' {
+		key = key[1 : len(key)-1]
+	}
+	return key
 }
 
 // stripModulePrefix removes the module path prefix from a resource address,
