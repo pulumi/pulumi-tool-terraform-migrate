@@ -9,13 +9,14 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-cty v1.5.0
 	github.com/hashicorp/go-plugin v1.7.0
+	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/hashicorp/terraform-exec v0.24.0
 	github.com/hashicorp/terraform-json v0.27.1
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1
 	github.com/hexops/autogold/v2 v2.3.0
 	github.com/opentofu/svchost v0.0.0-20250610175836-86c9e5e3d8c8
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/pulumi/opentofu v0.0.0-20250808205121-cc4a35131222
+	github.com/pulumi/opentofu v0.0.0-20250318202137-3146daceaf73
 	github.com/pulumi/pulumi-terraform-bridge/v3 v3.121.0
 	github.com/pulumi/pulumi/sdk/v3 v3.222.0
 	github.com/spf13/cobra v1.10.2
@@ -122,10 +123,10 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hashicorp/hcl/v2 v2.24.0 // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/terraform-plugin-go v0.29.0 // indirect
 	github.com/hashicorp/terraform-plugin-log v0.9.0 // indirect
+	github.com/hashicorp/terraform-svchost v0.1.1 // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/hexops/valast v1.4.4 // indirect
@@ -156,8 +157,7 @@ require (
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/openbao/openbao/api/v2 v2.1.0 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0 // indirect
+	github.com/opentofu/registry-address v0.0.0-20230920144404-f1e51167f633 // indirect
 	github.com/opentofu/registry-address/v2 v2.0.0-20250611143131-d0a99bd8acdd // indirect
 	github.com/opentracing/basictracer-go v1.1.0 // indirect
 	github.com/pgavlin/fx v0.1.6 // indirect
@@ -247,7 +247,6 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	lukechampine.com/frand v1.5.1 // indirect
 	mvdan.cc/gofumpt v0.7.0 // indirect
-	oras.land/oras-go/v2 v2.5.0 // indirect
 )
 
 replace github.com/hashicorp/terraform-plugin-sdk/v2 => github.com/pulumi/terraform-plugin-sdk/v2 v2.0.0-20250923233607-7f1981c8674a
