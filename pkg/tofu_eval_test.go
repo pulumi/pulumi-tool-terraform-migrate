@@ -108,9 +108,10 @@ func TestEvaluate_IndexedModules(t *testing.T) {
 	state, err := LoadRawState(filepath.Join(tfDir, "terraform.tfstate"))
 	require.NoError(t, err)
 
-	tofuCtx, err := Evaluate(config, state, tfDir)
+	tofuCtx, cleanup, err := Evaluate(config, state, tfDir)
 	require.NoError(t, err)
 	require.NotNil(t, tofuCtx)
+	defer cleanup()
 
 	ctx := context.Background()
 

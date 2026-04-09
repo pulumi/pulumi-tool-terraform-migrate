@@ -56,11 +56,15 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 		}
 
 		// Create tofu context for expression evaluation (graceful degradation).
-		tofuCtx, err = Evaluate(config, rawState, tfDir)
+		var cleanup func()
+		tofuCtx, cleanup, err = Evaluate(config, rawState, tfDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: could not create evaluation context: %v\n", err)
 			fmt.Fprintf(os.Stderr, "Continuing without evaluated values.\n")
 			tofuCtx = nil
+		}
+		if cleanup != nil {
+			defer cleanup()
 		}
 
 		// For resource matching we need tfjson state. Load it via the tofu loader

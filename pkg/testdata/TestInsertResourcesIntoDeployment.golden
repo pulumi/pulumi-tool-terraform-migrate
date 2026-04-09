@@ -1,6 +1,7 @@
 apitype.DeploymentV3{Resources: []apitype.ResourceV3{
 	{
 		URN:  urn.URN("urn:pulumi:dev::example::pulumi:pulumi:Stack::example-dev"),
+		ID:   resource.ID("a339fe8e-e15d-4203-8719-c0ca5d3f414e"),
 		Type: tokens.Type("pulumi:pulumi:Stack"),
 	},
 	{

@@ -97,8 +97,9 @@ func TestBuildModuleMap_WithEval(t *testing.T) {
 
 	tfjsonState := loadTofuShowJSON(t, filepath.Join("testdata", "tofu_state_indexed_modules.json"))
 
-	tofuCtx, err := Evaluate(config, rawState, tfDir)
+	tofuCtx, cleanup, err := Evaluate(config, rawState, tfDir)
 	require.NoError(t, err)
+	defer cleanup()
 
 	mm, err := BuildModuleMap(config, tofuCtx, rawState, tfjsonState, nil, "test-stack", "test-project")
 	require.NoError(t, err)

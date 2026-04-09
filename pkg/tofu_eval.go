@@ -187,17 +187,24 @@ func LoadProviders(config *configs.Config, tfDir string) (map[addrs.Provider]pro
 // ready for per-instance Eval() calls. Callers should use
 // tofuCtx.Eval(ctx, config, state, moduleAddr, opts) to evaluate expressions
 // in specific module instances.
-func Evaluate(config *configs.Config, state *states.State, tfDir string) (*tofu.Context, error) {
+//
+// The returned cleanup function must be called when the Context is no longer
+// needed to kill provider plugin processes.
+func Evaluate(config *configs.Config, state *states.State, tfDir string) (*tofu.Context, func(), error) {
 	factories, err := LoadProviders(config, tfDir)
 	if err != nil {
-		return nil, fmt.Errorf("loading providers for evaluation: %w", err)
+		return nil, nil, fmt.Errorf("loading providers for evaluation: %w", err)
 	}
 
 	tofuCtx, diags := tofu.NewContext(&tofu.ContextOpts{
 		Providers: factories,
 	})
 	if diags.HasErrors() {
-		return nil, fmt.Errorf("creating tofu context: %w", diags.Err())
+		return nil, nil, fmt.Errorf("creating tofu context: %w", diags.Err())
 	}
-	return tofuCtx, nil
+
+	cleanup := func() {
+		goplugin.CleanupClients()
+	}
+	return tofuCtx, cleanup, nil
 }
