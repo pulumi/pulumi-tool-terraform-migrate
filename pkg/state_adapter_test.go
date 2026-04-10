@@ -303,16 +303,28 @@ func TestPulumiNameFromTerraformAddress(t *testing.T) {
 			expected:     "example",
 		},
 		{
-			name:         "single module resource",
+			name:         "single module resource named this",
 			address:      "module.s3_bucket.aws_s3_bucket.this",
 			resourceType: "aws_s3_bucket",
-			expected:     "s3_bucket_this",
+			expected:     "s3_bucket",
+		},
+		{
+			name:         "single module resource not named this",
+			address:      "module.s3_bucket.aws_s3_bucket.main",
+			resourceType: "aws_s3_bucket",
+			expected:     "s3_bucket_main",
 		},
 		{
 			name:         "nested module resource",
 			address:      "module.outer.module.inner.aws_s3_bucket.mybucket",
 			resourceType: "aws_s3_bucket",
 			expected:     "outer_inner_mybucket",
+		},
+		{
+			name:         "nested module resource named this",
+			address:      "module.outer.module.inner.aws_s3_bucket.this",
+			resourceType: "aws_s3_bucket",
+			expected:     "outer_inner",
 		},
 		{
 			name:         "module with same name as resource",
@@ -325,6 +337,12 @@ func TestPulumiNameFromTerraformAddress(t *testing.T) {
 			address:      "module.module.aws_s3_bucket.bucket",
 			resourceType: "aws_s3_bucket",
 			expected:     "module_bucket",
+		},
+		{
+			name:         "root resource named this stays",
+			address:      "aws_s3_bucket.this",
+			resourceType: "aws_s3_bucket",
+			expected:     "this",
 		},
 	}
 

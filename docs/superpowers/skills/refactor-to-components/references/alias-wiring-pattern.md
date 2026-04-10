@@ -20,18 +20,26 @@ import * as pulumi from "@pulumi/pulumi";
 import aliasMap from "./migration-aliases.json";
 import { Vpc } from "./components/vpc";
 
+const migrationTransform = (args: pulumi.ResourceTransformationArgs): pulumi.ResourceTransformationResult | undefined => {
+  const oldUrn = (aliasMap as Record<string, string>)[args.name];
+  if (oldUrn) {
+    const existing = (args.opts.aliases as pulumi.Input<string | pulumi.Alias>[] | undefined) || [];
+    return {
+      props: args.props,
+      opts: { ...args.opts, aliases: [...existing, oldUrn] },
+    };
+  }
+  return undefined;
+};
+
 const vpc = new Vpc("vpc", { ...inputs }, {
-  transformations: [(args) => {
-    const oldUrn = aliasMap[args.name];
-    if (oldUrn) {
-      args.opts.aliases = [...(args.opts.aliases || []), { urn: oldUrn }];
-    }
-    return args;
-  }],
+  transformations: [migrationTransform],
 });
 ```
 
-Ensure `tsconfig.json` has `"resolveJsonModule": true`.
+**Important**: Aliases must be plain URN strings (e.g., `oldUrn`), not objects like `{ urn: oldUrn }`. The Pulumi `Alias` interface does not have a `urn` field.
+
+Ensure `tsconfig.json` has `"resolveJsonModule": true` and `"esModuleInterop": true`.
 
 ## Python
 
@@ -43,16 +51,22 @@ from components.vpc import Vpc
 with open("migration-aliases.json") as f:
     alias_map = json.load(f)
 
-def migration_transform(args):
+def migration_transform(args: pulumi.ResourceTransformationArgs):
     old_urn = alias_map.get(args.name)
     if old_urn:
-        args.opts.aliases = (args.opts.aliases or []) + [pulumi.Alias(urn=old_urn)]
-    return args
+        existing = args.opts.aliases or []
+        return pulumi.ResourceTransformationResult(
+            props=args.props,
+            opts=dataclasses.replace(args.opts, aliases=[*existing, old_urn]),
+        )
+    return None
 
 vpc = Vpc("vpc", inputs, opts=pulumi.ResourceOptions(
     transformations=[migration_transform],
 ))
 ```
+
+**Note**: In Python, aliases are also plain URN strings.
 
 ## Post-migration cleanup
 

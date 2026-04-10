@@ -22,6 +22,8 @@ import (
 	"testing"
 
 	tfjson "github.com/hashicorp/terraform-json"
+	"github.com/pulumi/opentofu/addrs"
+	ottofu "github.com/pulumi/opentofu/tofu"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
 )
@@ -57,6 +59,28 @@ func TestMain(m *testing.M) {
 	}
 	if _, err := PulumiProvidersForTerraformProviders(providers, nil); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: pre-warm failed: %v\n", err)
+	}
+
+	// Also pre-warm OpenTofu provider loading (for tests using tofu.Context.Eval).
+	// This prevents "text file busy" when parallel tests exec the same provider binary.
+	tfDir, err := filepath.Abs(filepath.Join("testdata", "tf_indexed_modules"))
+	if err == nil {
+		if _, statErr := os.Stat(filepath.Join(tfDir, ".terraform", "providers")); statErr == nil {
+			config, configErr := LoadConfig(tfDir)
+			if configErr == nil {
+				rawState, stateErr := LoadRawState(filepath.Join(tfDir, "terraform.tfstate"))
+				if stateErr == nil {
+					tofuCtx, cleanup, evalErr := Evaluate(config, rawState, tfDir)
+					if evalErr == nil {
+						// Run one Eval to fully initialize provider schemas
+						_, _ = tofuCtx.Eval(ctx, config, rawState,
+							addrs.RootModuleInstance.Child("pet", addrs.IntKey(0)),
+							&ottofu.EvalOpts{})
+						cleanup()
+					}
+				}
+			}
+		}
 	}
 
 	os.Exit(m.Run())

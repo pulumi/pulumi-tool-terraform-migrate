@@ -6,8 +6,28 @@ Restructure flat Pulumi state (imported from Terraform) into component resources
 
 - `module-map.json` exists (produced by `pulumi-terraform-migrate module-map`)
 - Target language chosen: TypeScript or Python
+- Required Pulumi plugins installed (see Step 0)
 
 ## Workflow
+
+### Step 0: Install required plugins
+
+When using Path A, generate `required-plugins.json` alongside the translated state:
+
+```bash
+pulumi-terraform-migrate stack \
+  --from <tf-dir> --to <pulumi-dir> --out state.json \
+  --plugins required-plugins.json
+```
+
+For both paths, install the plugins before running any Pulumi commands:
+
+```bash
+# Read required-plugins.json and install each plugin
+cat required-plugins.json | jq -r '.[] | "pulumi plugin install resource \(.name) \(.version)"' | sh
+```
+
+This ensures the correct provider versions are available. Without this step, `pulumi preview` and `pulumi import` may download mismatched provider versions.
 
 ### Step 1: Load module-map.json
 
@@ -100,3 +120,6 @@ For 15+ structurally similar modules (same source, same interface), offer **batc
 - Reference the `pulumi-component` skill for component authoring patterns if available in the workspace.
 - Do not embed code templates in this skill. The agent generates code from module-map data at runtime.
 - Component classes must be migration-unaware. All alias wiring is external via transforms on the component instantiation.
+- **Child resource naming**: Child resources inside components must use unique logical names that incorporate the parent name. For example, `new aws.s3.Bucket(`${name}-bucket`, ...)` inside `BucketComponent("bucket-0")` produces child name `bucket-0-bucket`. Using a bare name like `"bucket"` causes URN collisions when multiple component instances exist.
+- **Alias format (Path A)**: Migration aliases must be plain URN strings, not objects. Use `aliases: [...existing, oldUrn]` — not `{ urn: oldUrn }`. The Pulumi `Alias` interface does not have a `urn` field.
+- **Plugin installation**: Always generate and install `required-plugins.json` before running Pulumi commands. The `--plugins` flag on the `stack` command produces this file. Without it, Pulumi may download different provider versions than the Terraform state was built with.

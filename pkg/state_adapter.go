@@ -322,20 +322,29 @@ func formatDynamicProviderName(tfAddr string) string {
 //   - Nested: module.<mod1>.module.<mod2>.<resource_type>.<name>
 //
 // We extract the module path and resource name (excluding the type) and join them with underscores.
+// When the resource name is "this" (a Terraform convention for sole resources of a type in a module)
+// and there is a module path to provide context, the "this" suffix is dropped.
 func PulumiNameFromTerraformAddress(address, resourceType string) string {
 	parts := strings.Split(address, ".")
 
-	var nameParts []string
+	var moduleParts []string
+	var resourceParts []string
 	for i := 0; i < len(parts); i++ {
 		if parts[i] == resourceType {
-			nameParts = append(nameParts, parts[i+1:]...)
+			resourceParts = append(resourceParts, parts[i+1:]...)
 			break
 		}
 		if parts[i] == "module" && i+1 < len(parts) {
-			nameParts = append(nameParts, parts[i+1])
+			moduleParts = append(moduleParts, parts[i+1])
 			i++
 		}
 	}
 
+	// Drop "this" suffix when module context provides a meaningful name.
+	if len(moduleParts) > 0 && len(resourceParts) == 1 && resourceParts[0] == "this" {
+		return strings.Join(moduleParts, "_")
+	}
+
+	nameParts := append(moduleParts, resourceParts...)
 	return strings.Join(nameParts, "_")
 }

@@ -31,18 +31,21 @@ import (
 )
 
 func TestDetectStateFormat_RawTfstate(t *testing.T) {
+	t.Parallel()
 	format, err := DetectStateFormat(filepath.Join("testdata", "tofu_tfstate_indexed_modules.tfstate"))
 	require.NoError(t, err)
 	assert.Equal(t, StateFormatRaw, format)
 }
 
 func TestDetectStateFormat_TofuShowJson(t *testing.T) {
+	t.Parallel()
 	format, err := DetectStateFormat(filepath.Join("testdata", "tofu_state_indexed_modules.json"))
 	require.NoError(t, err)
 	assert.Equal(t, StateFormatTofuShowJSON, format)
 }
 
 func TestLoadConfig(t *testing.T) {
+	t.Parallel()
 	tfDir, err := filepath.Abs(filepath.Join("testdata", "tf_indexed_modules"))
 	require.NoError(t, err)
 
@@ -62,6 +65,7 @@ func TestLoadConfig(t *testing.T) {
 }
 
 func TestLoadRawState(t *testing.T) {
+	t.Parallel()
 	state, err := LoadRawState(filepath.Join("testdata", "tofu_tfstate_indexed_modules.tfstate"))
 	require.NoError(t, err)
 	require.NotNil(t, state)
@@ -77,6 +81,7 @@ func TestLoadRawState(t *testing.T) {
 }
 
 func TestLoadProviders(t *testing.T) {
+	t.Parallel()
 	tfDir, err := filepath.Abs(filepath.Join("testdata", "tf_indexed_modules"))
 	require.NoError(t, err)
 
@@ -94,6 +99,8 @@ func TestLoadProviders(t *testing.T) {
 }
 
 func TestEvaluate_IndexedModules(t *testing.T) {
+	// NOT parallel — starts provider plugin processes via go-plugin.
+	// goplugin.CleanupClients() is global and would kill other tests' providers.
 	tfDir, err := filepath.Abs(filepath.Join("testdata", "tf_indexed_modules"))
 	require.NoError(t, err)
 
