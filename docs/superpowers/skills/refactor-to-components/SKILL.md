@@ -5,7 +5,6 @@ Restructure flat Pulumi state (imported from Terraform) into component resources
 ## Prerequisites
 
 - `module-map.json` exists (produced by `pulumi-terraform-migrate module-map`)
-- Pulumi state imported into stack (via `pulumi-terraform-migrate stack`)
 - Target language chosen: TypeScript or Python
 
 ## Workflow
@@ -21,7 +20,24 @@ Parse the file and present an inventory table to the user:
 
 Use the schema documented in [references/module-map-format.md](references/module-map-format.md).
 
-### Step 2: Component mapping review
+### Step 2: Choose migration path
+
+Present both paths and let the user choose:
+
+**Path A: Translate + Alias (flat-state-first)**
+- Translate TF state to flat Pulumi state (`pulumi-terraform-migrate stack`)
+- Import flat state (`pulumi stack import`)
+- Build components, wire aliases, `pulumi up` to restructure
+- **Tradeoffs:** Simpler — works with existing state and existing tooling. Requires alias wiring and a cleanup step to remove aliases after migration.
+- **Prerequisites:** Pulumi state already imported into stack via `pulumi-terraform-migrate stack`
+
+**Path B: Direct Import into Components (code-first)**
+- Build Pulumi program with component structure first
+- Use `pulumi import` with import IDs from `module-map.json` to import directly into the component structure
+- **Tradeoffs:** Cleaner result — no aliases, no intermediate flat state, no cleanup step. Requires the program to be correct before importing (preview must succeed before import).
+- **Prerequisites:** None beyond the module-map
+
+### Step 3: Component mapping review
 
 Default mapping: 1:1 Terraform module to Pulumi component.
 
@@ -33,14 +49,14 @@ Offer the user these adjustments:
 
 Maintain the working plan in conversation context. Do not write intermediate files.
 
-### Step 3: Per-module generation loop
+### Step 4: Per-module generation loop
 
 For each module in the approved plan:
 
 1. **Propose** to the user:
    - Component class name and type token (e.g., `my:components:Vpc`)
    - Args interface derived from `interface.inputs`
-   - Child resources (list URNs from `resources`)
+   - Child resources (list from `resources`)
 
 2. **User approves or adjusts.**
 
@@ -53,22 +69,31 @@ For each module in the approved plan:
 
 For 15+ structurally similar modules (same source, same interface), offer **batch mode**: generate one template, apply to all instances.
 
-### Step 4: Generate main program
+### Step 5: Generate main program
 
 - Read `evaluatedValue` from module-map inputs for concrete values
 - Read `expression` to understand derivation — prefer variable references over hardcoded values where the expression references a `var.*` or another module output
 - Instantiate each component with appropriate args
-- Wire migration aliases using the transform pattern from [references/alias-wiring-pattern.md](references/alias-wiring-pattern.md)
-- Generate `migration-aliases.json` mapping new child resource names to old flat URNs
 
-### Step 5: Verification
+**Path A only:** Wire migration aliases using the transform pattern from [references/alias-wiring-pattern.md](references/alias-wiring-pattern.md). Generate `migration-aliases.json` mapping new child resource names to old flat URNs (from `resources[].translatedUrn`).
 
-Run this sequence with the user:
+**Path B only:** No alias wiring needed. Components are instantiated cleanly.
+
+### Step 6: Import / Verification
+
+**Path A: Translate + Alias**
 
 1. `pulumi preview` — expect zero changes (aliases resolve old URNs to new component children)
 2. `pulumi up` — state updated with component hierarchy
 3. Delete `migration-aliases.json` and remove transform code from main program
 4. `pulumi preview` — still zero changes (state now reflects new URNs)
+
+**Path B: Direct Import**
+
+1. `pulumi preview --import-file import.json` — generates import skeleton mapping each resource to its type and name
+2. Fill in `id` values in `import.json` from module-map's `resources[].importId` (match by type token and name, or by `resources[].terraformAddress`)
+3. `pulumi import --file import.json` — imports cloud resources directly into the component structure
+4. `pulumi preview` — expect zero changes (state matches program)
 
 ## Notes
 

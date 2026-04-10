@@ -39,13 +39,20 @@ type ModuleMap struct {
 	Modules map[string]*ModuleMapEntry `json:"modules"`
 }
 
+// ModuleResource represents a single resource within a module instance.
+type ModuleResource struct {
+	TranslatedURN    string `json:"translatedUrn"`
+	TerraformAddress string `json:"terraformAddress"`
+	ImportID         string `json:"importId"`
+}
+
 // ModuleMapEntry represents a single module instance in the module map.
 type ModuleMapEntry struct {
 	TerraformPath string                     `json:"terraformPath"`
 	Source        string                     `json:"source,omitempty"`
 	IndexKey      string                     `json:"indexKey,omitempty"`
 	IndexType     string                     `json:"indexType,omitempty"`
-	Resources     []string                   `json:"resources"`
+	Resources     []ModuleResource           `json:"resources"`
 	Interface     *ModuleInterface           `json:"interface,omitempty"`
 	Modules       map[string]*ModuleMapEntry `json:"modules,omitempty"`
 }
@@ -229,15 +236,15 @@ func discoverModuleInstances(tfjsonState *tfjson.State, parentSegments []moduleS
 }
 
 // matchResources finds resources in tfjsonState that belong to the given module instance
-// and returns their URNs (or raw addresses if provider mapping is unavailable).
+// and returns ModuleResource entries with URN, Terraform address, and import ID.
 func matchResources(
 	tfjsonState *tfjson.State,
 	segments []moduleSegment,
 	pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata,
 	stackName string,
 	projectName string,
-) []string {
-	var resources []string
+) []ModuleResource {
+	var resources []ModuleResource
 	modulePath := buildModulePath(segments)
 
 	tofuutil.VisitResources(tfjsonState, func(r *tfjson.StateResource) error {
@@ -252,12 +259,22 @@ func matchResources(
 		}
 
 		urn := buildResourceURN(r, pulumiProviders, stackName, projectName)
-		resources = append(resources, urn)
+		importID := ""
+		if r.AttributeValues != nil {
+			if id, ok := r.AttributeValues["id"]; ok {
+				importID = fmt.Sprintf("%v", id)
+			}
+		}
+		resources = append(resources, ModuleResource{
+			TranslatedURN:    urn,
+			TerraformAddress: r.Address,
+			ImportID:         importID,
+		})
 		return nil
 	}, &tofuutil.VisitOptions{})
 
 	if resources == nil {
-		resources = []string{}
+		resources = []ModuleResource{}
 	}
 	return resources
 }

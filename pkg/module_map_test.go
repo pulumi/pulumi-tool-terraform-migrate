@@ -36,6 +36,7 @@ func loadTofuShowJSON(t *testing.T, path string) *tfjson.State {
 }
 
 func TestBuildModuleMap_WithoutEval(t *testing.T) {
+	t.Parallel()
 	tfDir, err := filepath.Abs(filepath.Join("testdata", "tf_indexed_modules"))
 	require.NoError(t, err)
 
@@ -66,7 +67,13 @@ func TestBuildModuleMap_WithoutEval(t *testing.T) {
 
 	// Resources should be populated (without provider mapping, URNs will be raw addresses).
 	assert.Len(t, pet0.Resources, 1)
+	assert.Equal(t, "module.pet[0].random_pet.this", pet0.Resources[0].TranslatedURN) // falls back to address
+	assert.Equal(t, "module.pet[0].random_pet.this", pet0.Resources[0].TerraformAddress)
+	assert.Equal(t, "test-0-creative-doberman", pet0.Resources[0].ImportID)
+
 	assert.Len(t, pet1.Resources, 1)
+	assert.Equal(t, "module.pet[1].random_pet.this", pet1.Resources[0].TerraformAddress)
+	assert.Equal(t, "test-1-outgoing-spaniel", pet1.Resources[0].ImportID)
 
 	// Interface should be populated from config.
 	require.NotNil(t, pet0.Interface)
@@ -81,6 +88,7 @@ func TestBuildModuleMap_WithoutEval(t *testing.T) {
 }
 
 func TestBuildModuleMap_WithEval(t *testing.T) {
+	// NOT parallel — starts provider plugin processes via go-plugin.
 	tfDir, err := filepath.Abs(filepath.Join("testdata", "tf_indexed_modules"))
 	require.NoError(t, err)
 
@@ -120,6 +128,7 @@ func TestBuildModuleMap_WithEval(t *testing.T) {
 }
 
 func TestBuildModuleMap_Expression(t *testing.T) {
+	t.Parallel()
 	tfDir, err := filepath.Abs(filepath.Join("testdata", "tf_indexed_modules"))
 	require.NoError(t, err)
 
@@ -141,12 +150,17 @@ func TestBuildModuleMap_Expression(t *testing.T) {
 }
 
 func TestWriteModuleMap(t *testing.T) {
+	t.Parallel()
 	mm := &ModuleMap{
 		Modules: map[string]*ModuleMapEntry{
 			"vpc": {
 				TerraformPath: "module.vpc",
 				Source:        "./modules/vpc",
-				Resources:     []string{"urn:pulumi:stack::project::aws:ec2/vpc:Vpc::main"},
+				Resources: []ModuleResource{{
+				TranslatedURN:    "urn:pulumi:stack::project::aws:ec2/vpc:Vpc::main",
+				TerraformAddress: "module.vpc.aws_vpc.main",
+				ImportID:         "vpc-12345",
+			}},
 				Interface: &ModuleInterface{
 					Inputs:  []ModuleInterfaceField{{Name: "cidr", Required: true}},
 					Outputs: []ModuleInterfaceField{{Name: "id"}},
@@ -171,13 +185,17 @@ func TestWriteModuleMap(t *testing.T) {
 	require.Contains(t, got.Modules, "vpc")
 	assert.Equal(t, "module.vpc", got.Modules["vpc"].TerraformPath)
 	assert.Equal(t, "./modules/vpc", got.Modules["vpc"].Source)
-	assert.Len(t, got.Modules["vpc"].Resources, 1)
+	require.Len(t, got.Modules["vpc"].Resources, 1)
+	assert.Equal(t, "urn:pulumi:stack::project::aws:ec2/vpc:Vpc::main", got.Modules["vpc"].Resources[0].TranslatedURN)
+	assert.Equal(t, "module.vpc.aws_vpc.main", got.Modules["vpc"].Resources[0].TerraformAddress)
+	assert.Equal(t, "vpc-12345", got.Modules["vpc"].Resources[0].ImportID)
 	require.NotNil(t, got.Modules["vpc"].Interface)
 	assert.Len(t, got.Modules["vpc"].Interface.Inputs, 1)
 	assert.Equal(t, "cidr", got.Modules["vpc"].Interface.Inputs[0].Name)
 }
 
 func TestCtyValueToInterface(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    cty.Value

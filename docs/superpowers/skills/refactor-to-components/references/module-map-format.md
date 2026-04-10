@@ -22,9 +22,17 @@ Schema reference for the output of `pulumi-terraform-migrate module-map`.
 | `source` | `string` | Module source path or registry address |
 | `indexKey` | `string \| null` | Instance key when module uses `count` or `for_each`. Omitted for non-indexed modules. |
 | `indexType` | `"count" \| "for_each" \| "none"` | How the module is instantiated |
-| `resources` | `string[]` | Pulumi URNs of resources belonging to this module instance |
+| `resources` | `ModuleResource[]` | Resources belonging to this module instance (see below) |
 | `interface` | `object` | Inputs and outputs for the module |
 | `modules` | `object \| null` | Nested child modules (same structure as top-level `modules`). Omitted when empty. |
+
+## ModuleResource object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `translatedUrn` | `string` | Pulumi URN the resource would have in flat translated state |
+| `terraformAddress` | `string` | Full Terraform resource address (e.g., `module.acm.aws_acm_certificate.this[0]`) |
+| `importId` | `string` | Cloud provider resource ID for `pulumi import` |
 
 ## Interface object
 
@@ -58,7 +66,8 @@ Schema reference for the output of `pulumi-terraform-migrate module-map`.
 
 - `expression` vs `evaluatedValue`: Use `expression` to determine if the value derives from a variable or another module output — prefer wiring references over hardcoding `evaluatedValue`.
 - `indexType: "count"` modules have numeric `indexKey` values (`"0"`, `"1"`, ...). `for_each` modules have string keys.
-- `resources` contains fully qualified Pulumi URNs. These match entries in the imported state.
+- `resources[].translatedUrn` contains fully qualified Pulumi URNs matching entries in flat imported state.
+- `resources[].importId` contains the cloud provider resource ID needed for `pulumi import`.
 - Nested `modules` follow the same schema recursively. A module with children has its own resources AND child module resources.
 
 ## Example
@@ -72,8 +81,16 @@ Schema reference for the output of `pulumi-terraform-migrate module-map`.
       "indexKey": null,
       "indexType": "none",
       "resources": [
-        "urn:pulumi:dev::project::aws:ec2/vpc:Vpc::vpc_main",
-        "urn:pulumi:dev::project::aws:ec2/subnet:Subnet::vpc_subnets_0"
+        {
+          "translatedUrn": "urn:pulumi:dev::project::aws:ec2/vpc:Vpc::vpc_main",
+          "terraformAddress": "module.vpc.aws_vpc.main",
+          "importId": "vpc-0abc123def456"
+        },
+        {
+          "translatedUrn": "urn:pulumi:dev::project::aws:ec2/subnet:Subnet::vpc_subnets_0",
+          "terraformAddress": "module.vpc.aws_subnet.subnets[0]",
+          "importId": "subnet-0abc123def456"
+        }
       ],
       "interface": {
         "inputs": [
