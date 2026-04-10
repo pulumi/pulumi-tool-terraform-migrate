@@ -16,7 +16,6 @@ package pkg
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
@@ -26,9 +25,9 @@ import (
 )
 
 func TestConvertSimple(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	stackFolder := createPulumiStack(t)
-	data, err := translateStateFromJson(ctx, "testdata/bucket_state.json", stackFolder)
+	data, err := translateStateFromJson(ctx, "testdata/bucket_state.json")
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -37,9 +36,9 @@ func TestConvertSimple(t *testing.T) {
 }
 
 func TestConvertWithDependencies(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	stackFolder := createPulumiStack(t)
-	res, err := translateStateFromJson(ctx, "testdata/bucket_state.json", stackFolder)
+	res, err := translateStateFromJson(ctx, "testdata/bucket_state.json")
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -49,9 +48,9 @@ func TestConvertWithDependencies(t *testing.T) {
 }
 
 func TestConvertInvolved(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	stackFolder := createPulumiStack(t)
-	data, err := translateStateFromJson(ctx, "testdata/tofu_state.json", stackFolder)
+	data, err := translateStateFromJson(ctx, "testdata/tofu_state.json")
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -60,9 +59,9 @@ func TestConvertInvolved(t *testing.T) {
 }
 
 func TestConvertTwoModules(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	stackFolder := createPulumiStack(t)
-	data, err := translateStateFromJson(ctx, "testdata/tofu_state_two_buckets.json", stackFolder)
+	data, err := translateStateFromJson(ctx, "testdata/tofu_state_two_buckets.json")
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -78,9 +77,9 @@ func TestConvertTwoModules(t *testing.T) {
 }
 
 func TestConvertNestedModules(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	stackFolder := createPulumiStack(t)
-	data, err := translateStateFromJson(ctx, "testdata/tofu_state_nested_modules.json", stackFolder)
+	data, err := translateStateFromJson(ctx, "testdata/tofu_state_nested_modules.json")
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -98,8 +97,7 @@ func TestConvertNestedModules(t *testing.T) {
 func TestConvertWithSensitiveValues(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	stackFolder := createPulumiStack(t)
-	data, err := translateStateFromJson(ctx, "testdata/tofu_random_sensitive_state.json", stackFolder)
+	data, err := translateStateFromJson(ctx, "testdata/tofu_random_sensitive_state.json")
 	if err != nil {
 		t.Fatalf("failed to convert Terraform state: %v", err)
 	}
@@ -110,7 +108,7 @@ func TestConvertWithSensitiveValues(t *testing.T) {
 	require.True(t, ok)
 }
 
-func translateStateFromJson(ctx context.Context, tfStateJson string, pulumiProgramDir string) (*TranslateStateResult, error) {
+func translateStateFromJson(ctx context.Context, tfStateJson string) (*TranslateStateResult, error) {
 	tfState, err := tofu.LoadTerraformState(ctx, tofu.LoadTerraformStateOptions{
 		StateFilePath: tfStateJson,
 	})
@@ -118,7 +116,7 @@ func translateStateFromJson(ctx context.Context, tfStateJson string, pulumiProgr
 		return nil, err
 	}
 	// When loading from JSON, we don't have provider versions
-	return TranslateState(ctx, tfState, nil, pulumiProgramDir)
+	return TranslateState(ctx, tfState, nil, "dev", "test-project")
 }
 
 func Test_convertState_simple(t *testing.T) {
@@ -338,12 +336,3 @@ func TestPulumiNameFromTerraformAddress(t *testing.T) {
 	}
 }
 
-func createPulumiStack(t *testing.T) string {
-	dir, err := os.MkdirTemp("", "pulumi-stack-")
-	require.NoError(t, err)
-	t.Logf("Pulumi stack directory: %s", dir)
-
-	_ = runCommand(t, dir, "pulumi", "new", "typescript", "--dir", dir, "--yes")
-	_ = runCommand(t, dir, "pulumi", "up", "--yes")
-	return dir
-}

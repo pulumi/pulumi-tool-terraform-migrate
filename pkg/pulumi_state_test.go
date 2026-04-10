@@ -16,12 +16,13 @@ package pkg
 
 import (
 	"os"
-	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/hexops/autogold/v2"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/stretchr/testify/require"
 )
 
@@ -90,15 +91,7 @@ func TestInsertResourcesIntoDeployment(t *testing.T) {
 				},
 			},
 		},
-	}, "dev", "example", apitype.DeploymentV3{
-		Resources: []apitype.ResourceV3{
-			{
-				URN:  "urn:pulumi:dev::example::pulumi:pulumi:Stack::example-dev",
-				Type: "pulumi:pulumi:Stack",
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-			},
-		},
-	})
+	}, "dev", "example")
 	if err != nil {
 		t.Fatalf("failed to make deployment: %v", err)
 	}
@@ -181,15 +174,7 @@ func TestInsertResourcesIntoDeployment_multi_provider(t *testing.T) {
 				},
 			},
 		},
-	}, "dev", "example", apitype.DeploymentV3{
-		Resources: []apitype.ResourceV3{
-			{
-				URN:  "urn:pulumi:dev::example::pulumi:pulumi:Stack::example-dev",
-				Type: "pulumi:pulumi:Stack",
-				ID:   "stack-id",
-			},
-		},
-	})
+	}, "dev", "example")
 	require.NoError(t, err, "failed to make deployment")
 
 	require.Equal(t, 5, len(data.Resources), "expected 5 resources (1 stack, 2 providers, 2 resources)")
@@ -225,82 +210,81 @@ func TestInsertResourcesIntoDeployment_multi_provider(t *testing.T) {
 		"tls_private_key should be linked to tls provider")
 }
 
-func runCommand(t *testing.T, dir string, command string, args ...string) string {
-	t.Helper()
-	cmd := exec.Command(command, args...)
-	cmd.Dir = dir
-	output, err := cmd.Output()
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			t.Fatalf("failed to run command %s %v, error: %v, output: %s, stdout: %s", command, args, err, string(exitErr.Stderr), output)
-		}
-		t.Fatalf("failed to run command %s %v, error: %v", command, args, err)
+func TestInsertResourcesIntoDeployment_EmptyStackName(t *testing.T) {
+	t.Parallel()
+	_, err := InsertResourcesIntoDeployment(&PulumiState{}, "", "project")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "stackName")
+}
+
+func TestInsertResourcesIntoDeployment_EmptyProjectName(t *testing.T) {
+	t.Parallel()
+	_, err := InsertResourcesIntoDeployment(&PulumiState{}, "dev", "")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "projectName")
+}
+
+func TestInsertResourcesIntoDeployment_FlatState(t *testing.T) {
+	t.Parallel()
+	stackName := "dev"
+	projectName := "testproject"
+
+	providerID := PulumiResourceID{ID: "provider-uuid", Name: "default_6_0_0", Type: "pulumi:providers:aws"}
+	state := &PulumiState{
+		Providers: []PulumiResource{
+			{PulumiResourceID: providerID, Inputs: resource.PropertyMap{}, Outputs: resource.PropertyMap{}},
+		},
+		Resources: []PulumiResource{
+			{
+				PulumiResourceID: PulumiResourceID{ID: "subnet-123", Name: "this", Type: "aws:ec2/subnet:Subnet"},
+				Provider:         &providerID,
+				Inputs:           resource.PropertyMap{},
+				Outputs:          resource.PropertyMap{},
+			},
+		},
 	}
-	return string(output)
-}
 
-func TestInsertResourcesIntoDeployment_ZeroResources(t *testing.T) {
-	t.Parallel()
-	_, err := InsertResourcesIntoDeployment(&PulumiState{
-		Providers: []PulumiResource{
-			{
-				PulumiResourceID: PulumiResourceID{
-					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-					Type: "pulumi:providers:aws",
-					Name: "default_7.12.0",
-				},
-			},
-		},
-		Resources: []PulumiResource{},
-	}, "dev", "example", apitype.DeploymentV3{
-		Resources: []apitype.ResourceV3{},
-	})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "No Stack resource found")
-}
-
-func TestInsertResourcesIntoDeployment_MultipleResources(t *testing.T) {
-	t.Parallel()
-	_, err := InsertResourcesIntoDeployment(&PulumiState{
-		Providers: []PulumiResource{
-			{
-				PulumiResourceID: PulumiResourceID{
-					ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-					Type: "pulumi:providers:aws",
-					Name: "default_7.12.0",
-				},
-			},
-		},
-		Resources: []PulumiResource{},
-	}, "dev", "example", apitype.DeploymentV3{
-		Resources: []apitype.ResourceV3{
-			{
-				URN:  "urn:pulumi:dev::example::pulumi:pulumi:Stack::example-dev",
-				Type: "pulumi:pulumi:Stack",
-				ID:   "a339fe8e-e15d-4203-8719-c0ca5d3f414e",
-			},
-			{
-				URN:  "urn:pulumi:dev::example::aws:s3/bucket:Bucket::my-bucket",
-				Type: "aws:s3/bucket:Bucket",
-				ID:   "b339fe8e-e15d-4203-8719-c0ca5d3f414f",
-			},
-		},
-	})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "Found 2 resources")
-	require.Contains(t, err.Error(), "expected 1")
-}
-
-func TestGetDeployment(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "test-deployment-*")
+	result, err := InsertResourcesIntoDeployment(state, stackName, projectName)
 	require.NoError(t, err)
-	defer os.RemoveAll(testDir)
 
-	_ = runCommand(t, testDir, "pulumi", "new", "typescript", "--yes")
-	_ = runCommand(t, testDir, "pulumi", "stack", "select", "dev")
-	_ = runCommand(t, testDir, "pulumi", "up", "--yes")
+	// Stack + provider + resource = 3
+	require.Len(t, result.Resources, 3)
 
-	deployment, err := GetDeployment(testDir)
+	// Verify ordering: Stack, provider, resource
+	require.Equal(t, tokens.Type("pulumi:pulumi:Stack"), result.Resources[0].Type)
+	require.True(t, result.Resources[1].Custom) // provider
+	require.True(t, result.Resources[2].Custom) // resource
+
+	// Verify resource is parented to Stack (flat state)
+	res := result.Resources[2]
+	require.Contains(t, string(res.Parent), "pulumi:pulumi:Stack")
+}
+
+func TestGetProjectName(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	err := os.WriteFile(filepath.Join(dir, "Pulumi.yaml"), []byte("name: my-project\nruntime: go\n"), 0644)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(deployment.Deployment.Resources))
+
+	name, err := getProjectName(dir)
+	require.NoError(t, err)
+	require.Equal(t, "my-project", name)
+}
+
+func TestGetProjectName_Missing(t *testing.T) {
+	t.Parallel()
+	_, err := getProjectName(t.TempDir())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Pulumi.yaml")
+}
+
+func TestGetProjectName_EmptyName(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	err := os.WriteFile(filepath.Join(dir, "Pulumi.yaml"), []byte("runtime: go\n"), 0644)
+	require.NoError(t, err)
+
+	_, err = getProjectName(dir)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "empty")
 }

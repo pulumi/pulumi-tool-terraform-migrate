@@ -15,13 +15,15 @@
 package pkg
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
-	"github.com/pulumi/pulumi/sdk/v3/go/auto"
+	"gopkg.in/yaml.v3"
+
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
@@ -98,75 +100,41 @@ func getStackName(projectFolder string) (string, error) {
 	return "", fmt.Errorf("no current stack found")
 }
 
-type DeploymentResult struct {
-	Deployment  apitype.DeploymentV3
-	ProjectName string
-	StackName   string
+func getProjectName(projectDir string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(projectDir, "Pulumi.yaml"))
+	if err != nil {
+		return "", fmt.Errorf("failed to read Pulumi.yaml: %w", err)
+	}
+
+	var project struct {
+		Name string `yaml:"name"`
+	}
+	if err := yaml.Unmarshal(data, &project); err != nil {
+		return "", fmt.Errorf("failed to parse Pulumi.yaml: %w", err)
+	}
+	if project.Name == "" {
+		return "", fmt.Errorf("project name is empty in Pulumi.yaml")
+	}
+	return project.Name, nil
 }
 
-func GetDeployment(outputFolder string) (*DeploymentResult, error) {
-	ctx := context.Background()
-	workspace, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(outputFolder))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create workspace: %w", err)
+func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName string) (apitype.DeploymentV3, error) {
+	if stackName == "" {
+		return apitype.DeploymentV3{}, fmt.Errorf("stackName must not be empty")
 	}
-
-	// TODO[pulumi/pulumi#21266]: Use automation API to get the selected stack name once the issue is fixed.
-	stackName, err := getStackName(outputFolder)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stack name: %w", err)
-	}
-
-	untypedDeployment, err := workspace.ExportStack(ctx, stackName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to export stack: %w", err)
-	}
-
-	deployment := apitype.DeploymentV3{}
-	err = json.Unmarshal(untypedDeployment.Deployment, &deployment)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal stack deployment: %w", err)
-	}
-
-	projectSettings, err := workspace.ProjectSettings(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get project settings: %w", err)
-	}
-
-	if projectSettings == nil {
-		return nil, fmt.Errorf("project settings are nil")
-	}
-
-	return &DeploymentResult{
-		Deployment:  deployment,
-		ProjectName: string(projectSettings.Name),
-		StackName:   stackName,
-	}, nil
-}
-
-func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName string, deployment apitype.DeploymentV3) (apitype.DeploymentV3, error) {
-	nres := len(deployment.Resources)
-
-	if nres == 0 {
-		return apitype.DeploymentV3{}, fmt.Errorf(
-			"No Stack resource found in the Pulumi state for stack '%q'. "+
-				"Please run `pulumi up` to populate the initial Pulumi state and configure secrets providers, then try again.",
-			stackName)
-	}
-
-	if nres > 1 {
-		return apitype.DeploymentV3{}, fmt.Errorf(
-			"Found %d resources in stack %q, expected 1 (Stack resource). "+
-				"Migrating resources into stacks with pre-existing resources is not yet supported",
-			nres, stackName)
+	if projectName == "" {
+		return apitype.DeploymentV3{}, fmt.Errorf("projectName must not be empty")
 	}
 
 	now := time.Now()
 
-	stackResource, err := findStackResource(deployment)
-	if err != nil {
-		return apitype.DeploymentV3{}, err
-	}
+	stackURN := makeUrn(stackName, projectName, "pulumi:pulumi:Stack", projectName+"-"+stackName)
+
+	deployment := apitype.DeploymentV3{}
+	deployment.Resources = append(deployment.Resources, apitype.ResourceV3{
+		URN:  stackURN,
+		Type: "pulumi:pulumi:Stack",
+	})
 
 	for _, providerState := range state.Providers {
 		provider := apitype.ResourceV3{
@@ -200,7 +168,7 @@ func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName st
 			Type:     tokens.Type(res.Type),
 			Inputs:   res.Inputs.Mappable(),
 			Outputs:  res.Outputs.Mappable(),
-			Parent:   resource.URN(stackResource.URN),
+			Parent:   stackURN,
 			Provider: providerLink,
 			Created:  &now,
 			Modified: &now,
@@ -208,13 +176,4 @@ func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName st
 	}
 
 	return deployment, nil
-}
-
-func findStackResource(deployment apitype.DeploymentV3) (apitype.ResourceV3, error) {
-	for _, r := range deployment.Resources {
-		if string(r.URN.QualifiedType()) == "pulumi:pulumi:Stack" {
-			return r, nil
-		}
-	}
-	return apitype.ResourceV3{}, fmt.Errorf("No resources with qualified type pulumi:pulumi:Stack")
 }
