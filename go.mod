@@ -15,8 +15,8 @@ require (
 	github.com/hexops/autogold/v2 v2.3.0
 	github.com/opentofu/svchost v0.0.0-20250610175836-86c9e5e3d8c8
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/pulumi/opentofu v0.0.0-20250808205121-cc4a35131222
-	github.com/pulumi/pulumi-terraform-bridge/v3 v3.121.0
+	github.com/pulumi/opentofu e802c63f5867
+	github.com/pulumi/pulumi-terraform-bridge/v3 v3.127.0
 	github.com/pulumi/pulumi/sdk/v3 v3.222.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
@@ -173,9 +173,9 @@ require (
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/pulumi/appdash v0.0.0-20231130102222-75f619a67231 // indirect
-	github.com/pulumi/esc v0.22.0 // indirect
+	github.com/pulumi/esc v0.23.0 // indirect
 	github.com/pulumi/inflector v0.2.1 // indirect
-	github.com/pulumi/pulumi/pkg/v3 v3.222.0 // indirect
+	github.com/pulumi/pulumi/pkg/v3 v3.232.0 // indirect
 	github.com/pulumi/terraform-diff-reader v0.0.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
