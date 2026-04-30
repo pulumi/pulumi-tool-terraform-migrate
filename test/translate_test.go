@@ -135,7 +135,7 @@ func TestTranslateBasicWithDependencies(t *testing.T) {
 	statePath := setupTFStack(t, "testdata/tf_random_stack")
 	stackFolder, _ := createPulumiStack(t)
 
-	err := pkg.TranslateAndWriteState(ctx, statePath, stackFolder, filepath.Join(stackFolder, "state.json"), filepath.Join(stackFolder, "dependencies.json"), false, "", "")
+	err := pkg.TranslateAndWriteState(ctx, statePath, "", stackFolder, filepath.Join(stackFolder, "state.json"), filepath.Join(stackFolder, "dependencies.json"), false, "", "")
 	require.NoError(t, err)
 
 	dependencies, err := os.ReadFile(filepath.Join(stackFolder, "dependencies.json"))

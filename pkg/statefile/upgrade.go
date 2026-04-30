@@ -27,13 +27,18 @@ import (
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tfprovider"
 )
 
+// ProviderFactory creates a provider given an address and version.
+// The default factory uses tfprovider.LoadProvider to download and run real providers.
+type ProviderFactory func(ctx context.Context, providerAddr, version string) (tfprovider.Provider, error)
+
 // StateUpgrader manages TF provider processes for state upgrades.
 // Providers are loaded lazily on first use and cached for reuse.
 // Call Close() when done to clean up provider processes.
 type StateUpgrader struct {
-	mu        sync.Mutex
-	versions  map[string]string // tfProviderName -> version
-	providers map[string]tfprovider.Provider
+	mu              sync.Mutex
+	versions        map[string]string // tfProviderName -> version
+	providers       map[string]tfprovider.Provider
+	providerFactory ProviderFactory
 }
 
 // NewStateUpgrader creates a new upgrader with the specified provider versions.
@@ -42,8 +47,19 @@ type StateUpgrader struct {
 // Providers are loaded lazily on first use.
 func NewStateUpgrader(versions map[string]string) *StateUpgrader {
 	return &StateUpgrader{
-		versions:  versions,
-		providers: make(map[string]tfprovider.Provider),
+		versions:        versions,
+		providers:        make(map[string]tfprovider.Provider),
+		providerFactory: tfprovider.LoadProvider,
+	}
+}
+
+// NewStateUpgraderWithFactory creates a new upgrader with a custom provider factory.
+// This is primarily useful for testing to avoid downloading real providers.
+func NewStateUpgraderWithFactory(versions map[string]string, factory ProviderFactory) *StateUpgrader {
+	return &StateUpgrader{
+		versions:        versions,
+		providers:        make(map[string]tfprovider.Provider),
+		providerFactory: factory,
 	}
 }
 
@@ -76,7 +92,7 @@ func (p *StateUpgrader) getProvider(ctx context.Context, providerAddr string) (t
 	// Look up version from the versions map
 	version := p.versions[providerAddr]
 
-	prov, err := tfprovider.LoadProvider(ctx, providerAddr, version)
+	prov, err := p.providerFactory(ctx, providerAddr, version)
 	if err != nil {
 		return nil, err
 	}
