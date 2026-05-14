@@ -42,7 +42,7 @@ func TestBuildModuleMap_WithoutEval(t *testing.T) {
 
 	// Build without eval (nil tofuCtx) — no pulumiProviders needed for URN
 	// generation in this test since we just check structure.
-	mm, err := BuildModuleMap(config, nil, rawState, nil, "test-stack", "test-project")
+	mm, err := BuildModuleMap(config, nil, rawState, nil, nil, "test-stack", "test-project")
 	require.NoError(t, err)
 	require.NotNil(t, mm)
 
@@ -104,7 +104,7 @@ func TestBuildModuleMap_WithEval(t *testing.T) {
 	require.NoError(t, err)
 	defer cleanup()
 
-	mm, err := BuildModuleMap(config, tofuCtx, rawState, nil, "test-stack", "test-project")
+	mm, err := BuildModuleMap(config, tofuCtx, rawState, nil, nil, "test-stack", "test-project")
 	require.NoError(t, err)
 	require.NotNil(t, mm)
 
@@ -133,7 +133,7 @@ func TestBuildModuleMap_Expression(t *testing.T) {
 	rawState, err := LoadRawState(filepath.Join(tfDir, "terraform.tfstate"))
 	require.NoError(t, err)
 
-	mm, err := BuildModuleMap(config, nil, rawState, nil, "test-stack", "test-project")
+	mm, err := BuildModuleMap(config, nil, rawState, nil, nil, "test-stack", "test-project")
 	require.NoError(t, err)
 
 	pet0 := mm.Modules["pet[0]"]
@@ -217,7 +217,7 @@ func TestWriteModuleMap(t *testing.T) {
 	require.NotNil(t, got.RootResources[1].Attributes)
 	assert.Equal(t, "s3", got.RootResources[1].Attributes["backend"])
 	assert.Equal(t, "prod", got.RootResources[1].Attributes["workspace"])
-	assert.Nil(t, got.RootResources[0].Attributes) // managed resources have no attributes
+	assert.Nil(t, got.RootResources[0].Attributes) // this test constructs resources without attributes
 }
 
 func TestBuildModuleMap_RootResources(t *testing.T) {
@@ -270,7 +270,7 @@ func TestBuildModuleMap_RootResources(t *testing.T) {
 		nil,
 	)
 
-	mm, err := BuildModuleMap(config, nil, rawState, nil, "test-stack", "test-project")
+	mm, err := BuildModuleMap(config, nil, rawState, nil, nil, "test-stack", "test-project")
 	require.NoError(t, err)
 	require.NotNil(t, mm)
 
@@ -334,7 +334,7 @@ func TestBuildModuleMap_DataSources(t *testing.T) {
 		nil,
 	)
 
-	mm, err := BuildModuleMap(config, nil, rawState, nil, "test-stack", "test-project")
+	mm, err := BuildModuleMap(config, nil, rawState, nil, nil, "test-stack", "test-project")
 	require.NoError(t, err)
 
 	pet0 := mm.Modules["pet[0]"]

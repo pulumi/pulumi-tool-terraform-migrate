@@ -100,8 +100,16 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 		}
 	}
 
+	// Step 5: Build sensitivity map from provider schemas.
+	sensitivityMap, err := BuildSensitivityMap(ctx, config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not build sensitivity map: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Continuing without attribute redaction.\n")
+		sensitivityMap = nil
+	}
+
 	// Step 6: Build the module map.
-	mm, err := BuildModuleMap(config, tofuCtx, rawState, pulumiProviders, stackName, projectName)
+	mm, err := BuildModuleMap(config, tofuCtx, rawState, pulumiProviders, sensitivityMap, stackName, projectName)
 	if err != nil {
 		return fmt.Errorf("building module map: %w", err)
 	}

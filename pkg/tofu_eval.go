@@ -72,6 +72,10 @@ func DetectStateFormat(path string) (StateFormat, error) {
 // The tfDir must be an absolute path. Module sources are resolved relative to it
 // using the .terraform/modules/ directory.
 //
+// If modules are referenced in the config but .terraform/modules/ does not exist,
+// LoadConfig automatically runs `tofu init -backend=false` to download module
+// sources without initializing the backend (no remote state credentials needed).
+//
 // Because the configload package resolves module Dir entries from modules.json
 // relative to the process working directory, this function rewrites relative
 // Dir entries to be absolute (resolved against tfDir) in a temporary copy of
@@ -81,8 +85,20 @@ func LoadConfig(tfDir string) (*configs.Config, error) {
 
 	// Read the original manifest and make Dir entries absolute relative to tfDir.
 	manifest, err := modsdir.ReadManifestSnapshotForDir(origModulesDir)
-	if err != nil {
-		// If there's no manifest (no modules), proceed with the original dir.
+	modulesInstalled := err == nil && len(manifest) > 0
+
+	if !modulesInstalled && configHasModules(tfDir) {
+		// Modules referenced but not installed — run tofu init -backend=false.
+		fmt.Fprintf(os.Stderr, "Modules not installed. Running tofu init -backend=false...\n")
+		if err := runTofuInit(tfDir); err != nil {
+			return nil, fmt.Errorf("auto-installing modules: %w", err)
+		}
+		// Re-read the manifest after init.
+		manifest, err = modsdir.ReadManifestSnapshotForDir(origModulesDir)
+		if err != nil {
+			return nil, fmt.Errorf("reading modules manifest after init: %w", err)
+		}
+	} else if !modulesInstalled {
 		manifest = nil
 	}
 
@@ -207,4 +223,50 @@ func Evaluate(config *configs.Config, state *states.State, tfDir string) (*tofu.
 		goplugin.CleanupClients()
 	}
 	return tofuCtx, cleanup, nil
+}
+
+// configHasModules checks if any .tf file in the directory contains a module block.
+func configHasModules(tfDir string) bool {
+	entries, err := os.ReadDir(tfDir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if filepath.Ext(e.Name()) != ".tf" {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(tfDir, e.Name()))
+		if err != nil {
+			continue
+		}
+		if bytes.Contains(data, []byte("\nmodule ")) || bytes.Contains(data, []byte("\nmodule \"")) {
+			return true
+		}
+	}
+	return false
+}
+
+// runTofuInit runs `tofu init -backend=false` in the given directory to download
+// module sources without initializing the remote backend.
+//
+// The exit code is tolerated if modules.json was written successfully — tofu may
+// fail on version constraints or provider downloads that are irrelevant for
+// module source fetching.
+func runTofuInit(tfDir string) error {
+	cmd := exec.Command("tofu", "init", "-backend=false")
+	cmd.Dir = tfDir
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+
+	// Check if modules.json was created regardless of exit code.
+	modulesJSON := filepath.Join(tfDir, ".terraform", "modules", "modules.json")
+	if _, statErr := os.Stat(modulesJSON); statErr == nil {
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("tofu init -backend=false in %s: %w", tfDir, err)
+	}
+	return nil
 }
