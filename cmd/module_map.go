@@ -16,6 +16,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg"
 	"github.com/spf13/cobra"
@@ -27,6 +29,10 @@ func newModuleMapCmd() *cobra.Command {
 	var out string
 	var pulumiStack string
 	var pulumiProject string
+	var hostname string
+	var organization string
+	var workspace string
+	var tokenEnv string
 
 	cmd := &cobra.Command{
 		Use:   "module-map",
@@ -35,8 +41,13 @@ func newModuleMapCmd() *cobra.Command {
 instances, their interfaces (inputs/outputs), and the Pulumi URNs of
 resources belonging to each module instance.
 
-Example:
+State can be provided as a local file (--state-file) or pulled from a
+TFC-compatible remote backend (--hostname, --organization, --workspace,
+--token-env).
 
+Examples:
+
+  # From a local state file
   pulumi-terraform-migrate module-map \
     --from path/to/terraform-sources \
     --state-file path/to/terraform.tfstate \
@@ -44,17 +55,74 @@ Example:
     --pulumi-stack dev \
     --pulumi-project myproject
 
-The --state-file flag accepts either a raw .tfstate file or the JSON output
-of 'tofu show -json'. The format is auto-detected.
-
-When a raw .tfstate is provided the tool also evaluates variable expressions
-using the OpenTofu evaluation engine, populating evaluatedValue fields in
-the output. If evaluation fails, the tool continues gracefully without
-evaluated values.
+  # From a TFC-compatible remote (Scalr, TFC, TFE)
+  pulumi-terraform-migrate module-map \
+    --from path/to/terraform-sources \
+    --hostname app.terraform.io \
+    --organization my-org \
+    --workspace my-workspace-dev \
+    --token-env TFC_TOKEN \
+    --out /tmp/module-map.json \
+    --pulumi-stack dev \
+    --pulumi-project myproject
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := pkg.GenerateModuleMap(cmd.Context(), from, stateFile, out, pulumiStack, pulumiProject)
+			// Validate mutually exclusive state sources.
+			remoteFlags := []string{"hostname", "organization", "workspace", "token-env"}
+			remoteValues := map[string]string{
+				"hostname":     hostname,
+				"organization": organization,
+				"workspace":    workspace,
+				"token-env":    tokenEnv,
+			}
+			hasAnyRemote := false
+			for _, v := range remoteValues {
+				if v != "" {
+					hasAnyRemote = true
+					break
+				}
+			}
+
+			if stateFile != "" && hasAnyRemote {
+				return fmt.Errorf("--state-file and remote flags (--hostname, --organization, --workspace, --token-env) are mutually exclusive")
+			}
+
+			if stateFile == "" && !hasAnyRemote {
+				return fmt.Errorf("either --state-file or all remote flags (--hostname, --organization, --workspace, --token-env) must be provided")
+			}
+
+			var remote *pkg.RemoteStateOptions
+			if hasAnyRemote {
+				var missing []string
+				for _, flag := range remoteFlags {
+					if remoteValues[flag] == "" {
+						missing = append(missing, "--"+flag)
+					}
+				}
+				if len(missing) > 0 {
+					return fmt.Errorf("--hostname, --organization, --workspace, and --token-env are all required when using remote state (missing: %s)",
+						strings.Join(missing, ", "))
+				}
+
+				token := os.Getenv(tokenEnv)
+				if token == "" {
+					return fmt.Errorf("environment variable %s is empty or not set", tokenEnv)
+				}
+
+				remote = &pkg.RemoteStateOptions{
+					Hostname:     hostname,
+					Organization: organization,
+					Workspace:    workspace,
+					Token:        token,
+				}
+			}
+
+			err := pkg.GenerateModuleMap(cmd.Context(), from, stateFile, out, pulumiStack, pulumiProject, remote)
 			if err != nil {
+				// Enrich authentication errors with the env var name for user guidance.
+				if remote != nil && strings.Contains(err.Error(), "authentication failed") {
+					return fmt.Errorf("%w: check token in env var %s", err, tokenEnv)
+				}
 				return fmt.Errorf("failed to generate module map: %w", err)
 			}
 			return nil
@@ -66,9 +134,12 @@ evaluated values.
 	cmd.Flags().StringVarP(&out, "out", "o", "", "Where to emit the module-map.json file")
 	cmd.Flags().StringVar(&pulumiStack, "pulumi-stack", "", "Pulumi stack name for URN generation")
 	cmd.Flags().StringVar(&pulumiProject, "pulumi-project", "", "Pulumi project name for URN generation")
+	cmd.Flags().StringVar(&hostname, "hostname", "", "TFC-compatible API hostname (e.g. app.terraform.io)")
+	cmd.Flags().StringVar(&organization, "organization", "", "Organization name on the TFC-compatible host")
+	cmd.Flags().StringVar(&workspace, "workspace", "", "Workspace name on the TFC-compatible host")
+	cmd.Flags().StringVar(&tokenEnv, "token-env", "", "Name of environment variable containing the API token")
 
 	cmd.MarkFlagRequired("from")
-	cmd.MarkFlagRequired("state-file")
 	cmd.MarkFlagRequired("out")
 	cmd.MarkFlagRequired("pulumi-stack")
 	cmd.MarkFlagRequired("pulumi-project")

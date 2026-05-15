@@ -32,14 +32,18 @@ import (
 
 func TestDetectStateFormat_RawTfstate(t *testing.T) {
 	t.Parallel()
-	format, err := DetectStateFormat(filepath.Join("testdata", "tofu_tfstate_indexed_modules.tfstate"))
+	data, err := os.ReadFile(filepath.Join("testdata", "tofu_tfstate_indexed_modules.tfstate"))
+	require.NoError(t, err)
+	format, err := DetectStateFormatBytes(data)
 	require.NoError(t, err)
 	assert.Equal(t, StateFormatRaw, format)
 }
 
 func TestDetectStateFormat_TofuShowJson(t *testing.T) {
 	t.Parallel()
-	format, err := DetectStateFormat(filepath.Join("testdata", "tofu_state_indexed_modules.json"))
+	data, err := os.ReadFile(filepath.Join("testdata", "tofu_state_indexed_modules.json"))
+	require.NoError(t, err)
+	format, err := DetectStateFormatBytes(data)
 	require.NoError(t, err)
 	assert.Equal(t, StateFormatTofuShowJSON, format)
 }
@@ -66,11 +70,12 @@ func TestLoadConfig(t *testing.T) {
 
 func TestLoadRawState(t *testing.T) {
 	t.Parallel()
-	state, err := LoadRawState(filepath.Join("testdata", "tofu_tfstate_indexed_modules.tfstate"))
+	data, err := os.ReadFile(filepath.Join("testdata", "tofu_tfstate_indexed_modules.tfstate"))
+	require.NoError(t, err)
+	state, err := LoadRawStateBytes(data)
 	require.NoError(t, err)
 	require.NotNil(t, state)
 
-	// Should have resources from module.pet[0] and module.pet[1].
 	mod0 := state.Module(addrs.RootModuleInstance.Child("pet", addrs.IntKey(0)))
 	require.NotNil(t, mod0, "expected module.pet[0] to exist in state")
 	assert.Greater(t, len(mod0.Resources), 0, "expected module.pet[0] to have resources")

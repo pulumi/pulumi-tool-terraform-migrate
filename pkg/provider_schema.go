@@ -16,9 +16,12 @@ package pkg
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 
 	goversion "github.com/hashicorp/go-version"
 	disco "github.com/opentofu/svchost/disco"
@@ -59,6 +62,15 @@ func BuildSensitivityMap(ctx context.Context, config *configs.Config) (Sensitivi
 			continue
 		}
 
+		// Check disk cache first.
+		if cached, err := readCachedSensitivity(req.Type.String(), version); err == nil {
+			fmt.Fprintf(os.Stderr, "Using cached sensitivity map for %s %s\n", req.Type, version)
+			for k, v := range cached {
+				sm[k] = v
+			}
+			continue
+		}
+
 		fmt.Fprintf(os.Stderr, "Loading provider schema for %s %s...\n", req.Type, version)
 
 		// Load the provider.
@@ -78,14 +90,21 @@ func BuildSensitivityMap(ctx context.Context, config *configs.Config) (Sensitivi
 		}
 
 		// Walk resource schemas and record sensitive attributes.
+		providerSensitivity := make(SensitivityMap)
 		for resourceType, resourceSchema := range schemaResp.ResourceTypes {
 			sensitiveAttrs := findSensitiveAttributes(resourceSchema.Block, "")
 			if len(sensitiveAttrs) > 0 {
+				providerSensitivity[resourceType] = sensitiveAttrs
 				sm[resourceType] = sensitiveAttrs
 			}
 		}
 
 		provider.Close(ctx) //nolint:errcheck
+
+		// Write to disk cache for next time.
+		if err := writeCachedSensitivity(req.Type.String(), version, providerSensitivity); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not cache sensitivity map for %s: %v\n", req.Type, err)
+		}
 	}
 
 	return sm, nil
@@ -160,6 +179,55 @@ func findSensitiveAttributes(block *bridgeConfigSchema.Block, prefix string) map
 	}
 
 	return result
+}
+
+// sensitivityCacheDir returns the path to the sensitivity cache directory.
+func sensitivityCacheDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".pulumi", "sensitivity-cache")
+}
+
+// sensitivityCacheKey builds a filename-safe cache key from a provider address and version.
+func sensitivityCacheKey(providerAddr, version string) string {
+	safe := strings.ReplaceAll(providerAddr, "/", "-")
+	return safe + "@" + version + ".json"
+}
+
+// readCachedSensitivity reads a cached sensitivity map for a provider+version from disk.
+func readCachedSensitivity(providerAddr, version string) (SensitivityMap, error) {
+	dir := sensitivityCacheDir()
+	if dir == "" {
+		return nil, fmt.Errorf("could not determine cache directory")
+	}
+	path := filepath.Join(dir, sensitivityCacheKey(providerAddr, version))
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var sm SensitivityMap
+	if err := json.Unmarshal(data, &sm); err != nil {
+		return nil, err
+	}
+	return sm, nil
+}
+
+// writeCachedSensitivity writes a sensitivity map for a provider+version to disk.
+func writeCachedSensitivity(providerAddr, version string, sm SensitivityMap) error {
+	dir := sensitivityCacheDir()
+	if dir == "" {
+		return fmt.Errorf("could not determine cache directory")
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	data, err := json.Marshal(sm)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, sensitivityCacheKey(providerAddr, version)), data, 0644)
 }
 
 // RedactSensitiveAttributes returns a copy of attrs with sensitive values

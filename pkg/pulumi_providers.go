@@ -16,10 +16,13 @@ package pkg
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/pulumi/opentofu/states"
@@ -125,6 +128,20 @@ func getMappingFromStaticallyBridgedProvider(
 	staticProvider *providermap.BridgedPulumiProvider,
 	tfProviderName providermap.TerraformProviderName,
 ) (*info.Provider, error) {
+	// Check mapping cache first.
+	cacheKey := staticProvider.Identifier + "@" + staticProvider.Version
+	if cached, err := readCachedMapping(cacheKey); err == nil {
+		fmt.Fprintf(os.Stderr, "Using cached mapping for %s %s\n", staticProvider.Identifier, staticProvider.Version)
+		providerInfo, err := bridgedproviders.UnmarshalMappingData(cached)
+		if err == nil {
+			return providerInfo, nil
+		}
+		// Cache corrupt — fall through to fresh load.
+		fmt.Fprintf(os.Stderr, "Warning: cached mapping for %s is corrupt, reloading: %v\n", cacheKey, err)
+	}
+
+	fmt.Fprintf(os.Stderr, "Loading mapping for %s %s...\n", staticProvider.Identifier, staticProvider.Version)
+
 	result, err := bridgedproviders.EnsureProviderInstalled(context.Background(), bridgedproviders.InstallProviderOptions{
 		Name:    staticProvider.Identifier,
 		Version: staticProvider.Version,
@@ -141,12 +158,65 @@ func getMappingFromStaticallyBridgedProvider(
 		return nil, fmt.Errorf("failed to get mapping for provider %s: %w", tfProviderName, err)
 	}
 
+	// Write to cache for next time.
+	if err := writeCachedMapping(cacheKey, mapping); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not cache mapping for %s: %v\n", cacheKey, err)
+	}
+
 	providerInfo, err := bridgedproviders.UnmarshalMappingData(mapping)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal mapping for provider %s: %w", tfProviderName, err)
 	}
 
 	return providerInfo, nil
+}
+
+// mappingCacheDir returns the path to the mapping cache directory.
+func mappingCacheDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".pulumi", "mapping-cache")
+}
+
+// mappingCacheFileName builds a filename-safe cache key.
+func mappingCacheFileName(key string) string {
+	safe := strings.ReplaceAll(key, "/", "-")
+	return safe + ".json"
+}
+
+// readCachedMapping reads a cached GetMappingResult from disk.
+func readCachedMapping(key string) (*bridgedproviders.GetMappingResult, error) {
+	dir := mappingCacheDir()
+	if dir == "" {
+		return nil, fmt.Errorf("could not determine cache directory")
+	}
+	data, err := os.ReadFile(filepath.Join(dir, mappingCacheFileName(key)))
+	if err != nil {
+		return nil, err
+	}
+	var result bridgedproviders.GetMappingResult
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// writeCachedMapping writes a GetMappingResult to disk.
+func writeCachedMapping(key string, result *bridgedproviders.GetMappingResult) error {
+	dir := mappingCacheDir()
+	if dir == "" {
+		return fmt.Errorf("could not determine cache directory")
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	data, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, mappingCacheFileName(key)), data, 0644)
 }
 
 func GetPulumiProvidersForTerraformState(tfState *tfjson.State, providerVersions map[string]string) (map[providermap.TerraformProviderName]*ProviderWithMetadata, error) {

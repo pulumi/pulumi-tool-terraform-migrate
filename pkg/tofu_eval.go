@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/pulumi/opentofu/addrs"
@@ -47,25 +48,27 @@ const (
 	StateFormatTofuShowJSON
 )
 
-// DetectStateFormat auto-detects whether the file at path is a raw .tfstate
-// or the JSON output of `tofu show -json`. Raw tfstate files have a top-level
-// "version" key but no "format_version" key, while tofu show JSON has a
-// "format_version" key.
-func DetectStateFormat(path string) (StateFormat, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0, fmt.Errorf("reading state file %s: %w", path, err)
-	}
-
+// DetectStateFormatBytes auto-detects whether the data is a raw .tfstate
+// or the JSON output of `tofu show -json`.
+func DetectStateFormatBytes(data []byte) (StateFormat, error) {
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal(data, &top); err != nil {
-		return 0, fmt.Errorf("parsing state file %s as JSON: %w", path, err)
+		return 0, fmt.Errorf("parsing state as JSON: %w", err)
 	}
 
 	if _, hasFormatVersion := top["format_version"]; hasFormatVersion {
 		return StateFormatTofuShowJSON, nil
 	}
 	return StateFormatRaw, nil
+}
+
+// DetectStateFormat reads a state file from disk and detects its format.
+func DetectStateFormat(path string) (StateFormat, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, fmt.Errorf("reading state file %s: %w", path, err)
+	}
+	return DetectStateFormatBytes(data)
 }
 
 // LoadConfig loads a Terraform/OpenTofu configuration from the given directory.
@@ -139,18 +142,22 @@ func LoadConfig(tfDir string) (*configs.Config, error) {
 	return config, nil
 }
 
-// LoadRawState loads a raw .tfstate file into a *states.State.
+// LoadRawStateBytes parses raw .tfstate bytes into a *states.State.
+func LoadRawStateBytes(data []byte) (*states.State, error) {
+	sf, err := statefile.Read(bytes.NewReader(data), encryption.StateEncryptionDisabled())
+	if err != nil {
+		return nil, fmt.Errorf("parsing state: %w", err)
+	}
+	return sf.State, nil
+}
+
+// LoadRawState reads a raw .tfstate file from disk.
 func LoadRawState(path string) (*states.State, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading state file %s: %w", path, err)
 	}
-
-	sf, err := statefile.Read(bytes.NewReader(data), encryption.StateEncryptionDisabled())
-	if err != nil {
-		return nil, fmt.Errorf("parsing state file %s: %w", path, err)
-	}
-	return sf.State, nil
+	return LoadRawStateBytes(data)
 }
 
 // LoadProviders discovers provider plugins from the .terraform/providers/
@@ -168,32 +175,44 @@ func LoadProviders(config *configs.Config, tfDir string) (map[addrs.Provider]pro
 		// Use the first (highest precedence) cached provider.
 		// Capture loop variable for closure.
 		cached := cachedList[0]
+
+		// Singleton: start the provider subprocess once and reuse it across Eval calls.
+		var singleton providers.Interface
+		var singletonErr error
+		var once sync.Once
+
 		factories[provAddr] = func() (providers.Interface, error) {
-			execFile, err := cached.ExecutableFile()
-			if err != nil {
-				return nil, fmt.Errorf("getting executable for provider %s: %w", provAddr, err)
-			}
-			clientConfig := &goplugin.ClientConfig{
-				HandshakeConfig:  tfplugin.Handshake,
-				Logger:           logging.NewProviderLogger(""),
-				AllowedProtocols: []goplugin.Protocol{goplugin.ProtocolGRPC},
-				Managed:          true,
-				Cmd:              exec.Command(execFile),
-				AutoMTLS:         true,
-				VersionedPlugins: tfplugin.VersionedPlugins,
-			}
-			client := goplugin.NewClient(clientConfig)
-			rpcClient, err := client.Client()
-			if err != nil {
-				return nil, fmt.Errorf("connecting to provider %s: %w", provAddr, err)
-			}
-			raw, err := rpcClient.Dispense(tfplugin.ProviderPluginName)
-			if err != nil {
-				return nil, fmt.Errorf("dispensing provider %s: %w", provAddr, err)
-			}
-			p := raw.(*tfplugin.GRPCProvider)
-			p.PluginClient = client
-			return p, nil
+			once.Do(func() {
+				execFile, err := cached.ExecutableFile()
+				if err != nil {
+					singletonErr = fmt.Errorf("getting executable for provider %s: %w", provAddr, err)
+					return
+				}
+				clientConfig := &goplugin.ClientConfig{
+					HandshakeConfig:  tfplugin.Handshake,
+					Logger:           logging.NewProviderLogger(""),
+					AllowedProtocols: []goplugin.Protocol{goplugin.ProtocolGRPC},
+					Managed:          true,
+					Cmd:              exec.Command(execFile),
+					AutoMTLS:         true,
+					VersionedPlugins: tfplugin.VersionedPlugins,
+				}
+				client := goplugin.NewClient(clientConfig)
+				rpcClient, err := client.Client()
+				if err != nil {
+					singletonErr = fmt.Errorf("connecting to provider %s: %w", provAddr, err)
+					return
+				}
+				raw, err := rpcClient.Dispense(tfplugin.ProviderPluginName)
+				if err != nil {
+					singletonErr = fmt.Errorf("dispensing provider %s: %w", provAddr, err)
+					return
+				}
+				p := raw.(*tfplugin.GRPCProvider)
+				p.PluginClient = client
+				singleton = p
+			})
+			return singleton, singletonErr
 		}
 	}
 	return factories, nil
