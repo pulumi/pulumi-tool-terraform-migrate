@@ -46,6 +46,7 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 	}
 
 	// Step 1: Load Terraform/OpenTofu configuration.
+	fmt.Fprintf(os.Stderr, "[1/7] Loading Terraform configuration from %s...\n", tfDir)
 	config, err := LoadConfig(tfDir)
 	if err != nil {
 		return fmt.Errorf("loading config from %s: %w", tfDir, err)
@@ -54,6 +55,7 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 	// Step 2: Load state bytes.
 	var stateData []byte
 	if remote != nil {
+		fmt.Fprintf(os.Stderr, "[2/7] Pulling state from %s (%s/%s)...\n", remote.Hostname, remote.Organization, remote.Workspace)
 		tfcClient := &tfcpkg.Client{
 			Hostname: remote.Hostname,
 			Token:    remote.Token,
@@ -63,6 +65,7 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 			return fmt.Errorf("pulling remote state: %w", err)
 		}
 	} else {
+		fmt.Fprintf(os.Stderr, "[2/7] Reading state from %s...\n", stateFilePath)
 		stateData, err = os.ReadFile(stateFilePath)
 		if err != nil {
 			return fmt.Errorf("reading state file %s: %w", stateFilePath, err)
@@ -70,6 +73,7 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 	}
 
 	// Step 3: Detect format and parse.
+	fmt.Fprintf(os.Stderr, "[3/7] Detecting state format...\n")
 	format, err := DetectStateFormatBytes(stateData)
 	if err != nil {
 		return fmt.Errorf("detecting state format: %w", err)
@@ -81,6 +85,7 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 
 	switch format {
 	case StateFormatRaw:
+		fmt.Fprintf(os.Stderr, "[4/7] Parsing raw state and evaluating expressions...\n")
 		rawState, err = LoadRawStateBytes(stateData)
 		if err != nil {
 			return fmt.Errorf("loading raw state: %w", err)
@@ -97,6 +102,7 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 			defer cleanup()
 		}
 
+		fmt.Fprintf(os.Stderr, "[4b/7] Resolving Pulumi providers...\n")
 		tfProviders := getTerraformProvidersForRawState(rawState)
 		pulumiProviders, err = PulumiProvidersForTerraformProviders(tfProviders, nil)
 		if err != nil {
@@ -122,6 +128,7 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 	}
 
 	// Step 5: Build sensitivity map from provider schemas.
+	fmt.Fprintf(os.Stderr, "[5/7] Building sensitivity map...\n")
 	sensitivityMap, err := BuildSensitivityMap(ctx, config)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not build sensitivity map: %v\n", err)
@@ -130,12 +137,14 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 	}
 
 	// Step 6: Build the module map.
+	fmt.Fprintf(os.Stderr, "[6/7] Building module map...\n")
 	mm, err := BuildModuleMap(config, tofuCtx, rawState, pulumiProviders, sensitivityMap, stackName, projectName)
 	if err != nil {
 		return fmt.Errorf("building module map: %w", err)
 	}
 
 	// Step 7: Write the module map to disk.
+	fmt.Fprintf(os.Stderr, "[7/7] Writing module map to %s...\n", outputPath)
 	if err := WriteModuleMap(mm, outputPath); err != nil {
 		return fmt.Errorf("writing module map: %w", err)
 	}

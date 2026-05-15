@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/pulumi/opentofu/addrs"
@@ -174,32 +175,44 @@ func LoadProviders(config *configs.Config, tfDir string) (map[addrs.Provider]pro
 		// Use the first (highest precedence) cached provider.
 		// Capture loop variable for closure.
 		cached := cachedList[0]
+
+		// Singleton: start the provider subprocess once and reuse it across Eval calls.
+		var singleton providers.Interface
+		var singletonErr error
+		var once sync.Once
+
 		factories[provAddr] = func() (providers.Interface, error) {
-			execFile, err := cached.ExecutableFile()
-			if err != nil {
-				return nil, fmt.Errorf("getting executable for provider %s: %w", provAddr, err)
-			}
-			clientConfig := &goplugin.ClientConfig{
-				HandshakeConfig:  tfplugin.Handshake,
-				Logger:           logging.NewProviderLogger(""),
-				AllowedProtocols: []goplugin.Protocol{goplugin.ProtocolGRPC},
-				Managed:          true,
-				Cmd:              exec.Command(execFile),
-				AutoMTLS:         true,
-				VersionedPlugins: tfplugin.VersionedPlugins,
-			}
-			client := goplugin.NewClient(clientConfig)
-			rpcClient, err := client.Client()
-			if err != nil {
-				return nil, fmt.Errorf("connecting to provider %s: %w", provAddr, err)
-			}
-			raw, err := rpcClient.Dispense(tfplugin.ProviderPluginName)
-			if err != nil {
-				return nil, fmt.Errorf("dispensing provider %s: %w", provAddr, err)
-			}
-			p := raw.(*tfplugin.GRPCProvider)
-			p.PluginClient = client
-			return p, nil
+			once.Do(func() {
+				execFile, err := cached.ExecutableFile()
+				if err != nil {
+					singletonErr = fmt.Errorf("getting executable for provider %s: %w", provAddr, err)
+					return
+				}
+				clientConfig := &goplugin.ClientConfig{
+					HandshakeConfig:  tfplugin.Handshake,
+					Logger:           logging.NewProviderLogger(""),
+					AllowedProtocols: []goplugin.Protocol{goplugin.ProtocolGRPC},
+					Managed:          true,
+					Cmd:              exec.Command(execFile),
+					AutoMTLS:         true,
+					VersionedPlugins: tfplugin.VersionedPlugins,
+				}
+				client := goplugin.NewClient(clientConfig)
+				rpcClient, err := client.Client()
+				if err != nil {
+					singletonErr = fmt.Errorf("connecting to provider %s: %w", provAddr, err)
+					return
+				}
+				raw, err := rpcClient.Dispense(tfplugin.ProviderPluginName)
+				if err != nil {
+					singletonErr = fmt.Errorf("dispensing provider %s: %w", provAddr, err)
+					return
+				}
+				p := raw.(*tfplugin.GRPCProvider)
+				p.PluginClient = client
+				singleton = p
+			})
+			return singleton, singletonErr
 		}
 	}
 	return factories, nil

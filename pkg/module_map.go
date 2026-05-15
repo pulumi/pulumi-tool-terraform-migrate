@@ -91,16 +91,20 @@ func BuildModuleMap(
 		Modules: make(map[string]*ModuleMapEntry),
 	}
 
+	fmt.Fprintf(os.Stderr, "  Building module entries...\n")
 	err := buildModuleMapLevel(mm.Modules, config, tofuCtx, state, pulumiProviders, sensitivityMap, stackName, projectName, nil) //nolint:lll
 	if err != nil {
 		return nil, err
 	}
+	fmt.Fprintf(os.Stderr, "  Found %d module entries\n", len(mm.Modules))
 
 	// Collect root-level resources (empty segments = root module).
+	fmt.Fprintf(os.Stderr, "  Matching root-level resources...\n")
 	rootResources := matchResources(state, nil, pulumiProviders, sensitivityMap, stackName, projectName)
 	if len(rootResources) > 0 {
 		mm.RootResources = rootResources
 	}
+	fmt.Fprintf(os.Stderr, "  Found %d root resources\n", len(rootResources))
 
 	return mm, nil
 }
@@ -125,6 +129,7 @@ func buildModuleMapLevel(
 	for name, call := range config.Module.ModuleCalls {
 		// Discover instances of this module from state.
 		instances := discoverModuleInstances(state, parentSegments, name)
+		fmt.Fprintf(os.Stderr, "    module %s: %d instance(s)\n", name, len(instances))
 
 		// Get call-site expression text for each attribute.
 		callExpressions := getCallExpressions(call)
@@ -139,12 +144,14 @@ func buildModuleMapLevel(
 				mapKey = name + "[" + formatKey(inst.key) + "]"
 			}
 
+			fmt.Fprintf(os.Stderr, "      %s: matching resources...\n", mapKey)
 			entry := &ModuleMapEntry{
 				TerraformPath: buildModulePath(segments),
 				Source:        call.SourceAddrRaw,
 				IndexKey:      inst.key,
 				Resources:     matchResources(state, segments, pulumiProviders, sensitivityMap, stackName, projectName),
 			}
+			fmt.Fprintf(os.Stderr, "      %s: %d resources\n", mapKey, len(entry.Resources))
 
 			// Determine index type.
 			if inst.key != "" {
@@ -158,10 +165,12 @@ func buildModuleMapLevel(
 			// Build interface from child config.
 			childConfig := config.Children[name]
 			if childConfig != nil && childConfig.Module != nil {
+				fmt.Fprintf(os.Stderr, "      %s: building interface...\n", mapKey)
 				entry.Interface = buildModuleInterface(childConfig, callExpressions)
 
 				// If eval is available, populate evaluatedValue for inputs.
 				if tofuCtx != nil && state != nil {
+					fmt.Fprintf(os.Stderr, "      %s: evaluating expressions...\n", mapKey)
 					populateEvaluatedValues(entry.Interface, tofuCtx, config, state, segments)
 				}
 			}
