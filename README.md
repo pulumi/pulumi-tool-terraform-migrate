@@ -60,3 +60,131 @@ use in the translation.
 To proceed with the migration, import the state into your Pulumi stack, feed these artifacts into an LLM, and ask it to
 produce Pulumi sources that translate the Terraform sources. Instructing the LLM to aim for a clean `pulumi preview`
 helps is to fix discrepancies between code and state and get accurate results.
+
+## `set-secrets` command
+
+Extracts secret values from Terraform state and sets them as encrypted Pulumi stack config secrets.
+This allows secret migration without the orchestrating agent ever seeing the actual values.
+
+```
+pulumi-tool-terraform-migrate set-secrets \
+  --state-file terraform.tfstate \
+  --project-dir ./pulumi \
+  --stack prod \
+  --map 'dbPassword=aws_ssm_parameter.db_password:value' \
+  --map 'apiKey=aws_secretsmanager_secret_version.api_key:secret_string'
+```
+
+### Flow
+
+```
+ ┌──────────────────────────────────────────────────────────┐
+ │ INPUTS                                                   │
+ │  --state-file <path>       Terraform .tfstate file       │
+ │  --project-dir <path>      Pulumi project directory      │
+ │  --stack <name>            Pulumi stack name             │
+ │  --map <mapping>...        configKey=tf.address:attr     │
+ └────────────────────┬─────────────────────────────────────┘
+                      │
+                      ▼
+ [1] Parse Mappings
+     • Each --map flag: configKey=terraformAddress:attribute
+     • e.g. dbPassword=aws_ssm_parameter.db_password:value
+                      │
+                      ▼
+ [2] Read Terraform State
+     • Load .tfstate file
+     • Look up each terraform address + attribute
+     • Extract the raw secret values
+                      │
+                      ▼
+ [3] Set Pulumi Config Secrets
+     • Initialize stack if it doesn't exist
+     • Run `pulumi config set --secret` for each mapping
+     • Values are encrypted in the Pulumi stack config
+```
+
+## `module-map` command
+
+Generates a `module-map.json` sidecar file describing Terraform module instances, their interfaces
+(inputs/outputs with evaluated values), and the Pulumi URNs of resources belonging to each instance.
+
+```
+pulumi-tool-terraform-migrate module-map \
+  --from path/to/terraform-sources \
+  --hostname app.terraform.io \
+  --organization my-org \
+  --workspace my-workspace \
+  --token-env TFC_TOKEN \
+  --out /tmp/module-map.json \
+  --pulumi-stack dev \
+  --pulumi-project myproject
+```
+
+### Flow
+
+```
+ ┌──────────────────────────────────────────────────────────┐
+ │ INPUTS                                                   │
+ │  --from <tf-dir>           Terraform root module dir     │
+ │  --state-file <path>   ─┐  State source (pick one)      │
+ │  --hostname/org/ws     ─┘  Remote via TFC/Scalr API     │
+ │  --pulumi-stack/project    For URN generation            │
+ └────────────────────┬─────────────────────────────────────┘
+                      │
+                      ▼
+ [1] Load Terraform Configuration
+     • Parse .tf files and module sources
+     • Auto-run tofu init -backend=false if modules not installed
+                      │
+                      ▼
+ [2] Load State
+     • Remote: TFC/Scalr API (discovery → workspace → download)
+     • Local: read .tfstate from disk
+                      │
+                      ▼
+ [3] Detect Format & Parse
+     • Raw .tfstate → statefile.Read()
+     • tofu show -json → synthetic state from JSON
+                      │
+                      ▼
+ [4] Create Evaluation Context
+     • Discover provider plugins in .terraform/providers/
+     • Start providers as subprocesses (schema only, no API calls)
+     • Register builtin terraform provider stub
+       (terraform_remote_state, terraform_data)
+                      │
+                      ▼
+ [4b] Resolve Pulumi Providers
+      • Map terraform provider names → Pulumi providers
+      • Used to translate resource addresses to Pulumi URNs
+                      │
+                      ▼
+ [5] Build Root Variable Values
+     • Parse terraform.tfvars + *.auto.tfvars
+     • Fetch workspace vars from TFC/Scalr API
+     • Fill remaining required vars with unknown placeholders
+                      │
+                      ▼
+ [5b] Build Eval Scopes (one-time graph walk)
+      • Build OpenTofu eval graph from config + state + vars
+      • Walk graph once (resolves all variables, locals, outputs)
+      • Cache scopes for all module instances
+                      │
+                      ▼
+ [6] Build Module Map
+     For each module call in config:
+     ├─ Discover instances from state (count/for_each keys)
+     ├─ Match resources to each instance
+     │  ├─ Translate to Pulumi URNs
+     │  ├─ Extract import IDs from state
+     │  └─ Redact sensitive attrs (from state metadata)
+     ├─ Build interface (inputs/outputs from child config)
+     │  ├─ Extract call-site HCL expressions
+     │  └─ Evaluate variable values via cached scope
+     └─ Recurse into nested modules
+     Also collect root-level resources
+                      │
+                      ▼
+ [7] Write module-map.json
+```
