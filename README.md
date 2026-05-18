@@ -61,49 +61,6 @@ To proceed with the migration, import the state into your Pulumi stack, feed the
 produce Pulumi sources that translate the Terraform sources. Instructing the LLM to aim for a clean `pulumi preview`
 helps is to fix discrepancies between code and state and get accurate results.
 
-## `set-secrets` command
-
-Extracts secret values from Terraform state and sets them as encrypted Pulumi stack config secrets.
-This allows secret migration without the orchestrating agent ever seeing the actual values.
-
-```
-pulumi-tool-terraform-migrate set-secrets \
-  --state-file terraform.tfstate \
-  --project-dir ./pulumi \
-  --stack prod \
-  --map 'dbPassword=aws_ssm_parameter.db_password:value' \
-  --map 'apiKey=aws_secretsmanager_secret_version.api_key:secret_string'
-```
-
-### Flow
-
-```
- ┌──────────────────────────────────────────────────────────┐
- │ INPUTS                                                   │
- │  --state-file <path>       Terraform .tfstate file       │
- │  --project-dir <path>      Pulumi project directory      │
- │  --stack <name>            Pulumi stack name             │
- │  --map <mapping>...        configKey=tf.address:attr     │
- └────────────────────┬─────────────────────────────────────┘
-                      │
-                      ▼
- [1] Parse Mappings
-     • Each --map flag: configKey=terraformAddress:attribute
-     • e.g. dbPassword=aws_ssm_parameter.db_password:value
-                      │
-                      ▼
- [2] Read Terraform State
-     • Load .tfstate file
-     • Look up each terraform address + attribute
-     • Extract the raw secret values
-                      │
-                      ▼
- [3] Set Pulumi Config Secrets
-     • Initialize stack if it doesn't exist
-     • Run `pulumi config set --secret` for each mapping
-     • Values are encrypted in the Pulumi stack config
-```
-
 ## `module-map` command
 
 Generates a `module-map.json` sidecar file describing Terraform module instances, their interfaces
@@ -118,8 +75,14 @@ pulumi-tool-terraform-migrate module-map \
   --token-env TFC_TOKEN \
   --out /tmp/module-map.json \
   --pulumi-stack dev \
-  --pulumi-project myproject
+  --pulumi-project myproject \
+  --project-dir ./pulumi
 ```
+
+Sensitive attributes in state are automatically discovered and set as encrypted
+Pulumi config secrets via `pulumi config set --secret`. Use `--skip-secrets` to
+opt out. Config keys are derived from the terraform address
+(e.g. `module_rds_dmvhm_aws_db_instance_main_password`).
 
 ### Flow
 
@@ -130,6 +93,8 @@ pulumi-tool-terraform-migrate module-map \
  │  --state-file <path>   ─┐  State source (pick one)      │
  │  --hostname/org/ws     ─┘  Remote via TFC/Scalr API     │
  │  --pulumi-stack/project    For URN generation            │
+ │  --project-dir <path>      Pulumi project dir (default .)│
+ │  --skip-secrets            Skip setting config secrets   │
  └────────────────────┬─────────────────────────────────────┘
                       │
                       ▼
@@ -187,4 +152,11 @@ pulumi-tool-terraform-migrate module-map \
                       │
                       ▼
  [7] Write module-map.json
+                      │
+                      ▼
+ [8] Set Secrets (unless --skip-secrets)
+     • Discover sensitive attrs via AttrSensitivePaths
+     • Flatten terraform address to config key
+     • Run `pulumi config set --secret` for each
+     • Values never appear in module-map.json output
 ```
