@@ -33,6 +33,8 @@ func newModuleMapCmd() *cobra.Command {
 	var organization string
 	var workspace string
 	var tokenEnv string
+	var projectDir string
+	var skipSecrets bool
 
 	cmd := &cobra.Command{
 		Use:   "module-map",
@@ -117,7 +119,12 @@ Examples:
 				}
 			}
 
-			err := pkg.GenerateModuleMap(cmd.Context(), from, stateFile, out, pulumiStack, pulumiProject, remote)
+			secretsOpts := &pkg.SecretsOptions{
+				ProjectDir: projectDir,
+				Skip:       skipSecrets,
+			}
+
+			err := pkg.GenerateModuleMap(cmd.Context(), from, stateFile, out, pulumiStack, pulumiProject, remote, secretsOpts)
 			if err != nil {
 				// Enrich authentication errors with the env var name for user guidance.
 				if remote != nil && strings.Contains(err.Error(), "authentication failed") {
@@ -138,6 +145,8 @@ Examples:
 	cmd.Flags().StringVar(&organization, "organization", "", "Organization name on the TFC-compatible host")
 	cmd.Flags().StringVar(&workspace, "workspace", "", "Workspace name on the TFC-compatible host")
 	cmd.Flags().StringVar(&tokenEnv, "token-env", "", "Name of environment variable containing the API token")
+	cmd.Flags().StringVar(&projectDir, "project-dir", ".", "Path to the Pulumi project directory (for setting secrets)")
+	cmd.Flags().BoolVar(&skipSecrets, "skip-secrets", false, "Skip setting sensitive attributes as Pulumi config secrets")
 
 	cmd.MarkFlagRequired("from")
 	cmd.MarkFlagRequired("out")

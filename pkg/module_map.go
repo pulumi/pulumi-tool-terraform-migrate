@@ -15,18 +15,18 @@
 package pkg
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"sort"
+	"strings"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/pulumi/opentofu/addrs"
 	"github.com/pulumi/opentofu/configs"
 	"github.com/pulumi/opentofu/states"
-	"github.com/pulumi/opentofu/tofu"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/bridge"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
 	"github.com/zclconf/go-cty/cty"
@@ -80,10 +80,9 @@ type ModuleInterfaceField struct {
 // pulumiProviders may be nil if URN generation should fall back to raw addresses.
 func BuildModuleMap(
 	config *configs.Config,
-	tofuCtx *tofu.Context,
+	evalScopes *EvalScopes,
 	state *states.State,
 	pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata,
-	sensitivityMap SensitivityMap,
 	stackName string,
 	projectName string,
 ) (*ModuleMap, error) {
@@ -92,7 +91,7 @@ func BuildModuleMap(
 	}
 
 	fmt.Fprintf(os.Stderr, "  Building module entries...\n")
-	err := buildModuleMapLevel(mm.Modules, config, tofuCtx, state, pulumiProviders, sensitivityMap, stackName, projectName, nil) //nolint:lll
+	err := buildModuleMapLevel(mm.Modules, config, evalScopes, state, pulumiProviders, stackName, projectName, nil) //nolint:lll
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +99,7 @@ func BuildModuleMap(
 
 	// Collect root-level resources (empty segments = root module).
 	fmt.Fprintf(os.Stderr, "  Matching root-level resources...\n")
-	rootResources := matchResources(state, nil, pulumiProviders, sensitivityMap, stackName, projectName)
+	rootResources := matchResources(state, nil, pulumiProviders, stackName, projectName)
 	if len(rootResources) > 0 {
 		mm.RootResources = rootResources
 	}
@@ -114,10 +113,9 @@ func BuildModuleMap(
 func buildModuleMapLevel(
 	target map[string]*ModuleMapEntry,
 	config *configs.Config,
-	tofuCtx *tofu.Context,
+	evalScopes *EvalScopes,
 	state *states.State,
 	pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata,
-	sensitivityMap SensitivityMap,
 	stackName string,
 	projectName string,
 	parentSegments []moduleSegment,
@@ -149,7 +147,7 @@ func buildModuleMapLevel(
 				TerraformPath: buildModulePath(segments),
 				Source:        call.SourceAddrRaw,
 				IndexKey:      inst.key,
-				Resources:     matchResources(state, segments, pulumiProviders, sensitivityMap, stackName, projectName),
+				Resources:     matchResources(state, segments, pulumiProviders, stackName, projectName),
 			}
 			fmt.Fprintf(os.Stderr, "      %s: %d resources\n", mapKey, len(entry.Resources))
 
@@ -169,9 +167,9 @@ func buildModuleMapLevel(
 				entry.Interface = buildModuleInterface(childConfig, callExpressions)
 
 				// If eval is available, populate evaluatedValue for inputs.
-				if tofuCtx != nil && state != nil {
+				if evalScopes != nil {
 					fmt.Fprintf(os.Stderr, "      %s: evaluating expressions...\n", mapKey)
-					populateEvaluatedValues(entry.Interface, tofuCtx, config, state, segments)
+					populateEvaluatedValues(entry.Interface, evalScopes, segments)
 				}
 			}
 
@@ -179,8 +177,8 @@ func buildModuleMapLevel(
 			if childConfig != nil && len(childConfig.Module.ModuleCalls) > 0 {
 				entry.Modules = make(map[string]*ModuleMapEntry)
 				err := buildModuleMapLevel(
-					entry.Modules, childConfig, tofuCtx, state,
-					pulumiProviders, sensitivityMap, stackName, projectName, segments,
+					entry.Modules, childConfig, evalScopes, state,
+					pulumiProviders, stackName, projectName, segments,
 				)
 				if err != nil {
 					return err
@@ -263,7 +261,6 @@ func matchResources(
 	state *states.State,
 	segments []moduleSegment,
 	pulumiProviders map[providermap.TerraformProviderName]*ProviderWithMetadata,
-	sensitivityMap SensitivityMap,
 	stackName string,
 	projectName string,
 ) []ModuleResource {
@@ -325,16 +322,10 @@ func matchResources(
 						ImportID:         importID,
 					}
 
-					// Include attributes for all resources.
-					// Data sources: full attributes. Managed resources: redact sensitive.
+					// Include attributes, redacting sensitive paths from state.
 					if attrs != nil {
-						if mode == "data" {
-							mr.Attributes = attrs
-						} else if sensitivityMap != nil {
-							mr.Attributes = RedactSensitiveAttributes(attrs, sensitivityMap[resourceType])
-						} else {
-							mr.Attributes = attrs
-						}
+						redactSensitivePaths(attrs, inst.Current.AttrSensitivePaths)
+						mr.Attributes = attrs
 					}
 
 					resources = append(resources, mr)
@@ -460,17 +451,13 @@ func buildModuleInterface(childConfig *configs.Config, callExpressions map[strin
 	return iface
 }
 
-// populateEvaluatedValues uses tofuCtx.Eval() to evaluate variable values
+// populateEvaluatedValues uses pre-built EvalScopes to evaluate variable values
 // in a specific module instance and populates the EvaluatedValue field.
 func populateEvaluatedValues(
 	iface *ModuleInterface,
-	tofuCtx *tofu.Context,
-	config *configs.Config,
-	state *states.State,
+	evalScopes *EvalScopes,
 	segments []moduleSegment,
 ) {
-	ctx := context.Background()
-
 	// Build the module instance address from segments.
 	addr := addrs.RootModuleInstance
 	for _, seg := range segments {
@@ -485,8 +472,8 @@ func populateEvaluatedValues(
 		}
 	}
 
-	scope, diags := tofuCtx.Eval(ctx, config, state, addr, &tofu.EvalOpts{})
-	if diags.HasErrors() || scope == nil {
+	scope := evalScopes.Scope(addr)
+	if scope == nil {
 		return
 	}
 
@@ -507,11 +494,162 @@ func populateEvaluatedValues(
 	}
 }
 
+// SensitiveSecret represents a sensitive attribute discovered in state,
+// ready to be set as a Pulumi config secret.
+type SensitiveSecret struct {
+	ConfigKey string
+	Value     string
+}
+
+// DiscoverSensitiveSecrets walks the state and collects all sensitive attribute
+// values, returning them as config key / value pairs. The config key is derived
+// by flattening the terraform address and attribute name.
+func DiscoverSensitiveSecrets(state *states.State) []SensitiveSecret {
+	if state == nil {
+		return nil
+	}
+
+	var secrets []SensitiveSecret
+	for _, module := range state.Modules {
+		for _, res := range module.Resources {
+			for instKey, inst := range res.Instances {
+				if inst.Current == nil || len(inst.Current.AttrSensitivePaths) == 0 {
+					continue
+				}
+
+				// Build the full address.
+				address := res.Addr.Resource.String()
+				if instKey != nil {
+					address += instKey.String()
+				}
+				if len(module.Addr) > 0 {
+					address = module.Addr.String() + "." + address
+				}
+
+				// Parse attributes.
+				var attrs map[string]interface{}
+				if inst.Current.AttrsJSON == nil {
+					continue
+				}
+				if err := json.Unmarshal(inst.Current.AttrsJSON, &attrs); err != nil {
+					continue
+				}
+
+				// Collect sensitive top-level attributes.
+				for _, pvm := range inst.Current.AttrSensitivePaths {
+					if len(pvm.Path) != 1 {
+						continue
+					}
+					step, ok := pvm.Path[0].(cty.GetAttrStep)
+					if !ok {
+						continue
+					}
+					value, exists := attrs[step.Name]
+					if !exists || value == nil {
+						continue
+					}
+					configKey := flattenAddress(address, step.Name)
+					secrets = append(secrets, SensitiveSecret{
+						ConfigKey: configKey,
+						Value:     fmt.Sprintf("%v", value),
+					})
+				}
+			}
+		}
+	}
+	return secrets
+}
+
+// flattenAddress converts a terraform address + attribute into a valid Pulumi config key.
+// e.g. "module.rds[\"dmvhm\"].aws_db_instance.main" + "password" → "module_rds_dmvhm_aws_db_instance_main_password"
+func flattenAddress(address, attribute string) string {
+	s := address + "_" + attribute
+	replacer := strings.NewReplacer(
+		".", "_",
+		"[", "_",
+		"]", "",
+		"\"", "",
+		"/", "_",
+		" ", "_",
+	)
+	return replacer.Replace(s)
+}
+
+// SetSecretsFromState runs `pulumi config set --secret` for each sensitive secret.
+func SetSecretsFromState(secrets []SensitiveSecret, projectDir, stack string) error {
+	// Initialize stack if it doesn't exist.
+	fmt.Fprintf(os.Stderr, "Ensuring stack %s exists...\n", stack)
+	initCmd := exec.Command("pulumi", "stack", "init", stack)
+	initCmd.Dir = projectDir
+	initCmd.Stdout = os.Stderr
+	initCmd.Stderr = os.Stderr
+	if err := initCmd.Run(); err != nil {
+		selectCmd := exec.Command("pulumi", "stack", "select", stack)
+		selectCmd.Dir = projectDir
+		selectCmd.Stdout = os.Stderr
+		selectCmd.Stderr = os.Stderr
+		if err := selectCmd.Run(); err != nil {
+			return fmt.Errorf("could not init or select stack %s: %w", stack, err)
+		}
+	}
+
+	for _, s := range secrets {
+		fmt.Fprintf(os.Stderr, "  Setting secret %s\n", s.ConfigKey)
+		setCmd := exec.Command("pulumi", "config", "set", "--secret", s.ConfigKey, s.Value, "-s", stack)
+		setCmd.Dir = projectDir
+		setCmd.Stdout = os.Stderr
+		setCmd.Stderr = os.Stderr
+		if err := setCmd.Run(); err != nil {
+			return fmt.Errorf("setting secret %s: %w", s.ConfigKey, err)
+		}
+	}
+
+	fmt.Fprintf(os.Stderr, "Set %d secrets on stack %s\n", len(secrets), stack)
+	return nil
+}
+
+// redactSensitivePaths replaces sensitive attribute values with "(sensitive)" based on
+// the AttrSensitivePaths from the state. This uses the sensitivity information that
+// Terraform/OpenTofu persists in the state file itself, which tracks sensitivity from
+// both provider schemas and sensitive variable propagation.
+func redactSensitivePaths(attrs map[string]interface{}, paths []cty.PathValueMarks) {
+	for _, pvm := range paths {
+		if len(pvm.Path) == 0 {
+			continue
+		}
+		// For top-level attributes, the first step is a GetAttrStep.
+		step, ok := pvm.Path[0].(cty.GetAttrStep)
+		if !ok {
+			continue
+		}
+		if _, exists := attrs[step.Name]; exists {
+			if len(pvm.Path) == 1 {
+				// Top-level attribute is sensitive — redact it.
+				attrs[step.Name] = "(sensitive)"
+			}
+			// Nested paths: we could recurse, but for now top-level is sufficient.
+		}
+	}
+}
+
 // ctyValueToInterface converts a cty.Value to a plain Go value suitable for JSON serialization.
+// Values marked as sensitive (via cty marks from OpenTofu's sensitivity tracking) are redacted.
 func ctyValueToInterface(v cty.Value) interface{} {
 	if v == cty.NilVal || !v.IsKnown() {
 		return nil
 	}
+
+	// Strip marks (sensitivity, etc.). If the value is marked sensitive, redact it.
+	if v.IsMarked() {
+		unmarked, marks := v.Unmark()
+		for mark := range marks {
+			if mark == "sensitive" {
+				return "(sensitive)"
+			}
+		}
+		v = unmarked
+	}
+
 	if v.IsNull() {
 		return nil
 	}

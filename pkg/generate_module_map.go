@@ -40,7 +40,13 @@ type RemoteStateOptions struct {
 // GenerateModuleMap is the top-level orchestrator for the module-map subcommand.
 // It loads Terraform configuration and state, resolves Pulumi providers, builds a
 // ModuleMap, and writes it to outputPath.
-func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, stackName, projectName string, remote *RemoteStateOptions) error {
+// SecretsOptions configures the automatic secret extraction from state.
+type SecretsOptions struct {
+	ProjectDir string
+	Skip       bool
+}
+
+func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, stackName, projectName string, remote *RemoteStateOptions, secrets *SecretsOptions) error {
 	if stateFilePath != "" && remote != nil {
 		return fmt.Errorf("stateFilePath and remote are mutually exclusive")
 	}
@@ -127,18 +133,35 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 		}
 	}
 
-	// Step 5: Build sensitivity map from provider schemas.
-	fmt.Fprintf(os.Stderr, "[5/7] Building sensitivity map...\n")
-	sensitivityMap, err := BuildSensitivityMap(ctx, config)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not build sensitivity map: %v\n", err)
-		fmt.Fprintf(os.Stderr, "Continuing without attribute redaction.\n")
-		sensitivityMap = nil
+	// Step 5: Build root variable values for expression evaluation.
+	var remoteVars []tfcpkg.WorkspaceVariable
+	if remote != nil && tofuCtx != nil {
+		fmt.Fprintf(os.Stderr, "[5/7] Fetching workspace variables from %s...\n", remote.Hostname)
+		tfcClient := &tfcpkg.Client{
+			Hostname: remote.Hostname,
+			Token:    remote.Token,
+		}
+		remoteVars, err = tfcClient.ListVariables(ctx, remote.Organization, remote.Workspace)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not fetch workspace variables: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Continuing with local tfvars only.\n")
+		} else {
+			fmt.Fprintf(os.Stderr, "  Fetched %d workspace variables\n", len(remoteVars))
+		}
+	}
+
+	var evalScopes *EvalScopes
+	if tofuCtx != nil && config != nil {
+		rootVars := BuildRootVariables(config, tfDir, remoteVars)
+		fmt.Fprintf(os.Stderr, "  Built %d root variable values\n", len(rootVars))
+
+		fmt.Fprintf(os.Stderr, "[5b/7] Building eval scopes (one-time graph walk)...\n")
+		evalScopes, _ = BuildEvalScopes(ctx, tofuCtx, config, rawState, rootVars)
 	}
 
 	// Step 6: Build the module map.
 	fmt.Fprintf(os.Stderr, "[6/7] Building module map...\n")
-	mm, err := BuildModuleMap(config, tofuCtx, rawState, pulumiProviders, sensitivityMap, stackName, projectName)
+	mm, err := BuildModuleMap(config, evalScopes, rawState, pulumiProviders, stackName, projectName)
 	if err != nil {
 		return fmt.Errorf("building module map: %w", err)
 	}
@@ -150,6 +173,21 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 	}
 
 	fmt.Fprintf(os.Stderr, "Module map written to %s\n", outputPath)
+
+	// Step 8: Set sensitive attributes as Pulumi config secrets.
+	if secrets != nil && !secrets.Skip {
+		fmt.Fprintf(os.Stderr, "[8] Discovering sensitive attributes...\n")
+		sensitiveSecrets := DiscoverSensitiveSecrets(rawState)
+		if len(sensitiveSecrets) > 0 {
+			fmt.Fprintf(os.Stderr, "  Found %d sensitive attributes, setting as Pulumi config secrets...\n", len(sensitiveSecrets))
+			if err := SetSecretsFromState(sensitiveSecrets, secrets.ProjectDir, stackName); err != nil {
+				return fmt.Errorf("setting secrets: %w", err)
+			}
+		} else {
+			fmt.Fprintf(os.Stderr, "  No sensitive attributes found in state\n")
+		}
+	}
+
 	return nil
 }
 

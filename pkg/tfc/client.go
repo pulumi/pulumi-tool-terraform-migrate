@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type Client struct {
@@ -29,11 +30,82 @@ type Client struct {
 	HTTP     *http.Client
 }
 
-func (c *Client) StatePull(ctx context.Context, org, workspace string) ([]byte, error) {
-	httpClient := c.HTTP
-	if httpClient == nil {
-		httpClient = http.DefaultClient
+// WorkspaceVariable represents a single variable from the TFC/Scalr workspace.
+type WorkspaceVariable struct {
+	Key       string `json:"key"`
+	Value     string `json:"value"`
+	Category  string `json:"category"`  // "terraform" or "env"
+	HCL       bool   `json:"hcl"`
+	Sensitive bool   `json:"sensitive"`
+}
+
+// ListVariables fetches all Terraform variables from the workspace.
+func (c *Client) ListVariables(ctx context.Context, org, workspace string) ([]WorkspaceVariable, error) {
+	httpClient := c.httpClient()
+
+	baseURL := c.baseURL()
+	apiPrefix, err := c.discover(ctx, httpClient, baseURL)
+	if err != nil {
+		return nil, err
 	}
+
+	wsID, err := c.getWorkspaceID(ctx, httpClient, apiPrefix, org, workspace)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch all vars in a single request. Scalr's pagination is unreliable
+	// (page[number] parameter is ignored), so we request a large page size.
+	url := fmt.Sprintf("%s/workspaces/%s/vars?page%%5Bsize%%5D=500", apiPrefix, wsID)
+
+	var result struct {
+		Data []struct {
+			Attributes struct {
+				Key       string `json:"key"`
+				Value     string `json:"value"`
+				Category  string `json:"category"`
+				HCL       bool   `json:"hcl"`
+				Sensitive bool   `json:"sensitive"`
+			} `json:"attributes"`
+		} `json:"data"`
+	}
+
+	_, err = c.doJSON(ctx, httpClient, url, &result)
+	if err != nil {
+		return nil, fmt.Errorf("listing workspace variables: %w", err)
+	}
+
+	var allVars []WorkspaceVariable
+	for _, d := range result.Data {
+		if d.Attributes.Category != "terraform" {
+			continue
+		}
+		allVars = append(allVars, WorkspaceVariable{
+			Key:       d.Attributes.Key,
+			Value:     d.Attributes.Value,
+			Category:  d.Attributes.Category,
+			HCL:       d.Attributes.HCL,
+			Sensitive: d.Attributes.Sensitive,
+		})
+	}
+
+	return allVars, nil
+}
+
+func (c *Client) httpClient() *http.Client {
+	if c.HTTP != nil {
+		return c.HTTP
+	}
+	return &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			ForceAttemptHTTP2: true,
+		},
+	}
+}
+
+func (c *Client) StatePull(ctx context.Context, org, workspace string) ([]byte, error) {
+	httpClient := c.httpClient()
 
 	baseURL := c.baseURL()
 

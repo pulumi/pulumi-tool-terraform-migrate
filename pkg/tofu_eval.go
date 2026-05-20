@@ -215,6 +215,14 @@ func LoadProviders(config *configs.Config, tfDir string) (map[addrs.Provider]pro
 			return singleton, singletonErr
 		}
 	}
+	// Register a stub for the built-in "terraform" provider so that
+	// tofuCtx.Eval can read its schema (terraform_remote_state, terraform_data).
+	// We only need the schema — no actual data source reads happen during eval.
+	builtinAddr := addrs.NewBuiltInProvider("terraform")
+	factories[builtinAddr] = func() (providers.Interface, error) {
+		return &builtinTerraformProvider{}, nil
+	}
+
 	return factories, nil
 }
 
