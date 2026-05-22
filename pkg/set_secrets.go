@@ -18,8 +18,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
+
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 )
 
 // SecretMapping maps a Pulumi config key to a Terraform state resource attribute.
@@ -58,7 +59,7 @@ func ParseSecretMapping(s string) (SecretMapping, error) {
 // as encrypted secrets in a Pulumi stack config.
 //
 // It initializes the stack if it doesn't exist.
-func SetSecrets(stateFilePath, projectDir, stack string, mappings []SecretMapping) error {
+func SetSecrets(stateFilePath, projectDir, projectName, stack, runtime string, mappings []SecretMapping) error {
 	// Read and parse the state file.
 	data, err := os.ReadFile(stateFilePath)
 	if err != nil {
@@ -108,24 +109,13 @@ func SetSecrets(stateFilePath, projectDir, stack string, mappings []SecretMappin
 		}
 	}
 
-	// Initialize stack if it doesn't exist.
-	fmt.Fprintf(os.Stderr, "Ensuring stack %s exists...\n", stack)
-	initCmd := exec.Command("pulumi", "stack", "init", stack)
-	initCmd.Dir = projectDir
-	initCmd.Stdout = os.Stderr
-	initCmd.Stderr = os.Stderr
-	if err := initCmd.Run(); err != nil {
-		// Stack may already exist — check by selecting it.
-		selectCmd := exec.Command("pulumi", "stack", "select", stack)
-		selectCmd.Dir = projectDir
-		selectCmd.Stdout = os.Stderr
-		selectCmd.Stderr = os.Stderr
-		if err := selectCmd.Run(); err != nil {
-			return fmt.Errorf("could not init or select stack %s: %w", stack, err)
-		}
+	// Ensure a Pulumi project exists before stack operations.
+	if err := ensurePulumiProject(projectDir, projectName, runtime); err != nil {
+		return err
 	}
 
-	// Extract and set each secret.
+	// Extract secret values and build config map.
+	configMap := make(auto.ConfigMap, len(mappings))
 	for _, m := range mappings {
 		attrs, ok := attrsByAddress[m.TerraformAddress]
 		if !ok {
@@ -137,16 +127,12 @@ func SetSecrets(stateFilePath, projectDir, stack string, mappings []SecretMappin
 			return fmt.Errorf("attribute %q not found on resource %q", m.Attribute, m.TerraformAddress)
 		}
 
-		valueStr := fmt.Sprintf("%v", value)
+		fmt.Fprintf(os.Stderr, "  Mapping secret %s from %s:%s\n", m.ConfigKey, m.TerraformAddress, m.Attribute)
+		configMap[m.ConfigKey] = auto.ConfigValue{Value: fmt.Sprintf("%v", value), Secret: true}
+	}
 
-		fmt.Fprintf(os.Stderr, "Setting secret %s from %s:%s\n", m.ConfigKey, m.TerraformAddress, m.Attribute)
-		setCmd := exec.Command("pulumi", "config", "set", "--secret", m.ConfigKey, valueStr, "-s", stack)
-		setCmd.Dir = projectDir
-		setCmd.Stdout = os.Stderr
-		setCmd.Stderr = os.Stderr
-		if err := setCmd.Run(); err != nil {
-			return fmt.Errorf("setting secret %s: %w", m.ConfigKey, err)
-		}
+	if err := writeConfigSecrets(projectDir, stack, configMap); err != nil {
+		return err
 	}
 
 	fmt.Fprintf(os.Stderr, "Set %d secrets on stack %s\n", len(mappings), stack)

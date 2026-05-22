@@ -42,8 +42,10 @@ type RemoteStateOptions struct {
 // ModuleMap, and writes it to outputPath.
 // SecretsOptions configures the automatic secret extraction from state.
 type SecretsOptions struct {
-	ProjectDir string
-	Skip       bool
+	ProjectDir  string
+	ProjectName string
+	Runtime     string
+	Skip        bool
 }
 
 func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, stackName, projectName string, remote *RemoteStateOptions, secrets *SecretsOptions) error {
@@ -180,7 +182,7 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 		sensitiveSecrets := DiscoverSensitiveSecrets(rawState)
 		if len(sensitiveSecrets) > 0 {
 			fmt.Fprintf(os.Stderr, "  Found %d sensitive attributes, setting as Pulumi config secrets...\n", len(sensitiveSecrets))
-			if err := SetSecretsFromState(sensitiveSecrets, secrets.ProjectDir, stackName); err != nil {
+			if err := SetSecretsFromState(sensitiveSecrets, secrets.ProjectDir, secrets.ProjectName, stackName, secrets.Runtime); err != nil {
 				return fmt.Errorf("setting secrets: %w", err)
 			}
 		} else {
