@@ -15,10 +15,10 @@
 package pkg
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 
@@ -29,6 +29,7 @@ import (
 	"github.com/pulumi/opentofu/states"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/bridge"
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
+	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -575,36 +576,38 @@ func flattenAddress(address, attribute string) string {
 	return replacer.Replace(s)
 }
 
-// SetSecretsFromState runs `pulumi config set --secret` for each sensitive secret.
-func SetSecretsFromState(secrets []SensitiveSecret, projectDir, stack string) error {
-	// Initialize stack if it doesn't exist.
-	fmt.Fprintf(os.Stderr, "Ensuring stack %s exists...\n", stack)
-	initCmd := exec.Command("pulumi", "stack", "init", stack)
-	initCmd.Dir = projectDir
-	initCmd.Stdout = os.Stderr
-	initCmd.Stderr = os.Stderr
-	if err := initCmd.Run(); err != nil {
-		selectCmd := exec.Command("pulumi", "stack", "select", stack)
-		selectCmd.Dir = projectDir
-		selectCmd.Stdout = os.Stderr
-		selectCmd.Stderr = os.Stderr
-		if err := selectCmd.Run(); err != nil {
-			return fmt.Errorf("could not init or select stack %s: %w", stack, err)
-		}
+// SetSecretsFromState writes sensitive secrets to Pulumi stack config using the automation API.
+// Secret values are never printed or logged.
+func SetSecretsFromState(secrets []SensitiveSecret, projectDir, projectName, stack, runtime string) error {
+	// Ensure a Pulumi project exists before stack operations.
+	if err := ensurePulumiProject(projectDir, projectName, runtime); err != nil {
+		return err
 	}
 
+	configMap := make(auto.ConfigMap, len(secrets))
 	for _, s := range secrets {
-		fmt.Fprintf(os.Stderr, "  Setting secret %s\n", s.ConfigKey)
-		setCmd := exec.Command("pulumi", "config", "set", "--secret", s.ConfigKey, s.Value, "-s", stack)
-		setCmd.Dir = projectDir
-		setCmd.Stdout = os.Stderr
-		setCmd.Stderr = os.Stderr
-		if err := setCmd.Run(); err != nil {
-			return fmt.Errorf("setting secret %s: %w", s.ConfigKey, err)
-		}
+		configMap[s.ConfigKey] = auto.ConfigValue{Value: s.Value, Secret: true}
+	}
+
+	if err := writeConfigSecrets(projectDir, stack, configMap); err != nil {
+		return err
 	}
 
 	fmt.Fprintf(os.Stderr, "Set %d secrets on stack %s\n", len(secrets), stack)
+	return nil
+}
+
+// writeConfigSecrets creates a local workspace and writes secret config values.
+func writeConfigSecrets(projectDir, stack string, configMap auto.ConfigMap) error {
+	ctx := context.Background()
+	ws, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(projectDir))
+	if err != nil {
+		return fmt.Errorf("creating workspace: %w", err)
+	}
+
+	if err := ws.SetAllConfig(ctx, stack, configMap); err != nil {
+		return fmt.Errorf("setting config secrets: %w", err)
+	}
 	return nil
 }
 

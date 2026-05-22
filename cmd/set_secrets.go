@@ -24,7 +24,9 @@ import (
 func newSetSecretsCmd() *cobra.Command {
 	var stateFile string
 	var projectDir string
+	var projectName string
 	var stack string
+	var runtime string
 	var mappingStrs []string
 
 	cmd := &cobra.Command{
@@ -64,14 +66,16 @@ The stack is initialized automatically if it doesn't exist.
 				return fmt.Errorf("at least one --map flag is required")
 			}
 
-			return pkg.SetSecrets(stateFile, projectDir, stack, mappings)
+			return pkg.SetSecrets(stateFile, projectDir, projectName, stack, runtime, mappings)
 		},
 	}
 
 	cmd.Flags().StringVar(&stateFile, "state-file", "", "Path to terraform.tfstate")
 	cmd.Flags().StringVar(&projectDir, "project-dir", ".", "Path to the Pulumi project directory")
+	cmd.Flags().StringVar(&projectName, "project-name", "", "Pulumi project name (used when creating Pulumi.yaml)")
 	cmd.Flags().StringVarP(&stack, "stack", "s", "", "Pulumi stack name")
 	cmd.Flags().StringArrayVar(&mappingStrs, "map", nil, "Secret mapping: configKey=terraformAddress:attribute")
+	cmd.Flags().StringVar(&runtime, "runtime", "", "Pulumi runtime to use when creating Pulumi.yaml (e.g. nodejs, python, go, yaml)")
 
 	cmd.MarkFlagRequired("state-file")
 	cmd.MarkFlagRequired("stack")

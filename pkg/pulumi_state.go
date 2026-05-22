@@ -84,8 +84,7 @@ func getStackName(projectFolder string) (string, error) {
 		Name    string `json:"name"`
 		Current bool   `json:"current"`
 	}
-	err = json.Unmarshal(output, &stacks)
-	if err != nil {
+	if err := json.Unmarshal(output, &stacks); err != nil {
 		return "", fmt.Errorf("failed to unmarshal stack list: %w", err)
 	}
 	if len(stacks) == 0 {
@@ -116,6 +115,31 @@ func getProjectName(projectDir string) (string, error) {
 		return "", fmt.Errorf("project name is empty in Pulumi.yaml")
 	}
 	return project.Name, nil
+}
+
+// ensurePulumiProject creates a minimal Pulumi.yaml in projectDir if one does
+// not already exist.
+func ensurePulumiProject(projectDir, projectName, runtime string) error {
+	pulumiYaml := filepath.Join(projectDir, "Pulumi.yaml")
+	if _, err := os.Stat(pulumiYaml); err == nil {
+		return nil // already exists
+	}
+
+	if runtime == "" {
+		return fmt.Errorf("no Pulumi.yaml found in %s and no --runtime specified to create one", projectDir)
+	}
+
+	// Ensure the directory exists.
+	if err := os.MkdirAll(projectDir, 0o755); err != nil {
+		return fmt.Errorf("creating project directory: %w", err)
+	}
+
+	content := fmt.Sprintf("name: %s\nruntime: %s\n", projectName, runtime)
+	fmt.Fprintf(os.Stderr, "Creating minimal Pulumi.yaml for project %q (runtime: %s)\n", projectName, runtime)
+	if err := os.WriteFile(pulumiYaml, []byte(content), 0o644); err != nil {
+		return fmt.Errorf("writing Pulumi.yaml: %w", err)
+	}
+	return nil
 }
 
 func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName string) (apitype.DeploymentV3, error) {
