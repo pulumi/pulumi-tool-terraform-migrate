@@ -127,8 +127,13 @@ func FillImportFile(digest *ModuleMap, importFile *ImportFile, moduleMappings, r
 			continue
 		}
 		if !importOk {
-			result.Warnings = append(result.Warnings,
-				fmt.Sprintf("component %q from mapping not found in import file", componentName))
+			// All children may have been filled by resource mappings in Phase 1,
+			// or the component has no unfilled children. Only warn if the component
+			// name doesn't appear anywhere in the import file.
+			if !componentNames[componentName] {
+				result.Warnings = append(result.Warnings,
+					fmt.Sprintf("component %q from mapping not found in import file", componentName))
+			}
 			continue
 		}
 
