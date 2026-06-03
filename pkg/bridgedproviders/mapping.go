@@ -81,7 +81,7 @@ func GetMappingFromBinary(ctx context.Context, binaryPath string, opts GetMappin
 
 	// Load the provider from the binary path
 	// Use an empty package name since we only need GetMapping, not actual resource operations
-	provider, err := plugin.NewProviderFromPath(host, pctx, "", binaryPath)
+	provider, err := plugin.NewProviderFromPath(host, pctx, binaryPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load provider from %s: %w", binaryPath, err)
 	}

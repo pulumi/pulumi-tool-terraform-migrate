@@ -63,7 +63,7 @@ func GetMappingForTerraformProvider(
 		contract.IgnoreError(pctx.Close())
 	}()
 
-	provider, err := plugin.NewProviderFromPath(host, pctx, "", installResult.BinaryPath)
+	provider, err := plugin.NewProviderFromPath(host, pctx, installResult.BinaryPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load terraform-provider plugin: %w", err)
 	}
