@@ -71,7 +71,7 @@ func GetMappingFromBinary(ctx context.Context, binaryPath string, opts GetMappin
 	host := &minimalHost{}
 
 	// Create a plugin context for the provider
-	pctx, err := plugin.NewContext(ctx, nil, nil, nil, nil, "", nil, false, nil, nil)
+	pctx, err := plugin.NewContext(ctx, nil, nil, nil, nil, "", nil, false, nil, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create plugin context: %w", err)
 	}
@@ -173,11 +173,11 @@ func (h *minimalHost) LanguageRuntime(runtime string) (plugin.LanguageRuntime, e
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (h *minimalHost) EnsurePlugins(plugins []workspace.PluginSpec, kinds plugin.Flags) error {
+func (h *minimalHost) EnsurePlugins(plugins []workspace.PluginDescriptor, kinds plugin.Flags) error {
 	return fmt.Errorf("not implemented")
 }
 
-func (h *minimalHost) ResolvePlugin(spec workspace.PluginSpec) (*workspace.PluginInfo, error) {
+func (h *minimalHost) ResolvePlugin(spec workspace.PluginDescriptor) (*workspace.PluginInfo, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
