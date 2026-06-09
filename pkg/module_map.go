@@ -495,12 +495,16 @@ func populateEvaluatedValues(
 	}
 }
 
-// SensitiveSecret represents a sensitive attribute discovered in state,
-// ready to be set as a Pulumi config secret.
-type SensitiveSecret struct {
+// ConfigEntry represents a config value to be set on a Pulumi stack.
+// When Secret is true, the value is encrypted in the stack config.
+type ConfigEntry struct {
 	ConfigKey string
 	Value     string
+	Secret    bool
 }
+
+// SensitiveSecret is an alias for backwards compatibility.
+type SensitiveSecret = ConfigEntry
 
 // DiscoverSensitiveSecrets walks the state and collects all sensitive attribute
 // values, returning them as config key / value pairs. The config key is derived
@@ -602,9 +606,10 @@ func DiscoverSensitiveSecrets(state *states.State, projectName string) ([]Sensit
 				finalKey, len(finalKey), maxKeyLen, r.address))
 		}
 
-		secrets = append(secrets, SensitiveSecret{
+		secrets = append(secrets, ConfigEntry{
 			ConfigKey: finalKey,
 			Value:     r.value,
+			Secret:    true,
 		})
 	}
 
@@ -777,30 +782,39 @@ func sanitizeSegment(s string) string {
 	return strings.Trim(b.String(), "_")
 }
 
-// SetSecretsFromState writes sensitive secrets to Pulumi stack config using the automation API.
+// SetSecretsFromState writes config entries to Pulumi stack config using the automation API.
+// Entries with Secret=true are encrypted; others are set as plain config.
 // Secret values are never printed or logged.
-func SetSecretsFromState(secrets []SensitiveSecret, projectDir, projectName, stack, runtime string) error {
+func SetSecretsFromState(entries []ConfigEntry, projectDir, projectName, stack, runtime string) error {
 	// Ensure a Pulumi project exists before stack operations.
 	if err := ensurePulumiProject(projectDir, projectName, runtime); err != nil {
 		return err
 	}
 
-	configMap := make(auto.ConfigMap, len(secrets))
-	for _, s := range secrets {
-		configMap[s.ConfigKey] = auto.ConfigValue{Value: s.Value, Secret: true}
+	configMap := make(auto.ConfigMap, len(entries))
+	for _, e := range entries {
+		configMap[e.ConfigKey] = auto.ConfigValue{Value: e.Value, Secret: e.Secret}
 	}
 
-	if err := writeConfigSecrets(projectDir, stack, configMap); err != nil {
+	if err := writeConfigValues(projectDir, stack, configMap); err != nil {
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Set %d secrets on stack %s\n", len(secrets), stack)
+	var secretCount, plainCount int
+	for _, e := range entries {
+		if e.Secret {
+			secretCount++
+		} else {
+			plainCount++
+		}
+	}
+	fmt.Fprintf(os.Stderr, "Set %d secrets and %d plain config values on stack %s\n", secretCount, plainCount, stack)
 	return nil
 }
 
-// writeConfigSecrets creates a local workspace, ensures the stack exists, and writes secret config values.
+// writeConfigValues creates a local workspace, ensures the stack exists, and writes config values.
 // It sets each key individually to avoid overwriting existing config.
-func writeConfigSecrets(projectDir, stack string, configMap auto.ConfigMap) error {
+func writeConfigValues(projectDir, stack string, configMap auto.ConfigMap) error {
 	ctx := context.Background()
 	ws, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(projectDir))
 	if err != nil {

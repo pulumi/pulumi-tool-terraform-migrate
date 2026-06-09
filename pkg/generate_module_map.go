@@ -185,24 +185,31 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 		}
 		fmt.Fprintf(os.Stderr, "  Found %d sensitive attributes in state\n", len(sensitiveSecrets))
 
-		// Also set all workspace variables as secrets. Variables marked
-		// sensitive in the backend have their values redacted by the API;
-		// we skip those and warn so the user can set them manually.
+		// Set workspace variables as config. Variables marked sensitive in
+		// the backend are set as secrets; non-sensitive ones as plain config.
+		// Some backends (e.g. Scalr) redact sensitive values in the API
+		// response — skip those and warn so the user can set them manually.
 		if remoteVars != nil {
-			var added, skipped int
+			var secretCount, plainCount, skipped int
 			for _, rv := range remoteVars {
 				if rv.Value == "" {
 					skipped++
-					fmt.Fprintf(os.Stderr, "  WARNING: workspace var %q is empty (sensitive in backend), set manually\n", rv.Key)
+					fmt.Fprintf(os.Stderr, "  WARNING: workspace var %q is redacted (sensitive in backend), set manually with --secret\n", rv.Key)
 					continue
 				}
-				sensitiveSecrets = append(sensitiveSecrets, SensitiveSecret{
+				sensitiveSecrets = append(sensitiveSecrets, ConfigEntry{
 					ConfigKey: rv.Key,
 					Value:     rv.Value,
+					Secret:    rv.Sensitive,
 				})
-				added++
+				if rv.Sensitive {
+					secretCount++
+				} else {
+					plainCount++
+				}
 			}
-			fmt.Fprintf(os.Stderr, "  Added %d workspace variables as secrets (%d skipped, empty)\n", added, skipped)
+			fmt.Fprintf(os.Stderr, "  Workspace vars: %d as secrets, %d as plain config (%d skipped, redacted)\n",
+				secretCount, plainCount, skipped)
 		}
 
 		if len(sensitiveSecrets) > 0 {

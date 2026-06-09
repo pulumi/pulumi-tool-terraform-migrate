@@ -511,6 +511,86 @@ func TestDiscoverSensitiveSecrets_Dedup(t *testing.T) {
 	assert.Equal(t, "secret1", secrets[0].Value)
 }
 
+func TestDiscoverSensitiveSecrets_MarksEntriesAsSecret(t *testing.T) {
+	t.Parallel()
+
+	state := states.NewState()
+	rootModule := state.RootModule()
+
+	rootModule.SetResourceInstanceCurrent(
+		addrs.ResourceInstance{
+			Resource: addrs.Resource{
+				Mode: addrs.ManagedResourceMode,
+				Type: "aws_secretsmanager_secret_version",
+				Name: "my_secret",
+			},
+			Key: addrs.NoKey,
+		},
+		&states.ResourceInstanceObjectSrc{
+			AttrsJSON: []byte(`{"id":"v1","secret_string":"hunter2"}`),
+			AttrSensitivePaths: []cty.PathValueMarks{
+				{Path: cty.GetAttrPath("secret_string"), Marks: cty.NewValueMarks("sensitive")},
+			},
+		},
+		addrs.AbsProviderConfig{
+			Provider: addrs.MustParseProviderSourceString("registry.opentofu.org/hashicorp/aws"),
+		},
+		nil,
+	)
+
+	entries, err := DiscoverSensitiveSecrets(state, "test-project")
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "my_secret_secret_string", entries[0].ConfigKey)
+	assert.Equal(t, "hunter2", entries[0].Value)
+	assert.True(t, entries[0].Secret, "entries from DiscoverSensitiveSecrets should have Secret=true")
+}
+
+func TestConfigEntry_WorkspaceVarsSensitivity(t *testing.T) {
+	t.Parallel()
+
+	// Simulate workspace variables as they come from the TFC/Scalr API.
+	vars := []struct {
+		key       string
+		value     string
+		sensitive bool
+	}{
+		{"db_timeout", "30", false},              // non-sensitive, non-empty → plain config
+		{"api_key", "sk-abc123", true},            // sensitive, non-empty → secret (TFC behavior)
+		{"redacted_password", "", true},            // sensitive, empty → skip (Scalr behavior)
+		{"oauth_base_url", "https://auth.co", false}, // non-sensitive → plain config
+	}
+
+	var entries []ConfigEntry
+	var skipped int
+	for _, rv := range vars {
+		if rv.value == "" {
+			skipped++
+			continue
+		}
+		entries = append(entries, ConfigEntry{
+			ConfigKey: rv.key,
+			Value:     rv.value,
+			Secret:    rv.sensitive,
+		})
+	}
+
+	require.Len(t, entries, 3)
+	assert.Equal(t, 1, skipped, "should skip 1 redacted variable")
+
+	// Non-sensitive vars should have Secret=false.
+	assert.Equal(t, "db_timeout", entries[0].ConfigKey)
+	assert.False(t, entries[0].Secret, "non-sensitive workspace var should be plain config")
+
+	// Sensitive vars with values (TFC behavior) should have Secret=true.
+	assert.Equal(t, "api_key", entries[1].ConfigKey)
+	assert.True(t, entries[1].Secret, "sensitive workspace var with value should be secret")
+
+	// Non-sensitive vars should have Secret=false.
+	assert.Equal(t, "oauth_base_url", entries[2].ConfigKey)
+	assert.False(t, entries[2].Secret, "non-sensitive workspace var should be plain config")
+}
+
 func TestCtyValueToInterface(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
