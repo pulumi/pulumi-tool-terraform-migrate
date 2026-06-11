@@ -185,6 +185,17 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 		}
 		fmt.Fprintf(os.Stderr, "  Found %d sensitive attributes in state\n", len(sensitiveSecrets))
 
+		// Set tfvars values as plain config. These come from terraform.tfvars
+		// and *.auto.tfvars files committed to the repo.
+		// Workspace variables (below) take priority and may override these.
+		if config != nil {
+			tfvarsEntries := collectTFVarsConfig(config, tfDir)
+			if len(tfvarsEntries) > 0 {
+				sensitiveSecrets = append(sensitiveSecrets, tfvarsEntries...)
+				fmt.Fprintf(os.Stderr, "  Added %d tfvars values as plain config\n", len(tfvarsEntries))
+			}
+		}
+
 		// Set workspace variables as config. Variables marked sensitive in
 		// the backend are set as secrets; non-sensitive ones as plain config.
 		// Some backends (e.g. Scalr) redact sensitive values in the API

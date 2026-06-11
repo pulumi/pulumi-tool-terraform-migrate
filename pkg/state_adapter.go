@@ -58,24 +58,32 @@ func TranslateAndWriteState(
 	stackNameOverride string,
 	projectNameOverride string,
 ) error {
-	loadOpts := tofu.LoadTerraformStateOptions{
-		ProjectDir: tfDir,
-	}
-	if stateFilePath != "" {
-		loadOpts = tofu.LoadTerraformStateOptions{
-			StateFilePath: stateFilePath,
-		}
-	}
-	tfState, err := tofu.LoadTerraformState(ctx, loadOpts)
-	if err != nil {
-		return err
-	}
+	var tfState *tfjson.State
+	var providerVersionMap map[string]string
+	var err error
 
-	providerVersions, err := tofu.GetProviderVersions(ctx, tfDir)
-	if err != nil {
-		// Log the error but don't fail - provider versions are optional
-		fmt.Fprintf(os.Stderr, "Warning: failed to extract provider versions: %v\n", err)
-		providerVersions = tofu.TofuVersionOutput{}
+	if stateFilePath != "" {
+		// Try to load the state file directly, detecting its format.
+		tfState, providerVersionMap, err = loadStateFileDirectly(stateFilePath, tfDir)
+		if err != nil {
+			return err
+		}
+	} else {
+		// No state file — use tofu to load from the project directory.
+		loadOpts := tofu.LoadTerraformStateOptions{
+			ProjectDir: tfDir,
+		}
+		tfState, err = tofu.LoadTerraformState(ctx, loadOpts)
+		if err != nil {
+			return err
+		}
+
+		providerVersions, pvErr := tofu.GetProviderVersions(ctx, tfDir)
+		if pvErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to extract provider versions: %v\n", pvErr)
+			providerVersions = tofu.TofuVersionOutput{}
+		}
+		providerVersionMap = providerVersions.ProviderSelections
 	}
 
 	// Resolve stack and project names from overrides or workspace fallback
@@ -99,7 +107,7 @@ func TranslateAndWriteState(
 		}
 	}
 
-	res, err := TranslateState(ctx, tfState, providerVersions.ProviderSelections, stackName, projectName)
+	res, err := TranslateState(ctx, tfState, providerVersionMap, stackName, projectName)
 	if err != nil {
 		return err
 	}
@@ -289,9 +297,15 @@ func convertResourceStateExceptProviderLink(
 		return PulumiResource{}, fmt.Errorf("failed to extract inputs from outputs: %w", err)
 	}
 
+	// Extract resource ID from converted properties, falling back to empty string.
+	resourceID := ""
+	if idProp, ok := props["id"]; ok && idProp.IsString() {
+		resourceID = idProp.StringValue()
+	}
+
 	return PulumiResource{
 		PulumiResourceID: PulumiResourceID{
-			ID:   props["id"].StringValue(),
+			ID:   resourceID,
 			Name: PulumiNameFromTerraformAddress(res.Address, res.Type),
 			Type: string(pulumiTypeToken),
 		},
@@ -313,6 +327,56 @@ func formatDynamicProviderName(tfAddr string) string {
 	}
 	// Fallback: just use the whole address
 	return "terraform-provider " + tfAddr
+}
+
+// loadStateFileDirectly reads a state file, detects its format, and returns a tfjson.State
+// without requiring the tofu binary. For raw .tfstate files, it parses them directly
+// using the OpenTofu statefile library and converts to tfjson format. Provider versions
+// are extracted from .terraform.lock.hcl in the TF directory if available.
+func loadStateFileDirectly(stateFilePath, tfDir string) (*tfjson.State, map[string]string, error) {
+	stateData, err := os.ReadFile(stateFilePath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("reading state file: %w", err)
+	}
+
+	format, err := DetectStateFormatBytes(stateData)
+	if err != nil {
+		return nil, nil, fmt.Errorf("detecting state format: %w", err)
+	}
+
+	var tfState *tfjson.State
+
+	switch format {
+	case StateFormatTofuShowJSON:
+		// Already in tfjson format — unmarshal directly.
+		fmt.Fprintln(os.Stderr, "State file detected as tofu show -json format, parsing directly.")
+		var st tfjson.State
+		if err := json.Unmarshal(stateData, &st); err != nil {
+			return nil, nil, fmt.Errorf("parsing tofu show JSON: %w", err)
+		}
+		tfState = &st
+
+	case StateFormatRaw:
+		// Raw .tfstate — parse with OpenTofu statefile library and convert.
+		fmt.Fprintln(os.Stderr, "State file detected as raw .tfstate format, parsing directly (no tofu binary needed).")
+		rawState, err := LoadRawStateBytes(stateData)
+		if err != nil {
+			return nil, nil, fmt.Errorf("parsing raw state: %w", err)
+		}
+		tfState = TfjsonFromRawState(rawState)
+	}
+
+	// Extract provider versions from .terraform.lock.hcl if available.
+	providerVersions, err := tofu.GetProviderVersionsFromLockfile(tfDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to read lockfile for provider versions: %v\n", err)
+		providerVersions = map[string]string{}
+	}
+	if len(providerVersions) > 0 {
+		fmt.Fprintf(os.Stderr, "Extracted %d provider versions from .terraform.lock.hcl\n", len(providerVersions))
+	}
+
+	return tfState, providerVersions, nil
 }
 
 // PulumiNameFromTerraformAddress extracts a unique Pulumi resource name from a Terraform address.

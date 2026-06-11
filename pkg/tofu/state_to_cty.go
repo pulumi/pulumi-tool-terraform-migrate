@@ -16,6 +16,8 @@ package tofu
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/zclconf/go-cty/cty"
@@ -24,7 +26,25 @@ import (
 
 func StateToCtyValue(resource *tfjson.StateResource, ty cty.Type) (cty.Value, error) {
 	// TODO[pulumi/pulumi-service#35117]: add support for sensitive values
-	data, err := json.Marshal(resource.AttributeValues)
+	attrs := resource.AttributeValues
+
+	// Filter out attributes not present in the target type schema.
+	// This handles deprecated/removed attributes that may linger in older state files
+	// but are no longer recognized by the current provider schema version.
+	if ty.IsObjectType() && attrs != nil {
+		filtered := make(map[string]interface{}, len(attrs))
+		for k, v := range attrs {
+			if ty.HasAttribute(k) {
+				filtered[k] = v
+			} else {
+				fmt.Fprintf(os.Stderr, "Warning: skipping deprecated attribute %q on %s (not in current provider schema)\n",
+					k, resource.Address)
+			}
+		}
+		attrs = filtered
+	}
+
+	data, err := json.Marshal(attrs)
 	if err != nil {
 		return cty.Value{}, err
 	}
