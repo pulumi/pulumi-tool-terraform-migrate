@@ -25,13 +25,15 @@ type ImportEntry struct {
 	Name      string `json:"name"`
 	ID        string `json:"id,omitempty"`
 	Parent    string `json:"parent,omitempty"`
+	Provider  string `json:"provider,omitempty"`
 	Component bool   `json:"component,omitempty"`
 	Version   string `json:"version,omitempty"`
 }
 
 // ImportFile represents the top-level Pulumi import file structure.
 type ImportFile struct {
-	Resources []ImportEntry `json:"resources"`
+	NameTable map[string]string `json:"nameTable,omitempty"`
+	Resources []ImportEntry     `json:"resources"`
 }
 
 // FillResult contains statistics from the fill operation.
@@ -328,4 +330,168 @@ func normalizeInstanceKey(s string) string {
 	key := s[idx+1 : len(s)-1] // strip [ and ]
 	key = strings.Trim(key, `"`)
 	return base + "_" + key
+}
+
+// TranslateImportIDs translates TF import IDs to Pulumi-expected formats.
+// TF and Pulumi often use different import ID formats for the same resource type.
+// This function looks up digest attributes to construct the correct Pulumi ID.
+func TranslateImportIDs(importFile *ImportFile, digest *ModuleMap) int {
+	// Build TF resource lookup by importId.
+	tfByID := map[string]*ModuleResource{}
+	for i := range digest.RootResources {
+		r := &digest.RootResources[i]
+		if r.Mode == "managed" && r.ImportID != "" {
+			tfByID[r.ImportID] = r
+		}
+	}
+	for _, entry := range digest.Modules {
+		for i := range entry.Resources {
+			r := &entry.Resources[i]
+			if r.Mode == "managed" && r.ImportID != "" {
+				tfByID[r.ImportID] = r
+			}
+		}
+	}
+
+	translated := 0
+	for i := range importFile.Resources {
+		entry := &importFile.Resources[i]
+		if entry.Component || entry.ID == "" || entry.ID == "<PLACEHOLDER>" {
+			continue
+		}
+
+		tf := tfByID[entry.ID]
+		if tf == nil {
+			continue
+		}
+		attrs := tf.Attributes
+
+		var newID string
+		switch entry.Type {
+		case "aws:wafv2/ipSet:IpSet", "aws:wafv2/webAcl:WebAcl":
+			// uuid -> id/name/scope
+			if name, _ := attrs["name"].(string); name != "" {
+				scope, _ := attrs["scope"].(string)
+				newID = entry.ID + "/" + name + "/" + scope
+			}
+
+		case "aws:ec2/routeTableAssociation:RouteTableAssociation":
+			// rtbassoc -> subnet/rtb
+			if sid, _ := attrs["subnet_id"].(string); sid != "" {
+				rtb, _ := attrs["route_table_id"].(string)
+				newID = sid + "/" + rtb
+			}
+
+		case "aws:ec2/securityGroupRule:SecurityGroupRule":
+			// sgrule -> sg_type_proto_from_to_source
+			sg, _ := attrs["security_group_id"].(string)
+			t, _ := attrs["type"].(string)
+			proto, _ := attrs["protocol"].(string)
+			fp := fmt.Sprintf("%v", attrs["from_port"])
+			tp := fmt.Sprintf("%v", attrs["to_port"])
+			var src string
+			if self, _ := attrs["self"].(bool); self {
+				src = "self"
+			} else if cidrs, ok := attrs["cidr_blocks"].([]interface{}); ok && len(cidrs) > 0 {
+				parts := make([]string, len(cidrs))
+				for i, c := range cidrs {
+					parts[i] = fmt.Sprintf("%v", c)
+				}
+				src = strings.Join(parts, "_")
+			} else {
+				src = sg
+			}
+			newID = sg + "_" + t + "_" + proto + "_" + fp + "_" + tp + "_" + src
+
+		case "aws:appautoscaling/target:Target":
+			ns, _ := attrs["service_namespace"].(string)
+			rid, _ := attrs["resource_id"].(string)
+			dim, _ := attrs["scalable_dimension"].(string)
+			newID = ns + "/" + rid + "/" + dim
+
+		case "aws:appautoscaling/policy:Policy":
+			ns, _ := attrs["service_namespace"].(string)
+			rid, _ := attrs["resource_id"].(string)
+			dim, _ := attrs["scalable_dimension"].(string)
+			name, _ := attrs["name"].(string)
+			newID = ns + "/" + rid + "/" + dim + "/" + name
+
+		case "aws:iam/rolePolicyAttachment:RolePolicyAttachment":
+			role, _ := attrs["role"].(string)
+			if role == "" {
+				if roles, ok := attrs["roles"].([]interface{}); ok && len(roles) > 0 {
+					role, _ = roles[0].(string)
+				}
+			}
+			arn, _ := attrs["policy_arn"].(string)
+			if role != "" && arn != "" {
+				newID = role + "/" + arn
+			}
+
+		case "aws:iam/policyAttachment:PolicyAttachment":
+			if name, _ := attrs["name"].(string); name != "" {
+				newID = name
+			}
+
+		case "aws:opensearch/serverlessAccessPolicy:ServerlessAccessPolicy",
+			"aws:opensearch/serverlessSecurityPolicy:ServerlessSecurityPolicy":
+			name, _ := attrs["name"].(string)
+			typ, _ := attrs["type"].(string)
+			if name != "" && typ != "" {
+				newID = name + "/" + typ
+			}
+
+		case "aws:ecs/cluster:Cluster":
+			if name, _ := attrs["name"].(string); name != "" {
+				newID = name
+			}
+
+		case "aws:ecs/service:Service":
+			cluster, _ := attrs["cluster"].(string)
+			svcName, _ := attrs["name"].(string)
+			if cluster != "" && svcName != "" {
+				if strings.Contains(cluster, "arn:") {
+					parts := strings.Split(cluster, "/")
+					cluster = parts[len(parts)-1]
+				}
+				newID = cluster + "/" + svcName
+			}
+
+		case "aws:ecs/taskDefinition:TaskDefinition":
+			if arn, _ := attrs["arn"].(string); arn != "" {
+				newID = arn
+			}
+
+		case "aws:apigatewayv2/apiMapping:ApiMapping":
+			if domain, _ := attrs["domain_name"].(string); domain != "" {
+				newID = entry.ID + "/" + domain
+			}
+
+		case "aws:kinesis/stream:Stream":
+			if name, _ := attrs["name"].(string); name != "" {
+				newID = name
+			}
+
+		case "aws:lambda/permission:Permission":
+			fn, _ := attrs["function_name"].(string)
+			stmt, _ := attrs["statement_id"].(string)
+			if fn != "" && stmt != "" {
+				newID = fn + "/" + stmt
+			}
+
+		case "aws:s3/bucketObject:BucketObject", "aws:s3/bucketObjectv2:BucketObjectv2":
+			bucket, _ := attrs["bucket"].(string)
+			key, _ := attrs["key"].(string)
+			if bucket != "" && key != "" {
+				newID = "s3://" + bucket + "/" + key
+			}
+		}
+
+		if newID != "" && newID != entry.ID {
+			entry.ID = newID
+			translated++
+		}
+	}
+
+	return translated
 }

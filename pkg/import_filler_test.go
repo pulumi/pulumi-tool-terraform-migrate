@@ -492,3 +492,143 @@ func TestNormalizeInstanceKey(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslateImportIDs(t *testing.T) {
+	t.Parallel()
+
+	digest := &ModuleMap{
+		RootResources: []ModuleResource{
+			{
+				Mode:             "managed",
+				ImportID:         "aclid-123",
+				TerraformAddress: "aws_wafv2_web_acl.my_acl",
+				Attributes: map[string]interface{}{
+					"name":  "my-waf-acl",
+					"scope": "REGIONAL",
+				},
+			},
+			{
+				Mode:             "managed",
+				ImportID:         "s3-key-abc",
+				TerraformAddress: "aws_s3_object.my_obj",
+				Attributes: map[string]interface{}{
+					"bucket": "my-bucket",
+					"key":    "path/to/file.txt",
+				},
+			},
+			{
+				Mode:             "managed",
+				ImportID:         "rtbassoc-123",
+				TerraformAddress: "aws_route_table_association.public",
+				Attributes: map[string]interface{}{
+					"subnet_id":      "subnet-abc",
+					"route_table_id": "rtb-xyz",
+				},
+			},
+			{
+				Mode:             "managed",
+				ImportID:         "arn:aws:ecs:us-east-1:123:service/my-cluster/my-svc",
+				TerraformAddress: "aws_ecs_service.my_svc",
+				Attributes: map[string]interface{}{
+					"cluster": "arn:aws:ecs:us-east-1:123:cluster/my-cluster",
+					"name":    "my-svc",
+				},
+			},
+			{
+				Mode:             "managed",
+				ImportID:         "my-fn-id",
+				TerraformAddress: "aws_lambda_permission.invoke",
+				Attributes: map[string]interface{}{
+					"function_name": "my-function",
+					"statement_id":  "AllowInvoke",
+				},
+			},
+			{
+				Mode:             "managed",
+				ImportID:         "not-translated",
+				TerraformAddress: "aws_iam_role.my_role",
+				Attributes:       map[string]interface{}{"name": "my-role"},
+			},
+		},
+	}
+
+	importFile := &ImportFile{
+		NameTable: map[string]string{"provider": "urn:pulumi:stack::proj::pulumi:providers:aws::default"},
+		Resources: []ImportEntry{
+			{Type: "aws:wafv2/webAcl:WebAcl", Name: "my-acl", ID: "aclid-123", Provider: "aws-us-east-1"},
+			{Type: "aws:s3/bucketObject:BucketObject", Name: "my-obj", ID: "s3-key-abc"},
+			{Type: "aws:ec2/routeTableAssociation:RouteTableAssociation", Name: "public", ID: "rtbassoc-123"},
+			{Type: "aws:ecs/service:Service", Name: "my-svc", ID: "arn:aws:ecs:us-east-1:123:service/my-cluster/my-svc"},
+			{Type: "aws:lambda/permission:Permission", Name: "invoke", ID: "my-fn-id"},
+			{Type: "aws:iam/role:Role", Name: "my-role", ID: "not-translated"},
+		},
+	}
+
+	translated := TranslateImportIDs(importFile, digest)
+
+	assert.Equal(t, 5, translated)
+
+	// WAFv2: uuid -> id/name/scope
+	assert.Equal(t, "aclid-123/my-waf-acl/REGIONAL", importFile.Resources[0].ID)
+
+	// S3 BucketObject: key -> s3://bucket/key
+	assert.Equal(t, "s3://my-bucket/path/to/file.txt", importFile.Resources[1].ID)
+
+	// RouteTableAssociation: rtbassoc -> subnet/rtb
+	assert.Equal(t, "subnet-abc/rtb-xyz", importFile.Resources[2].ID)
+
+	// ECS Service: ARN -> cluster-name/service-name
+	assert.Equal(t, "my-cluster/my-svc", importFile.Resources[3].ID)
+
+	// Lambda Permission: id -> function/statement
+	assert.Equal(t, "my-function/AllowInvoke", importFile.Resources[4].ID)
+
+	// IAM Role: no translation needed
+	assert.Equal(t, "not-translated", importFile.Resources[5].ID)
+
+	// Provider and NameTable preserved
+	assert.Equal(t, "aws-us-east-1", importFile.Resources[0].Provider)
+	assert.NotNil(t, importFile.NameTable)
+	assert.Equal(t, "urn:pulumi:stack::proj::pulumi:providers:aws::default", importFile.NameTable["provider"])
+}
+
+func TestProviderAndNameTablePreserved(t *testing.T) {
+	t.Parallel()
+
+	digest := &ModuleMap{
+		RootResources: []ModuleResource{
+			{
+				Mode:             "managed",
+				ImportID:         "vpc-123",
+				TranslatedURN:    "urn:pulumi:stack::proj::aws:ec2/vpc:Vpc::my-vpc",
+				TerraformAddress: "aws_vpc.main",
+			},
+		},
+	}
+
+	importFile := &ImportFile{
+		NameTable: map[string]string{
+			"aws-us-east-1": "urn:pulumi:stack::proj::pulumi:providers:aws::aws-us-east-1",
+		},
+		Resources: []ImportEntry{
+			{Type: "aws:ec2/vpc:Vpc", Name: "my-vpc", ID: "<PLACEHOLDER>", Provider: "aws-us-east-1"},
+		},
+	}
+
+	resourceMappings := map[string]string{
+		"aws_vpc.main": "my-vpc",
+	}
+
+	result := FillImportFile(digest, importFile, nil, resourceMappings)
+	require.Equal(t, 1, result.Filled)
+
+	// ID was filled
+	assert.Equal(t, "vpc-123", importFile.Resources[0].ID)
+
+	// Provider preserved through fill
+	assert.Equal(t, "aws-us-east-1", importFile.Resources[0].Provider)
+
+	// NameTable preserved
+	assert.Equal(t, "urn:pulumi:stack::proj::pulumi:providers:aws::aws-us-east-1",
+		importFile.NameTable["aws-us-east-1"])
+}

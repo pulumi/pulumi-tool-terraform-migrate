@@ -129,8 +129,12 @@ Examples:
 				moduleMappings[parts[0]] = parts[1]
 			}
 
-			// Run the fill logic.
+			// Run the fill logic (provider fields and nameTable are preserved
+			// automatically since ImportEntry has Provider and ImportFile has NameTable).
 			result := pkg.FillImportFile(&digest, &importFile, moduleMappings, resourceMappings)
+
+			// Translate TF import IDs to Pulumi-expected formats.
+			translated := pkg.TranslateImportIDs(&importFile, &digest)
 
 			// Write output.
 			outData, err := json.MarshalIndent(&importFile, "", "    ")
@@ -145,6 +149,9 @@ Examples:
 			fmt.Fprintf(os.Stderr, "Filled:    %d\n", result.Filled)
 			fmt.Fprintf(os.Stderr, "Skipped:   %d (components)\n", result.Skipped)
 			fmt.Fprintf(os.Stderr, "Unmatched: %d\n", result.Unmatched)
+			if translated > 0 {
+				fmt.Fprintf(os.Stderr, "Translated: %d IDs\n", translated)
+			}
 			for _, w := range result.Warnings {
 				fmt.Fprintf(os.Stderr, "  WARNING: %s\n", w)
 			}
