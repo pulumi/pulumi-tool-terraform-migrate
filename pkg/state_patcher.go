@@ -29,6 +29,7 @@ import (
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
+	pulumiarchive "github.com/pulumi/pulumi/sdk/v3/go/common/resource/archive"
 )
 
 // FieldsFile represents the aws-import-diff-fields.json structure.
@@ -593,8 +594,13 @@ func buildAssetSentinel(absPath, assetType string) (map[string]interface{}, erro
 		// Try directory first (strip .zip).
 		dirPath := strings.TrimSuffix(absPath, ".zip")
 		if info, err := os.Stat(dirPath); err == nil && info.IsDir() {
+			hash, err := hashFileArchive(dirPath)
+			if err != nil {
+				return nil, fmt.Errorf("hashing directory %s: %w", dirPath, err)
+			}
 			return map[string]interface{}{
 				sigKey: archiveSig,
+				"hash": hash,
 				"path": dirPath,
 			}, nil
 		}
@@ -608,8 +614,13 @@ func buildAssetSentinel(absPath, assetType string) (map[string]interface{}, erro
 
 		// Plain directory path.
 		if info, err := os.Stat(absPath); err == nil && info.IsDir() {
+			hash, err := hashFileArchive(absPath)
+			if err != nil {
+				return nil, fmt.Errorf("hashing directory %s: %w", absPath, err)
+			}
 			return map[string]interface{}{
 				sigKey: archiveSig,
+				"hash": hash,
 				"path": absPath,
 			}, nil
 		}
@@ -782,6 +793,20 @@ func injectAssetDeltas(deltaRaw interface{}, fields []assetFieldDeltaInfo) inter
 	}
 
 	return delta
+}
+
+// hashFileArchive computes the hash of a directory archive using the Pulumi SDK's
+// archive package, which is the exact same hashing the engine uses for FileArchive.
+// This ensures the hash in our sentinel matches the program-side hash.
+func hashFileArchive(dirPath string) (string, error) {
+	arch, err := pulumiarchive.FromPath(dirPath)
+	if err != nil {
+		return "", fmt.Errorf("creating archive from %s: %w", dirPath, err)
+	}
+	if err := arch.EnsureHash(); err != nil {
+		return "", fmt.Errorf("computing hash for %s: %w", dirPath, err)
+	}
+	return arch.Hash, nil
 }
 
 // isAssetOrArchiveSentinel checks if a value is a Pulumi asset or archive sentinel.

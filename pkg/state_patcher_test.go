@@ -825,4 +825,13 @@ func TestPatchState_InjectsArchiveDelta(t *testing.T) {
 	assert.Equal(t, float64(1), assetEntry["kind"])            // FileArchive
 	assert.Equal(t, float64(3), assetEntry["archiveFormat"])    // ZIPArchive
 	assert.Equal(t, "source_code_hash", assetEntry["hashField"])
+
+	// The code input sentinel should have a hash computed by the Pulumi archive package.
+	inputs := resources[0].(map[string]interface{})["inputs"].(map[string]interface{})
+	codeSentinel, ok := inputs["code"].(map[string]interface{})
+	require.True(t, ok, "code input should be an archive sentinel")
+	codeHash, ok := codeSentinel["hash"].(string)
+	require.True(t, ok, "code sentinel should have a hash")
+	assert.NotEmpty(t, codeHash, "code hash should not be empty")
+	assert.Len(t, codeHash, 64, "hash should be 64-char SHA256 hex")
 }
