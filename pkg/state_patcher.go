@@ -30,6 +30,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	pulumiarchive "github.com/pulumi/pulumi/sdk/v3/go/common/resource/archive"
+	pulumiasset "github.com/pulumi/pulumi/sdk/v3/go/common/resource/asset"
 )
 
 // FieldsFile represents the aws-import-diff-fields.json structure.
@@ -439,9 +440,9 @@ func PatchState(
 			// Treat empty string the same as nil — TF stores "" for unset
 			// string fields, but the bridge applies the schema default.
 			inputVal := inputsRaw[pulumiField]
-			inputEmpty := inputVal == nil || inputVal == ""
+			inputEmpty := isEmptyValue(inputVal)
 			outputVal := outputsRaw[pulumiField]
-			outputEmpty := outputVal == nil || outputVal == ""
+			outputEmpty := isEmptyValue(outputVal)
 
 			// Also treat empty-string digest values as unset.
 			digSensitive := digVal == "(sensitive)"
@@ -694,8 +695,39 @@ func buildAssetArchiveFromZip(zipPath string) (map[string]interface{}, error) {
 		}
 	}
 
+	// Compute overall archive hash using the Pulumi SDK, matching what the
+	// engine computes for AssetArchive({"file": StringAsset(content)}).
+	archiveAssets := make(map[string]interface{})
+	for _, f := range r.File {
+		if f.FileInfo().IsDir() {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			continue
+		}
+		content, err := io.ReadAll(rc)
+		rc.Close()
+		if err != nil {
+			continue
+		}
+		a, err := pulumiasset.FromText(string(content))
+		if err != nil {
+			continue
+		}
+		archiveAssets[f.Name] = a
+	}
+	arch, err := pulumiarchive.FromAssets(archiveAssets)
+	if err != nil {
+		return nil, fmt.Errorf("creating archive for hash: %w", err)
+	}
+	if err := arch.EnsureHash(); err != nil {
+		return nil, fmt.Errorf("computing archive hash: %w", err)
+	}
+
 	return map[string]interface{}{
 		sigKey:   archiveSig,
+		"hash":   arch.Hash,
 		"assets": assets,
 	}, nil
 }
@@ -815,6 +847,20 @@ func hashFileArchive(dirPath string) (string, error) {
 		return "", fmt.Errorf("computing hash for %s: %w", dirPath, err)
 	}
 	return arch.Hash, nil
+}
+
+// isEmptyValue checks if a value is nil, empty string, or empty array/map.
+func isEmptyValue(v interface{}) bool {
+	if v == nil || v == "" {
+		return true
+	}
+	switch val := v.(type) {
+	case []interface{}:
+		return len(val) == 0
+	case map[string]interface{}:
+		return len(val) == 0
+	}
+	return false
 }
 
 // snakeToCamel converts a snake_case string to camelCase.
