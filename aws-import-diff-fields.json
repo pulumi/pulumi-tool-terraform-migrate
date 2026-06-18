@@ -452,7 +452,7 @@
         "code" : {
           "default" : null,
           "asset" : "FileArchive",
-          "assetKind" : 1,
+          "assetKind" : 2,
           "archiveFormat" : 3,
           "hashField" : "source_code_hash",
           "read_from_aws" : false,

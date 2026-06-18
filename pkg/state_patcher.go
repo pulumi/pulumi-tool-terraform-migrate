@@ -47,7 +47,7 @@ type FieldCategory struct {
 type FieldInfo struct {
 	Default       interface{} `json:"default"`
 	Asset         string      `json:"asset,omitempty"`         // "FileAsset" or "FileArchive"
-	AssetKind     *int        `json:"assetKind,omitempty"`     // bridge AssetTranslationKind (0=FileAsset, 1=FileArchive)
+	AssetKind     *int        `json:"assetKind,omitempty"`     // bridge AssetTranslationKind (0=FileAsset, 2=FileArchive)
 	ArchiveFormat *int        `json:"archiveFormat,omitempty"` // resource.ArchiveFormat (3=ZIPArchive)
 	HashField     string      `json:"hashField,omitempty"`     // e.g. "source_code_hash"
 }
