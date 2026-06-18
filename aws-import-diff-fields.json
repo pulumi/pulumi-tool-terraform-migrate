@@ -187,8 +187,12 @@
       }
     },
     "aws:rds/clusterParameterGroup:ClusterParameterGroup" : {
-      "read_filtered" : {
-        "parameters" : "Read filters by Source=parameterSourceUser, discarding system defaults"
+      "not_read" : {
+        "parameters" : {
+          "default" : null,
+          "note" : "read_filtered — Read filters by Source=parameterSourceUser, discarding system defaults. Digest has the TF state value with snake_case keys (apply_method) which get camelCased (applyMethod) by the patcher.",
+          "root_cause" : "provider_design"
+        }
       }
     },
     "aws:rds/clusterInstance:ClusterInstance" : {

@@ -76,6 +76,7 @@ var tfToPulumiField = map[string]string{
 	"force_destroy":                      "forceDestroy",
 	"force_overwrite_replica_secret":     "forceOverwriteReplicaSecret",
 	"master_password":                    "masterPassword",
+	"parameter":                          "parameters",
 	"private_key":                        "privateKey",
 	"publish":                            "publish",
 	"recovery_window_in_days":            "recoveryWindowInDays",
@@ -426,6 +427,13 @@ func PatchState(
 			var digVal interface{}
 			if digResource != nil && tfAttr != "" {
 				digVal = digResource.Attributes[tfAttr]
+				// For complex values (arrays, objects), convert snake_case keys
+				// to camelCase. Only needed when the digest has nested structures
+				// with TF-style keys that differ from Pulumi's camelCase.
+				switch digVal.(type) {
+				case []interface{}, map[string]interface{}:
+					digVal = camelCaseKeys(digVal)
+				}
 			}
 
 			// Treat empty string the same as nil — TF stores "" for unset
@@ -807,6 +815,39 @@ func hashFileArchive(dirPath string) (string, error) {
 		return "", fmt.Errorf("computing hash for %s: %w", dirPath, err)
 	}
 	return arch.Hash, nil
+}
+
+// snakeToCamel converts a snake_case string to camelCase.
+func snakeToCamel(s string) string {
+	parts := strings.Split(s, "_")
+	for i := 1; i < len(parts); i++ {
+		if len(parts[i]) > 0 {
+			parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+		}
+	}
+	return strings.Join(parts, "")
+}
+
+// camelCaseKeys recursively converts snake_case keys to camelCase in maps and
+// arrays. Used when copying digest values (TF snake_case) to Pulumi state
+// (camelCase).
+func camelCaseKeys(v interface{}) interface{} {
+	switch val := v.(type) {
+	case map[string]interface{}:
+		result := make(map[string]interface{}, len(val))
+		for k, v := range val {
+			result[snakeToCamel(k)] = camelCaseKeys(v)
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(val))
+		for i, v := range val {
+			result[i] = camelCaseKeys(v)
+		}
+		return result
+	default:
+		return v
+	}
 }
 
 // isAssetOrArchiveSentinel checks if a value is a Pulumi asset or archive sentinel.

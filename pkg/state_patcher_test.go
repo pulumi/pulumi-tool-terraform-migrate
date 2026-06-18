@@ -835,3 +835,82 @@ func TestPatchState_InjectsArchiveDelta(t *testing.T) {
 	assert.NotEmpty(t, codeHash, "code hash should not be empty")
 	assert.Len(t, codeHash, 64, "hash should be 64-char SHA256 hex")
 }
+
+func TestPatchState_CamelCasesNestedDigestKeys(t *testing.T) {
+	// When the digest has an array of objects with snake_case keys (e.g.,
+	// parameter: [{apply_method: "immediate", name: "rds.force_ssl", value: "1"}]),
+	// the patcher should convert to camelCase for Pulumi state.
+	state := map[string]interface{}{
+		"version": 3,
+		"deployment": map[string]interface{}{
+			"resources": []interface{}{
+				map[string]interface{}{
+					"urn":     "urn:pulumi:dev::proj::aws:rds/clusterParameterGroup:ClusterParameterGroup::my-params",
+					"type":    "aws:rds/clusterParameterGroup:ClusterParameterGroup",
+					"custom":  true,
+					"id":      "my-params",
+					"parent":  "urn:pulumi:dev::proj::pulumi:pulumi:Stack::proj-dev",
+					"inputs":  map[string]interface{}{"parameters": nil},
+					"outputs": map[string]interface{}{"parameters": nil},
+				},
+			},
+		},
+	}
+	stateData, _ := json.Marshal(state)
+
+	digest := ModuleMap{
+		RootResources: []ModuleResource{
+			{
+				Mode:             "managed",
+				TranslatedURN:    "urn:pulumi:dev::proj::aws:rds/clusterParameterGroup:ClusterParameterGroup::my-params",
+				TerraformAddress: "aws_rds_cluster_parameter_group.my_params",
+				Attributes: map[string]interface{}{
+					"parameter": []interface{}{
+						map[string]interface{}{
+							"apply_method": "immediate",
+							"name":         "rds.force_ssl",
+							"value":        "1",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	fields := &FieldsFile{
+		Fields: map[string]FieldCategory{
+			"clusterParameterGroup:ClusterParameterGroup": {
+				NotRead: map[string]FieldInfo{
+					"parameters": {Default: nil},
+				},
+			},
+		},
+	}
+
+	resourceMappings := map[string]string{
+		"aws_rds_cluster_parameter_group.my_params": "my-params",
+	}
+
+	patched, result, err := PatchState(stateData, &digest, fields, nil, resourceMappings, nil, "")
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.Patched)
+	assert.Equal(t, 1, result.FieldsFromDigest)
+
+	var patchedState map[string]interface{}
+	require.NoError(t, json.Unmarshal(patched, &patchedState))
+	resources := patchedState["deployment"].(map[string]interface{})["resources"].([]interface{})
+	inputs := resources[0].(map[string]interface{})["inputs"].(map[string]interface{})
+
+	params, ok := inputs["parameters"].([]interface{})
+	require.True(t, ok, "parameters should be an array")
+	require.Len(t, params, 1)
+
+	param := params[0].(map[string]interface{})
+	// Keys should be camelCase, not snake_case.
+	assert.Equal(t, "immediate", param["applyMethod"])
+	assert.Equal(t, "rds.force_ssl", param["name"])
+	assert.Equal(t, "1", param["value"])
+	// Snake case key should NOT be present.
+	_, hasSnake := param["apply_method"]
+	assert.False(t, hasSnake, "apply_method should not be present (should be applyMethod)")
+}
