@@ -378,6 +378,219 @@ func TestBuildModuleMap_DataSources(t *testing.T) {
 	assert.Equal(t, "module.pet[0].random_pet.this", managedRes.TerraformAddress)
 }
 
+func TestFlattenAddress(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		address   string
+		attribute string
+		expected  string
+	}{
+		{
+			name:      "simple root resource",
+			address:   "aws_db_instance.main",
+			attribute: "password",
+			expected:  "main_password",
+		},
+		{
+			name:      "module resource with for_each",
+			address:   `module.rds["dmvhm"].aws_rds_cluster.main`,
+			attribute: "master_password",
+			expected:  "rds_dmvhm_main_master_password",
+		},
+		{
+			name:      "deep module with generic name this",
+			address:   `module.capture_secrets["dmvhm-capture-service-develop"].aws_secretsmanager_secret_version.this["dmvhm-capture-service-develop/ia_callback_client_oauth"]`,
+			attribute: "secret_string",
+			expected:  "capture_secrets_dmvhm_capture_service_develop_ia_callback_client_oauth_secret_string",
+		},
+		{
+			name:      "ssm parameter pattern with generic name",
+			address:   `module.cdpa_param_stack_values_parameters["/develop/cdp-adapter"].aws_ssm_parameter.ssm_parameters["/develop/cdp-adapter/trusted_host_key"]`,
+			attribute: "value",
+			expected:  "cdpa_param_stack_values_parameters_develop_cdp_adapter_trusted_host_key_value",
+		},
+		{
+			name:      "resource key matches module key exactly",
+			address:   `module.secrets["my-key"].aws_secretsmanager_secret.this["my-key"]`,
+			attribute: "secret_string",
+			expected:  "secrets_my_key_secret_string",
+		},
+		{
+			name:      "no module prefix",
+			address:   "aws_ssm_parameter.db_password",
+			attribute: "value",
+			expected:  "db_password_value",
+		},
+		{
+			name:      "nested modules",
+			address:   `module.parent["p1"].module.child["c1"].aws_secret.this["c1/secret_val"]`,
+			attribute: "value",
+			expected:  "parent_p1_child_c1_secret_val_value",
+		},
+		// Real dmvhm addresses that were too long
+		{
+			name:      "dmvhm capture secrets long key",
+			address:   `module.capture_secrets["dmvhm-capture-service-develop"].aws_secretsmanager_secret_version.this["dmvhm-capture-service-develop/capture_client_secret"]`,
+			attribute: "secret_string",
+			expected:  "capture_secrets_dmvhm_capture_service_develop_capture_client_secret_secret_string",
+		},
+		{
+			name:      "dmvhm cdpa param stack",
+			address:   `module.cdpa_param_stack_values_parameters["/develop/cdp-adapter"].aws_ssm_parameter.ssm_parameters["/develop/cdp-adapter/api_key"]`,
+			attribute: "value",
+			expected:  "cdpa_param_stack_values_parameters_develop_cdp_adapter_api_key_value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := flattenAddress(tt.address, tt.attribute)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFlattenAddress_MaxLength(t *testing.T) {
+	t.Parallel()
+	// All dmvhm-style addresses should produce keys under 106 chars
+	// (128 - len("dmvhm-infrastructure") - 1 = 107, so <=106 is safe)
+	longAddresses := []struct {
+		address   string
+		attribute string
+	}{
+		{`module.capture_secrets["dmvhm-capture-service-develop"].aws_secretsmanager_secret_version.this["dmvhm-capture-service-develop/ia_callback_client_oauth"]`, "secret_string"},
+		{`module.capture_secrets["dmvhm-capture-service-develop"].aws_secretsmanager_secret_version.this["dmvhm-capture-service-develop/capture_client_secret"]`, "secret_string"},
+		{`module.cdpa_param_stack_values_parameters["/develop/cdp-adapter"].aws_ssm_parameter.ssm_parameters["/develop/cdp-adapter/trusted_host_key"]`, "value"},
+		{`module.cdpa_param_stack_values_parameters["/develop/cdp-adapter"].aws_ssm_parameter.ssm_parameters["/develop/cdp-adapter/api_key"]`, "value"},
+		{`module.cdpa_param_stack_values_parameters["/develop/cdp-adapter"].aws_ssm_parameter.ssm_parameters["/develop/cdp-adapter/certificate_password"]`, "value"},
+	}
+
+	projectName := "dmvhm-infrastructure"
+	maxKeyLen := 128 - len(projectName) - 1
+
+	for _, la := range longAddresses {
+		key := flattenAddress(la.address, la.attribute)
+		assert.LessOrEqual(t, len(key), maxKeyLen,
+			"key %q (%d chars) from %s exceeds max %d", key, len(key), la.address, maxKeyLen)
+	}
+}
+
+func TestDiscoverSensitiveSecrets_Dedup(t *testing.T) {
+	t.Parallel()
+
+	// Build a state with two resources that would produce the same flattened key.
+	state := states.NewState()
+	rootModule := state.RootModule()
+
+	rootModule.SetResourceInstanceCurrent(
+		addrs.ResourceInstance{
+			Resource: addrs.Resource{
+				Mode: addrs.ManagedResourceMode,
+				Type: "aws_db_instance",
+				Name: "main",
+			},
+			Key: addrs.NoKey,
+		},
+		&states.ResourceInstanceObjectSrc{
+			AttrsJSON: []byte(`{"id":"db1","password":"secret1"}`),
+			AttrSensitivePaths: []cty.PathValueMarks{
+				{Path: cty.GetAttrPath("password"), Marks: cty.NewValueMarks("sensitive")},
+			},
+		},
+		addrs.AbsProviderConfig{
+			Provider: addrs.MustParseProviderSourceString("registry.opentofu.org/hashicorp/aws"),
+		},
+		nil,
+	)
+
+	secrets, err := DiscoverSensitiveSecrets(state, "test-project")
+	require.NoError(t, err)
+	require.Len(t, secrets, 1)
+	assert.Equal(t, "main_password", secrets[0].ConfigKey)
+	assert.Equal(t, "secret1", secrets[0].Value)
+}
+
+func TestDiscoverSensitiveSecrets_MarksEntriesAsSecret(t *testing.T) {
+	t.Parallel()
+
+	state := states.NewState()
+	rootModule := state.RootModule()
+
+	rootModule.SetResourceInstanceCurrent(
+		addrs.ResourceInstance{
+			Resource: addrs.Resource{
+				Mode: addrs.ManagedResourceMode,
+				Type: "aws_secretsmanager_secret_version",
+				Name: "my_secret",
+			},
+			Key: addrs.NoKey,
+		},
+		&states.ResourceInstanceObjectSrc{
+			AttrsJSON: []byte(`{"id":"v1","secret_string":"hunter2"}`),
+			AttrSensitivePaths: []cty.PathValueMarks{
+				{Path: cty.GetAttrPath("secret_string"), Marks: cty.NewValueMarks("sensitive")},
+			},
+		},
+		addrs.AbsProviderConfig{
+			Provider: addrs.MustParseProviderSourceString("registry.opentofu.org/hashicorp/aws"),
+		},
+		nil,
+	)
+
+	entries, err := DiscoverSensitiveSecrets(state, "test-project")
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "my_secret_secret_string", entries[0].ConfigKey)
+	assert.Equal(t, "hunter2", entries[0].Value)
+	assert.True(t, entries[0].Secret, "entries from DiscoverSensitiveSecrets should have Secret=true")
+}
+
+func TestConfigEntry_WorkspaceVarsSensitivity(t *testing.T) {
+	t.Parallel()
+
+	// Simulate workspace variables as they come from the TFC/Scalr API.
+	vars := []struct {
+		key       string
+		value     string
+		sensitive bool
+	}{
+		{"db_timeout", "30", false},              // non-sensitive, non-empty → plain config
+		{"api_key", "sk-abc123", true},            // sensitive, non-empty → secret (TFC behavior)
+		{"redacted_password", "", true},            // sensitive, empty → skip (Scalr behavior)
+		{"oauth_base_url", "https://auth.co", false}, // non-sensitive → plain config
+	}
+
+	var entries []ConfigEntry
+	var skipped int
+	for _, rv := range vars {
+		if rv.value == "" {
+			skipped++
+			continue
+		}
+		entries = append(entries, ConfigEntry{
+			ConfigKey: rv.key,
+			Value:     rv.value,
+			Secret:    rv.sensitive,
+		})
+	}
+
+	require.Len(t, entries, 3)
+	assert.Equal(t, 1, skipped, "should skip 1 redacted variable")
+
+	// Non-sensitive vars should have Secret=false.
+	assert.Equal(t, "db_timeout", entries[0].ConfigKey)
+	assert.False(t, entries[0].Secret, "non-sensitive workspace var should be plain config")
+
+	// Sensitive vars with values (TFC behavior) should have Secret=true.
+	assert.Equal(t, "api_key", entries[1].ConfigKey)
+	assert.True(t, entries[1].Secret, "sensitive workspace var with value should be secret")
+
+	// Non-sensitive vars should have Secret=false.
+	assert.Equal(t, "oauth_base_url", entries[2].ConfigKey)
+	assert.False(t, entries[2].Secret, "non-sensitive workspace var should be plain config")
+}
+
 func TestCtyValueToInterface(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

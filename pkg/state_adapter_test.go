@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/tofu"
-	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/stretchr/testify/require"
 )
@@ -104,8 +103,11 @@ func TestConvertWithSensitiveValues(t *testing.T) {
 
 	password := data.Export.Deployment.Resources[2]
 	require.Equal(t, tokens.Type("random:index/randomPassword:RandomPassword"), password.Type)
-	_, ok := password.Outputs["result"].(*resource.Secret)
-	require.True(t, ok)
+	// Sensitive values are serialized with the Pulumi secret sentinel format
+	resultMap, ok := password.Outputs["result"].(map[string]interface{})
+	require.True(t, ok, "result should be a map (secret sentinel)")
+	require.Equal(t, "1b47061264138c4ac30d75fd1eb44270", resultMap["4dabf18193072939515e22adb298388d"])
+	require.Contains(t, resultMap, "plaintext")
 }
 
 func translateStateFromJson(ctx context.Context, tfStateJson string) (*TranslateStateResult, error) {
@@ -213,13 +215,14 @@ func Test_convertState_corrupted_state(t *testing.T) {
 	pulumiProviders, err := GetPulumiProvidersForTerraformState(tfState, nil)
 	require.NoError(t, err, "failed to get Pulumi providers")
 
-	_, errorMessages, err := convertState(tfState, pulumiProviders)
+	// Unknown/deprecated attributes in state are now skipped with a warning
+	// rather than causing a translation error. This handles the common case
+	// where older TF state files contain attributes removed in newer provider versions.
+	pulumiState, errorMessages, err := convertState(tfState, pulumiProviders)
 	require.NoError(t, err, "failed to convert state")
-	require.Equal(t, 1, len(errorMessages), "expected 1 error message")
-	require.Equal(t, "password", errorMessages[0].ResourceName)
-	require.Equal(t, "random_password", errorMessages[0].ResourceType)
-	require.Equal(t, "registry.opentofu.org/hashicorp/random", errorMessages[0].ResourceProvider)
-	require.Contains(t, errorMessages[0].ErrorMessage, "unsupported attribute \"corrupted\"")
+	require.Equal(t, 0, len(errorMessages), "deprecated attributes should be skipped, not cause errors")
+	require.Equal(t, 1, len(pulumiState.Resources), "resource should still be translated")
+	require.Equal(t, "random:index/randomPassword:RandomPassword", pulumiState.Resources[0].PulumiResourceID.Type)
 }
 
 func Test_convertState_unknown_provider(t *testing.T) {

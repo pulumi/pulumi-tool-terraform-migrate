@@ -131,7 +131,7 @@ func SetSecrets(stateFilePath, projectDir, projectName, stack, runtime string, m
 		configMap[m.ConfigKey] = auto.ConfigValue{Value: fmt.Sprintf("%v", value), Secret: true}
 	}
 
-	if err := writeConfigSecrets(projectDir, stack, configMap); err != nil {
+	if err := writeConfigValues(projectDir, stack, configMap); err != nil {
 		return err
 	}
 

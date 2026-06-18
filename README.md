@@ -61,19 +61,90 @@ To proceed with the migration, import the state into your Pulumi stack, feed the
 produce Pulumi sources that translate the Terraform sources. Instructing the LLM to aim for a clean `pulumi preview`
 helps is to fix discrepancies between code and state and get accurate results.
 
-## `module-map` command
+## Migration workflow
 
-Generates a `module-map.json` sidecar file describing Terraform module instances, their interfaces
+The `tf-digest` and `import-id-match` commands work together to automate Pulumi
+resource imports from Terraform state. The end-to-end flow looks like this:
+
+```
+ ┌─────────────────┐     ┌──────────────────────┐     ┌──────────────────────┐
+ │  TF sources +   │     │  Pulumi program with │     │  Mapping config      │
+ │  state          │     │  ComponentResources   │     │  (--map flags or     │
+ │                 │     │                       │     │   mappings.yaml)     │
+ └────────┬────────┘     └──────────┬────────────┘     └──────────┬───────────┘
+          │                         │                             │
+          ▼                         ▼                             │
+  ┌───────────────┐     ┌───────────────────────┐                 │
+  │  tf-digest    │     │  pulumi preview       │                 │
+  │               │     │  --import-file        │                 │
+  └───────┬───────┘     │  import.json          │                 │
+          │             └───────────┬───────────┘                 │
+          │                         │                             │
+          ▼                         ▼                             ▼
+  ┌───────────────┐     ┌───────────────────────┐     ┌───────────────────────┐
+  │ tf-digest.json│────▶│   import-id-match      │◀───│  --map / --mapping-   │
+  │               │     │                       │     │  file                 │
+  └───────────────┘     └───────────┬───────────┘     └───────────────────────┘
+                                    │
+                                    ▼
+                        ┌───────────────────────┐
+                        │  filled-import.json   │
+                        │  (IDs populated)      │
+                        └───────────┬───────────┘
+                                    │
+                                    ▼
+                        ┌───────────────────────┐
+                        │  pulumi import        │
+                        │  --file filled-       │
+                        │  import.json          │
+                        └───────────────────────┘
+```
+
+### Step-by-step example
+
+```bash
+# 1. Digest Terraform sources + state into a sidecar JSON
+pulumi plugin run terraform-migrate -- tf-digest \
+  --from ./tf-sources \
+  --hostname scalr.example.com \
+  --organization my-org \
+  --workspace my-workspace-dev \
+  --token-env SCALR_TOKEN \
+  --out tf-digest.json \
+  --pulumi-stack dev \
+  --pulumi-project myproject
+
+# 2. Generate the skeleton import file from a Pulumi preview
+pulumi preview --import-file import.json
+
+# 3. Fill import IDs by matching TF resources → Pulumi components
+pulumi plugin run terraform-migrate -- import-id-match \
+  --digest tf-digest.json \
+  --import-file import.json \
+  --map 'module.caas_rds=caas_rds' \
+  --map 'module.capture_ui["dmvhm"]=capture_ui["dmvhm"]' \
+  --map 'module.lambda_vpc["dmvhm"]=lambda_vpc-dmvhm' \
+  --out filled-import.json
+
+# 4. Import resources into the Pulumi stack
+pulumi import --file filled-import.json
+```
+
+---
+
+## `tf-digest` command
+
+Generates a `tf-digest.json` sidecar file describing Terraform module instances, their interfaces
 (inputs/outputs with evaluated values), and the Pulumi URNs of resources belonging to each instance.
 
 ```
-pulumi-tool-terraform-migrate module-map \
+pulumi-tool-terraform-migrate tf-digest \
   --from path/to/terraform-sources \
   --hostname app.terraform.io \
   --organization my-org \
   --workspace my-workspace \
   --token-env TFC_TOKEN \
-  --out /tmp/module-map.json \
+  --out /tmp/tf-digest.json \
   --pulumi-stack dev \
   --pulumi-project myproject \
   --project-dir ./pulumi
@@ -84,7 +155,7 @@ Pulumi config secrets via `pulumi config set --secret`. Use `--skip-secrets` to
 opt out. Config keys are derived from the terraform address
 (e.g. `module_rds_dmvhm_aws_db_instance_main_password`).
 
-### Flow
+### `tf-digest` internal flow
 
 ```
  ┌──────────────────────────────────────────────────────────┐
@@ -137,7 +208,7 @@ opt out. Config keys are derived from the terraform address
       • Cache scopes for all module instances
                       │
                       ▼
- [6] Build Module Map
+ [6] Build TF Digest
      For each module call in config:
      ├─ Discover instances from state (count/for_each keys)
      ├─ Match resources to each instance
@@ -151,12 +222,152 @@ opt out. Config keys are derived from the terraform address
      Also collect root-level resources
                       │
                       ▼
- [7] Write module-map.json
+ [7] Write tf-digest.json
                       │
                       ▼
  [8] Set Secrets (unless --skip-secrets)
      • Discover sensitive attrs via AttrSensitivePaths
      • Flatten terraform address to config key
      • Run `pulumi config set --secret` for each
-     • Values never appear in module-map.json output
+     • Values never appear in tf-digest.json output
+```
+
+---
+
+## `import-id-match` command
+
+Fills a Pulumi import file's `<PLACEHOLDER>` IDs by matching resources from a TF digest
+to Pulumi component children. This bridges the naming gap between Terraform's flat
+resource addresses and Pulumi's component-based naming.
+
+### Why is this needed?
+
+When `pulumi preview --import-file` generates a skeleton import file, all IDs
+are `<PLACEHOLDER>`. The TF digest knows the real import IDs (from state), but
+the resource names differ between TF and Pulumi.
+
+The `import-id-match` command solves this by:
+
+1. Grouping import entries by their `parent` field (component children)
+2. Grouping TF resources by their module path (from the digest)
+3. Using explicit mappings to pair TF modules with Pulumi components
+4. Matching children within each pair **by type + resource name**
+5. Falling back to type-only matching when there's a single candidate
+
+### Usage
+
+```
+pulumi-tool-terraform-migrate import-id-match \
+  --digest tf-digest.json \
+  --import-file import.json \
+  --map 'module.caas_rds=caas_rds' \
+  --map 'module.capture_ui["dmvhm"]=capture_ui["dmvhm"]' \
+  --mapping-file mappings.yaml \
+  --out filled-import.json
+```
+
+### Flags
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--digest` | Yes | Path to `tf-digest.json` (from `tf-digest` command) |
+| `--import-file` | Yes | Path to Pulumi import file (from `pulumi preview --import-file`) |
+| `--map` | No | Repeatable. Format: `module.X=componentName` |
+| `--mapping-file` | No | Path to YAML mapping file |
+| `--out` / `-o` | Yes | Output path for the filled import file |
+
+At least one of `--map` or `--mapping-file` should be provided (both can be used together;
+CLI flags override file entries).
+
+### Mapping format
+
+**CLI flags** (repeatable):
+```
+--map 'module.caas_rds=caas_rds'
+--map 'module.capture_ui["dmvhm"]=capture_ui["dmvhm"]'
+--map 'module.lambda_vpc["dmvhm"]=lambda_vpc-dmvhm'
+```
+
+- **Left side**: TF module path as it appears in `terraformPath` in the digest
+- **Right side**: Pulumi component instance name as it appears in the `name` field of
+  component entries in the import file
+
+**Mapping file** (`--mapping-file mappings.yaml`):
+```yaml
+mappings:
+  module.caas_rds: caas_rds
+  module.capture_ui["dmvhm"]: capture_ui["dmvhm"]
+  module.lambda_vpc["dmvhm"]: lambda_vpc-dmvhm
+```
+
+Root-level resources (no module / no parent) are matched automatically without mappings.
+
+### Matching algorithm
+
+The matching is deterministic when Pulumi components use TF resource names
+as logical name suffixes (the convention enforced by the component generation
+skill):
+
+```
+TF digest:   module.caas_rds.aws_rds_cluster.aurora_cluster
+                                              ^^^^^^^^^^^^^^ extractResourceName → "aurora_cluster"
+
+Import file: name: "caas_rds-aurora_cluster", parent: "caas_rds"
+                            ^^^^^^^^^^^^^^ extractImportSuffix → "aurora_cluster"
+
+Match: type=aws:rds/cluster:Cluster + name="aurora_cluster" → fill ID
+```
+
+```
+ ┌────────────────────────┐          ┌──────────────────────────┐
+ │    tf-digest.json      │          │     import.json          │
+ │                        │          │                          │
+ │  modules:              │          │  resources:              │
+ │    module.caas_rds:    │          │    - type: Component     │
+ │      - aws_rds_cluster │          │      name: caas_rds      │
+ │        .aurora_cluster │          │      component: true     │
+ │        id: cluster-123 │          │                          │
+ │      - aws_rds_cluster_│          │    - type: aws:rds/...   │
+ │        instance.inst   │          │      name: caas_rds-     │
+ │        id: inst-456    │          │        aurora_cluster    │
+ │                        │          │      id: <PLACEHOLDER>   │
+ │  rootResources:        │          │      parent: caas_rds    │
+ │    - aws_s3_bucket     │          │                          │
+ │      .my_bucket        │          │    - type: aws:rds/...   │
+ │      id: my-bucket     │          │      name: caas_rds-inst │
+ └───────────┬────────────┘          │      id: <PLACEHOLDER>   │
+             │                       │      parent: caas_rds    │
+             │    ┌──────────────┐   │                          │
+             │    │   mappings   │   │    - type: aws:s3/...    │
+             │    │              │   │      name: my_bucket     │
+             │    │ module.      │   │      id: <PLACEHOLDER>   │
+             │    │ caas_rds     │   └──────────┬───────────────┘
+             │    │  = caas_rds  │               │
+             │    └──────┬───────┘               │
+             │           │                       │
+             ▼           ▼                       ▼
+     ┌───────────────────────────────────────────────────┐
+     │           import-id-match command                 │
+     │                                                   │
+     │  1. Group import entries by parent                │
+     │     caas_rds → [aurora_cluster, inst]             │
+     │     (orphans) → [my_bucket]                       │
+     │                                                   │
+     │  2. Group TF resources by module path             │
+     │     module.caas_rds → [aurora_cluster, inst]      │
+     │     root → [my_bucket]                            │
+     │                                                   │
+     │  3. Pair via mappings                             │
+     │  4. Match by type + name (deterministic)          │
+     │  5. Root resources matched automatically          │
+     └──────────────────────┬────────────────────────────┘
+                            │
+                            ▼
+              ┌──────────────────────────────┐
+              │   filled-import.json         │
+              │                              │
+              │   aurora_cluster: cluster-123 │
+              │   inst: inst-456             │
+              │   my_bucket: my-bucket       │
+              └──────────────────────────────┘
 ```

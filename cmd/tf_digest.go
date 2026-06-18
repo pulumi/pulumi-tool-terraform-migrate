@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newModuleMapCmd() *cobra.Command {
+func newTfDigestCmd() *cobra.Command {
 	var from string
 	var stateFile string
 	var out string
@@ -38,11 +38,12 @@ func newModuleMapCmd() *cobra.Command {
 	var runtime string
 
 	cmd := &cobra.Command{
-		Use:   "module-map",
-		Short: "Generate a module-map.json sidecar from Terraform sources and state",
-		Long: `Generate a module-map.json sidecar file that describes Terraform module
-instances, their interfaces (inputs/outputs), and the Pulumi URNs of
-resources belonging to each module instance.
+		Use:   "tf-digest",
+		Short: "Digest Terraform sources and state into a tf-digest.json sidecar",
+		Long: `Digest Terraform configuration and state into a tf-digest.json sidecar
+file that describes Terraform module instances, their interfaces
+(inputs/outputs), and the Pulumi URNs of resources belonging to each
+module instance.
 
 State can be provided as a local file (--state-file) or pulled from a
 TFC-compatible remote backend (--hostname, --organization, --workspace,
@@ -51,21 +52,21 @@ TFC-compatible remote backend (--hostname, --organization, --workspace,
 Examples:
 
   # From a local state file
-  pulumi-terraform-migrate module-map \
+  pulumi-terraform-migrate tf-digest \
     --from path/to/terraform-sources \
     --state-file path/to/terraform.tfstate \
-    --out /tmp/module-map.json \
+    --out /tmp/tf-digest.json \
     --pulumi-stack dev \
     --pulumi-project myproject
 
   # From a TFC-compatible remote (Scalr, TFC, TFE)
-  pulumi-terraform-migrate module-map \
+  pulumi-terraform-migrate tf-digest \
     --from path/to/terraform-sources \
     --hostname app.terraform.io \
     --organization my-org \
     --workspace my-workspace-dev \
     --token-env TFC_TOKEN \
-    --out /tmp/module-map.json \
+    --out /tmp/tf-digest.json \
     --pulumi-stack dev \
     --pulumi-project myproject
 `,
@@ -133,7 +134,7 @@ Examples:
 				if remote != nil && strings.Contains(err.Error(), "authentication failed") {
 					return fmt.Errorf("%w: check token in env var %s", err, tokenEnv)
 				}
-				return fmt.Errorf("failed to generate module map: %w", err)
+				return fmt.Errorf("failed to generate tf digest: %w", err)
 			}
 			return nil
 		},
@@ -161,5 +162,5 @@ Examples:
 }
 
 func init() {
-	rootCmd.AddCommand(newModuleMapCmd())
+	rootCmd.AddCommand(newTfDigestCmd())
 }

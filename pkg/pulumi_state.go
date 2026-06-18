@@ -26,9 +26,68 @@ import (
 
 	"github.com/pulumi/pulumi/sdk/v3/go/common/apitype"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/resource"
+	"github.com/pulumi/pulumi/sdk/v3/go/common/resource/sig"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/tokens"
 	"github.com/pulumi/pulumi/sdk/v3/go/common/util/contract"
 )
+
+// serializePropertyMap converts a PropertyMap to a map[string]interface{} suitable
+// for the Pulumi state file JSON format. Unlike Mappable(), this serializes
+// secret values using the standard Pulumi secret sentinel format:
+//
+//	{"4dabf18...": "1b47061...", "plaintext": "<json-encoded-value>"}
+//
+// `pulumi stack import` will re-encrypt these using the stack's encrypter.
+func serializePropertyMap(props resource.PropertyMap) map[string]interface{} {
+	return resource.PropertyMap.MapRepl(props, nil, func(v resource.PropertyValue) (interface{}, bool) {
+		if v.IsSecret() {
+			inner := serializePropertyValue(v.SecretValue().Element)
+			innerJSON, err := json.Marshal(inner)
+			if err != nil {
+				return nil, false
+			}
+			return map[string]interface{}{
+				sig.Key:     sig.Secret,
+				"plaintext": string(innerJSON),
+			}, true
+		}
+		return nil, false
+	})
+}
+
+func serializePropertyValue(v resource.PropertyValue) interface{} {
+	if v.IsSecret() {
+		inner := serializePropertyValue(v.SecretValue().Element)
+		innerJSON, _ := json.Marshal(inner)
+		return map[string]interface{}{
+			sig.Key:     sig.Secret,
+			"plaintext": string(innerJSON),
+		}
+	}
+	if v.IsNull() {
+		return nil
+	}
+	if v.IsBool() {
+		return v.BoolValue()
+	}
+	if v.IsNumber() {
+		return v.NumberValue()
+	}
+	if v.IsString() {
+		return v.StringValue()
+	}
+	if v.IsArray() {
+		arr := make([]interface{}, len(v.ArrayValue()))
+		for i, elem := range v.ArrayValue() {
+			arr[i] = serializePropertyValue(elem)
+		}
+		return arr
+	}
+	if v.IsObject() {
+		return serializePropertyMap(v.ObjectValue())
+	}
+	return v.V
+}
 
 func makeUrn(stackName, projectName, typeName, resourceName string) resource.URN {
 	return resource.URN(fmt.Sprintf("urn:pulumi:%s::%s::%s::%s", stackName, projectName, typeName, resourceName))
@@ -166,8 +225,8 @@ func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName st
 			Custom:   true,
 			ID:       resource.ID(providerState.ID),
 			Type:     tokens.Type(providerState.Type),
-			Inputs:   providerState.Inputs.Mappable(),
-			Outputs:  providerState.Outputs.Mappable(),
+			Inputs:   serializePropertyMap(providerState.Inputs),
+			Outputs:  serializePropertyMap(providerState.Outputs),
 			Created:  &now,
 			Modified: &now,
 		}
@@ -190,8 +249,8 @@ func InsertResourcesIntoDeployment(state *PulumiState, stackName, projectName st
 			Custom:   true,
 			ID:       resource.ID(res.ID),
 			Type:     tokens.Type(res.Type),
-			Inputs:   res.Inputs.Mappable(),
-			Outputs:  res.Outputs.Mappable(),
+			Inputs:   serializePropertyMap(res.Inputs),
+			Outputs:  serializePropertyMap(res.Outputs),
 			Parent:   stackURN,
 			Provider: providerLink,
 			Created:  &now,

@@ -495,22 +495,39 @@ func populateEvaluatedValues(
 	}
 }
 
-// SensitiveSecret represents a sensitive attribute discovered in state,
-// ready to be set as a Pulumi config secret.
-type SensitiveSecret struct {
+// ConfigEntry represents a config value to be set on a Pulumi stack.
+// When Secret is true, the value is encrypted in the stack config.
+type ConfigEntry struct {
 	ConfigKey string
 	Value     string
+	Secret    bool
 }
+
+// SensitiveSecret is an alias for backwards compatibility.
+type SensitiveSecret = ConfigEntry
 
 // DiscoverSensitiveSecrets walks the state and collects all sensitive attribute
 // values, returning them as config key / value pairs. The config key is derived
 // by flattening the terraform address and attribute name.
-func DiscoverSensitiveSecrets(state *states.State) []SensitiveSecret {
+//
+// projectName is used for length checking: Pulumi config keys are limited to
+// 128 chars total including the "project:" namespace prefix.
+//
+// After collecting all secrets, this function:
+//  1. Deduplicates keys by appending _2, _3, etc. and warns to stderr
+//  2. Checks key lengths and returns an error if any exceed the limit
+func DiscoverSensitiveSecrets(state *states.State, projectName string) ([]SensitiveSecret, error) {
 	if state == nil {
-		return nil
+		return nil, nil
 	}
 
-	var secrets []SensitiveSecret
+	type rawSecret struct {
+		address   string
+		attribute string
+		value     string
+	}
+
+	var raw []rawSecret
 	for _, module := range state.Modules {
 		for _, res := range module.Resources {
 			for instKey, inst := range res.Instances {
@@ -549,64 +566,271 @@ func DiscoverSensitiveSecrets(state *states.State) []SensitiveSecret {
 					if !exists || value == nil {
 						continue
 					}
-					configKey := flattenAddress(address, step.Name)
-					secrets = append(secrets, SensitiveSecret{
-						ConfigKey: configKey,
-						Value:     fmt.Sprintf("%v", value),
+					raw = append(raw, rawSecret{
+						address:   address,
+						attribute: step.Name,
+						value:     fmt.Sprintf("%v", value),
 					})
 				}
 			}
 		}
 	}
-	return secrets
+
+	// Generate keys and handle dedup + length checking.
+	maxKeyLen := 128 - len(projectName) - 1 // subtract "project:" namespace
+	keyCounts := make(map[string]int)
+	keyToAddress := make(map[string]string) // first address that produced each key
+
+	var secrets []SensitiveSecret
+	var tooLong []string
+
+	for _, r := range raw {
+		key := flattenAddress(r.address, r.attribute)
+		keyCounts[key]++
+		count := keyCounts[key]
+
+		if count == 1 {
+			keyToAddress[key] = r.address
+		}
+
+		finalKey := key
+		if count > 1 {
+			finalKey = fmt.Sprintf("%s_%d", key, count)
+			fmt.Fprintf(os.Stderr, "  WARNING: duplicate config key %q from:\n    1: %s\n    %d: %s\n",
+				key, keyToAddress[key], count, r.address)
+		}
+
+		if len(finalKey) > maxKeyLen {
+			tooLong = append(tooLong, fmt.Sprintf(
+				"key %q (%d chars, max %d) from %s",
+				finalKey, len(finalKey), maxKeyLen, r.address))
+		}
+
+		secrets = append(secrets, ConfigEntry{
+			ConfigKey: finalKey,
+			Value:     r.value,
+			Secret:    true,
+		})
+	}
+
+	if len(tooLong) > 0 {
+		for _, msg := range tooLong {
+			fmt.Fprintf(os.Stderr, "  ERROR: config key too long: %s\n", msg)
+		}
+		return secrets, fmt.Errorf("%d config key(s) exceed the 128-char Pulumi limit (including %q namespace)", len(tooLong), projectName+":")
+	}
+
+	return secrets, nil
 }
 
-// flattenAddress converts a terraform address + attribute into a valid Pulumi config key.
-// e.g. "module.rds[\"dmvhm\"].aws_db_instance.main" + "password" → "module_rds_dmvhm_aws_db_instance_main_password"
+// flattenAddress converts a terraform address + attribute into a concise Pulumi config key.
+//
+// Terraform addresses like:
+//
+//	module.capture_secrets["dmvhm-capture-service-develop"].aws_secretsmanager_secret_version.this["dmvhm-capture-service-develop/cap_client_oauth"]
+//
+// are shortened by:
+//  1. Stripping all "module." prefixes
+//  2. Stripping resource types (e.g. aws_secretsmanager_secret_version)
+//  3. Stripping generic resource names like "this", "ssm_parameters"
+//  4. Deduplicating for_each keys that repeat between module and resource levels
+//
+// The result is a human-readable key like "capture_secrets_cap_client_oauth_secret_string".
 func flattenAddress(address, attribute string) string {
-	s := address + "_" + attribute
-	replacer := strings.NewReplacer(
-		".", "_",
-		"[", "_",
-		"]", "",
+	clean := strings.NewReplacer(
 		"\"", "",
-		"/", "_",
 		" ", "_",
 	)
-	return replacer.Replace(s)
+	address = clean.Replace(address)
+
+	// Generic resource names that add no value.
+	genericNames := map[string]bool{
+		"this":           true,
+		"ssm_parameters": true,
+	}
+
+	// Parse the address into module segments and a resource tail.
+	// Address forms:
+	//   module.A[k1].module.B[k2].resource_type.name[k3]   (nested modules)
+	//   module.A[k1].resource_type.name[k3]                 (single module)
+	//   resource_type.name[k3]                              (root resource)
+	type segment struct {
+		name string
+		key  string
+	}
+	var moduleSegments []segment
+	var resourceName, resourceKey string
+
+	// Split into dot-separated parts, handling brackets.
+	remaining := address
+	var parts []string
+	for remaining != "" {
+		// Find next dot that isn't inside brackets.
+		depth := 0
+		dotIdx := -1
+		for i, c := range remaining {
+			switch c {
+			case '[':
+				depth++
+			case ']':
+				depth--
+			case '.':
+				if depth == 0 {
+					dotIdx = i
+				}
+			}
+			if dotIdx >= 0 {
+				break
+			}
+		}
+		if dotIdx >= 0 {
+			parts = append(parts, remaining[:dotIdx])
+			remaining = remaining[dotIdx+1:]
+		} else {
+			parts = append(parts, remaining)
+			remaining = ""
+		}
+	}
+
+	// Walk parts: "module" keywords indicate module segments; the last two non-module
+	// parts are resource_type and resource_name.
+	i := 0
+	for i < len(parts) {
+		if parts[i] == "module" && i+1 < len(parts) {
+			name, key := splitForEachKey(parts[i+1])
+			moduleSegments = append(moduleSegments, segment{name: name, key: key})
+			i += 2
+		} else {
+			break
+		}
+	}
+
+	// Remaining parts: resource_type[.resource_name[key]]
+	// parts[i] = resource type (discarded), parts[i+1] = resource name + optional key
+	if i+1 < len(parts) {
+		// Skip resource type at parts[i]
+		resourceName, resourceKey = splitForEachKey(parts[i+1])
+	} else if i < len(parts) {
+		// Only resource type, no separate name (rare)
+		resourceName, _ = splitForEachKey(parts[i])
+	}
+
+	// Build key from meaningful segments.
+	var keyParts []string
+
+	// Collect all sanitized module keys for dedup.
+	var allModuleKeys []string
+	for _, ms := range moduleSegments {
+		keyParts = append(keyParts, ms.name)
+		if ms.key != "" {
+			sanitized := sanitizeSegment(ms.key)
+			keyParts = append(keyParts, sanitized)
+			allModuleKeys = append(allModuleKeys, sanitized)
+		}
+	}
+
+	// Include resource name only if it's not generic.
+	if resourceName != "" && !genericNames[resourceName] {
+		keyParts = append(keyParts, resourceName)
+	}
+
+	// Include resource key, deduplicating against module keys.
+	if resourceKey != "" {
+		sanitized := sanitizeSegment(resourceKey)
+		// Try to strip redundant prefixes from module keys.
+		for _, mk := range allModuleKeys {
+			if sanitized == mk {
+				sanitized = ""
+				break
+			}
+			if strings.HasPrefix(sanitized, mk+"_") {
+				sanitized = sanitized[len(mk)+1:]
+				break
+			}
+		}
+		if sanitized != "" {
+			keyParts = append(keyParts, sanitized)
+		}
+	}
+
+	keyParts = append(keyParts, attribute)
+	return strings.Join(keyParts, "_")
 }
 
-// SetSecretsFromState writes sensitive secrets to Pulumi stack config using the automation API.
+// splitForEachKey splits "name[key]" into ("name", "key") or ("name", "") if no key.
+func splitForEachKey(s string) (string, string) {
+	if idx := strings.Index(s, "["); idx >= 0 {
+		key := strings.TrimRight(s[idx+1:], "]")
+		return s[:idx], key
+	}
+	return s, ""
+}
+
+// sanitizeSegment replaces non-alphanumeric chars with underscores and collapses runs.
+func sanitizeSegment(s string) string {
+	var b strings.Builder
+	lastUnderscore := false
+	for _, c := range s {
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') {
+			b.WriteRune(c)
+			lastUnderscore = false
+		} else if !lastUnderscore {
+			b.WriteRune('_')
+			lastUnderscore = true
+		}
+	}
+	return strings.Trim(b.String(), "_")
+}
+
+// SetSecretsFromState writes config entries to Pulumi stack config using the automation API.
+// Entries with Secret=true are encrypted; others are set as plain config.
 // Secret values are never printed or logged.
-func SetSecretsFromState(secrets []SensitiveSecret, projectDir, projectName, stack, runtime string) error {
+func SetSecretsFromState(entries []ConfigEntry, projectDir, projectName, stack, runtime string) error {
 	// Ensure a Pulumi project exists before stack operations.
 	if err := ensurePulumiProject(projectDir, projectName, runtime); err != nil {
 		return err
 	}
 
-	configMap := make(auto.ConfigMap, len(secrets))
-	for _, s := range secrets {
-		configMap[s.ConfigKey] = auto.ConfigValue{Value: s.Value, Secret: true}
+	configMap := make(auto.ConfigMap, len(entries))
+	for _, e := range entries {
+		configMap[e.ConfigKey] = auto.ConfigValue{Value: e.Value, Secret: e.Secret}
 	}
 
-	if err := writeConfigSecrets(projectDir, stack, configMap); err != nil {
+	if err := writeConfigValues(projectDir, stack, configMap); err != nil {
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Set %d secrets on stack %s\n", len(secrets), stack)
+	var secretCount, plainCount int
+	for _, e := range entries {
+		if e.Secret {
+			secretCount++
+		} else {
+			plainCount++
+		}
+	}
+	fmt.Fprintf(os.Stderr, "Set %d secrets and %d plain config values on stack %s\n", secretCount, plainCount, stack)
 	return nil
 }
 
-// writeConfigSecrets creates a local workspace and writes secret config values.
-func writeConfigSecrets(projectDir, stack string, configMap auto.ConfigMap) error {
+// writeConfigValues creates a local workspace, ensures the stack exists, and writes config values.
+// It sets each key individually to avoid overwriting existing config.
+func writeConfigValues(projectDir, stack string, configMap auto.ConfigMap) error {
 	ctx := context.Background()
 	ws, err := auto.NewLocalWorkspace(ctx, auto.WorkDir(projectDir))
 	if err != nil {
 		return fmt.Errorf("creating workspace: %w", err)
 	}
 
-	if err := ws.SetAllConfig(ctx, stack, configMap); err != nil {
-		return fmt.Errorf("setting config secrets: %w", err)
+	// Create the stack if it doesn't already exist.
+	fmt.Fprintf(os.Stderr, "Ensuring stack %s exists...\n", stack)
+	if err := ws.CreateStack(ctx, stack); err != nil && !auto.IsCreateStack409Error(err) {
+		return fmt.Errorf("creating stack %s: %w", stack, err)
+	}
+
+	for key, val := range configMap {
+		if err := ws.SetConfig(ctx, stack, key, val); err != nil {
+			return fmt.Errorf("setting config key %q: %w", key, err)
+		}
 	}
 	return nil
 }

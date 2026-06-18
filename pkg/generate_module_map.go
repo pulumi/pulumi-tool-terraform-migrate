@@ -176,17 +176,58 @@ func GenerateModuleMap(ctx context.Context, tfDir, stateFilePath, outputPath, st
 
 	fmt.Fprintf(os.Stderr, "Module map written to %s\n", outputPath)
 
-	// Step 8: Set sensitive attributes as Pulumi config secrets.
+	// Step 8: Set sensitive attributes and workspace variables as Pulumi config secrets.
 	if secrets != nil && !secrets.Skip {
 		fmt.Fprintf(os.Stderr, "[8] Discovering sensitive attributes...\n")
-		sensitiveSecrets := DiscoverSensitiveSecrets(rawState)
+		sensitiveSecrets, err := DiscoverSensitiveSecrets(rawState, secrets.ProjectName)
+		if err != nil {
+			return fmt.Errorf("discovering secrets: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "  Found %d sensitive attributes in state\n", len(sensitiveSecrets))
+
+		// Set tfvars values as plain config. These come from terraform.tfvars
+		// and *.auto.tfvars files committed to the repo.
+		// Workspace variables (below) take priority and may override these.
+		if config != nil {
+			tfvarsEntries := collectTFVarsConfig(config, tfDir)
+			if len(tfvarsEntries) > 0 {
+				sensitiveSecrets = append(sensitiveSecrets, tfvarsEntries...)
+				fmt.Fprintf(os.Stderr, "  Added %d tfvars values as plain config\n", len(tfvarsEntries))
+			}
+		}
+
+		// Set workspace variables as config. Variables marked sensitive in
+		// the backend are set as secrets; non-sensitive ones as plain config.
+		// Some backends (e.g. Scalr) redact sensitive values in the API
+		// response — skip those and warn so the user can set them manually.
+		if remoteVars != nil {
+			var secretCount, plainCount, skipped int
+			for _, rv := range remoteVars {
+				if rv.Value == "" {
+					skipped++
+					fmt.Fprintf(os.Stderr, "  WARNING: workspace var %q is redacted (sensitive in backend), set manually with --secret\n", rv.Key)
+					continue
+				}
+				sensitiveSecrets = append(sensitiveSecrets, ConfigEntry{
+					ConfigKey: rv.Key,
+					Value:     rv.Value,
+					Secret:    rv.Sensitive,
+				})
+				if rv.Sensitive {
+					secretCount++
+				} else {
+					plainCount++
+				}
+			}
+			fmt.Fprintf(os.Stderr, "  Workspace vars: %d as secrets, %d as plain config (%d skipped, redacted)\n",
+				secretCount, plainCount, skipped)
+		}
+
 		if len(sensitiveSecrets) > 0 {
-			fmt.Fprintf(os.Stderr, "  Found %d sensitive attributes, setting as Pulumi config secrets...\n", len(sensitiveSecrets))
+			fmt.Fprintf(os.Stderr, "  Setting %d total secrets on stack...\n", len(sensitiveSecrets))
 			if err := SetSecretsFromState(sensitiveSecrets, secrets.ProjectDir, secrets.ProjectName, stackName, secrets.Runtime); err != nil {
 				return fmt.Errorf("setting secrets: %w", err)
 			}
-		} else {
-			fmt.Fprintf(os.Stderr, "  No sensitive attributes found in state\n")
 		}
 	}
 

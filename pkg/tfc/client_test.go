@@ -112,6 +112,111 @@ func TestStatePull_Unauthorized(t *testing.T) {
 	assert.Contains(t, err.Error(), "authentication failed")
 }
 
+func TestListVariables_Paginated(t *testing.T) {
+	t.Parallel()
+
+	org, workspace, wsID := "myorg", "myworkspace", "ws-abc123"
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/.well-known/terraform.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"tfe.v2": "/api/v2/"})
+	})
+
+	mux.HandleFunc(fmt.Sprintf("/api/v2/organizations/%s/workspaces/%s", org, workspace),
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/vnd.api+json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": map[string]interface{}{"id": wsID, "type": "workspaces"},
+			})
+		})
+
+	mux.HandleFunc(fmt.Sprintf("/api/v2/workspaces/%s/vars", wsID),
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/vnd.api+json")
+			if r.URL.Query().Get("page[number]") == "2" {
+				// Page 2: last page
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"data": []map[string]interface{}{
+						{"attributes": map[string]interface{}{"key": "var_b", "value": "val_b", "category": "terraform"}},
+					},
+					"meta": map[string]interface{}{
+						"pagination": map[string]interface{}{
+							"current-page": 2, "next-page": nil, "total-pages": 2, "total-count": 3,
+						},
+					},
+				})
+				return
+			}
+			// Page 1
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": []map[string]interface{}{
+					{"attributes": map[string]interface{}{"key": "var_a", "value": "val_a", "category": "terraform"}},
+					{"attributes": map[string]interface{}{"key": "env_var", "value": "skip", "category": "env"}},
+				},
+				"meta": map[string]interface{}{
+					"pagination": map[string]interface{}{
+						"current-page": 1, "next-page": 2, "total-pages": 2, "total-count": 3,
+					},
+				},
+			})
+		})
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	client := &Client{Hostname: server.URL, Token: "test-token"}
+	vars, err := client.ListVariables(context.Background(), org, workspace)
+	require.NoError(t, err)
+	require.Len(t, vars, 2)
+	assert.Equal(t, "var_a", vars[0].Key)
+	assert.Equal(t, "var_b", vars[1].Key)
+}
+
+func TestListVariables_SinglePage(t *testing.T) {
+	t.Parallel()
+
+	org, workspace, wsID := "myorg", "myworkspace", "ws-abc123"
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/.well-known/terraform.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"tfe.v2": "/api/v2/"})
+	})
+
+	mux.HandleFunc(fmt.Sprintf("/api/v2/organizations/%s/workspaces/%s", org, workspace),
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/vnd.api+json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": map[string]interface{}{"id": wsID, "type": "workspaces"},
+			})
+		})
+
+	mux.HandleFunc(fmt.Sprintf("/api/v2/workspaces/%s/vars", wsID),
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/vnd.api+json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": []map[string]interface{}{
+					{"attributes": map[string]interface{}{"key": "only_var", "value": "val", "category": "terraform"}},
+				},
+				"meta": map[string]interface{}{
+					"pagination": map[string]interface{}{
+						"current-page": 1, "next-page": nil, "total-pages": 1, "total-count": 1,
+					},
+				},
+			})
+		})
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	client := &Client{Hostname: server.URL, Token: "test-token"}
+	vars, err := client.ListVariables(context.Background(), org, workspace)
+	require.NoError(t, err)
+	require.Len(t, vars, 1)
+	assert.Equal(t, "only_var", vars[0].Key)
+}
+
 func TestStatePull_WorkspaceNotFound(t *testing.T) {
 	t.Parallel()
 

@@ -15,6 +15,7 @@
 package pkg
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -134,6 +135,66 @@ func BuildRootVariables(
 	}
 
 	return rootVars
+}
+
+// collectTFVarsConfig reads terraform.tfvars and *.auto.tfvars and returns
+// ConfigEntry values for each variable. These are set as plain (non-secret)
+// Pulumi config so that the program can read them with config.require().
+func collectTFVarsConfig(config *configs.Config, tfDir string) []ConfigEntry {
+	seen := make(map[string]bool)
+	var entries []ConfigEntry
+
+	addVars := func(path string) {
+		vals, err := parseTFVarsFile(path)
+		if err != nil {
+			return
+		}
+		for k, v := range vals {
+			// Only include variables declared in the root module.
+			if _, declared := config.Root.Module.Variables[k]; !declared {
+				continue
+			}
+			seen[k] = true
+			strVal := ctyValueToString(v)
+			if strVal == "" {
+				continue
+			}
+			entries = append(entries, ConfigEntry{
+				ConfigKey: k,
+				Value:     strVal,
+				Secret:    false,
+			})
+		}
+	}
+
+	// terraform.tfvars
+	addVars(filepath.Join(tfDir, "terraform.tfvars"))
+
+	// *.auto.tfvars (alphabetically)
+	autoFiles, _ := filepath.Glob(filepath.Join(tfDir, "*.auto.tfvars"))
+	sort.Strings(autoFiles)
+	for _, f := range autoFiles {
+		addVars(f)
+	}
+
+	return entries
+}
+
+// ctyValueToString converts a cty.Value to its string representation for config.
+// For strings, returns the raw string. For other types, returns JSON.
+func ctyValueToString(v cty.Value) string {
+	if !v.IsKnown() || v.IsNull() {
+		return ""
+	}
+	if v.Type() == cty.String {
+		return v.AsString()
+	}
+	// For complex types (lists, maps, objects), serialize to JSON.
+	jsonBytes, err := json.Marshal(ctyValueToInterface(v))
+	if err != nil {
+		return ""
+	}
+	return string(jsonBytes)
 }
 
 // parseTFVarsFile parses an HCL .tfvars file and returns the attribute values.
