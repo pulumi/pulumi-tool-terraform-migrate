@@ -29,7 +29,7 @@ jobs:
           export-environment-variables: false
 
       - name: Export AWS Credentials
-        uses: pulumi/esc-action@6cf9520e68354d86f81c455e8d43eabd58f5c9f5 # v1.5.0
+        uses: pulumi/esc-action@197ccaa42ab49560ce838a3010eb8345ce086896 # v1.6.0
         env:
           PULUMI_ACCESS_TOKEN: ${{ steps.generate_pulumi_token.outputs.pulumi-access-token }}
         with:
