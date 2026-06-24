@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -43,10 +44,13 @@ func newPatchStateCmd() *cobra.Command {
 		Long: `Patch a Pulumi stack state (from pulumi stack export) with field values
 from a TF digest that the cloud API import doesn't return.
 
-Only patches fields classified as "not_read" in the fields file. For each
-matching resource, if the state input is nil:
+Uses schema-driven patching: loads provider schemas based on the providers
+recorded in the digest, then iterates each resource's fields to determine
+which need patching.
+
+For each matching resource, if the state input is nil:
   1. Use the digest value if available (from TF state)
-  2. Fall back to the TF SDK default from the fields file
+  2. Fall back to the TF SDK default from the provider schema
 
 After patching, re-import the state with: pulumi stack import --file <output>
 
@@ -56,10 +60,18 @@ Example:
   pulumi-terraform-migrate patch-state \
     --state state.json \
     --digest tf-digest.json \
-    --fields aws-import-diff-fields.json \
     --mapping-file mappings.yaml \
     --out patched-state.json
   pulumi stack import --file patched-state.json
+
+Legacy mode (deprecated):
+
+  pulumi-terraform-migrate patch-state \
+    --state state.json \
+    --digest tf-digest.json \
+    --fields aws-import-diff-fields.json \
+    --mapping-file mappings.yaml \
+    --out patched-state.json
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Load state.
@@ -76,12 +88,6 @@ Example:
 			var digest pkg.ModuleMap
 			if err := json.Unmarshal(digestData, &digest); err != nil {
 				return fmt.Errorf("parsing digest: %w", err)
-			}
-
-			// Load fields.
-			fieldsFile, err := pkg.LoadFieldsFile(fieldsPath)
-			if err != nil {
-				return err
 			}
 
 			// Load mappings.
@@ -137,10 +143,42 @@ Example:
 				fmt.Fprintf(os.Stderr, "Loaded %d secret config values from stack %s\n", len(configSecrets), stack)
 			}
 
-			// Patch.
-			patched, result, err := pkg.PatchState(stateData, &digest, fieldsFile, moduleMappings, resourceMappings, configSecrets, configDir)
-			if err != nil {
-				return err
+			var patched []byte
+			var result *pkg.PatchStateResult
+
+			if fieldsPath != "" {
+				// Legacy path: use hand-curated fields file.
+				fmt.Fprintf(os.Stderr, "WARNING: --fields is deprecated; omit it to use schema-driven patching\n")
+				fieldsFile, err := pkg.LoadFieldsFile(fieldsPath)
+				if err != nil {
+					return err
+				}
+				patched, result, err = pkg.PatchState(stateData, &digest, fieldsFile, moduleMappings, resourceMappings, configSecrets, configDir)
+				if err != nil {
+					return err
+				}
+			} else {
+				// Schema-driven path: load providers from digest metadata.
+				if len(digest.Providers) == 0 {
+					return fmt.Errorf("digest has no providers metadata; regenerate with latest module-map command, or use --fields for legacy mode")
+				}
+
+				var tfProviders []providermap.TerraformProviderName
+				for name := range digest.Providers {
+					tfProviders = append(tfProviders, providermap.TerraformProviderName(name))
+				}
+
+				providers, err := pkg.PulumiProvidersForTerraformProviders(tfProviders, digest.Providers)
+				if err != nil {
+					return fmt.Errorf("loading providers: %w", err)
+				}
+
+				typeMap := pkg.BuildPulumiToTFTypeMap(providers)
+
+				patched, result, err = pkg.PatchStateFromSchema(stateData, &digest, providers, typeMap, moduleMappings, resourceMappings, configSecrets, configDir)
+				if err != nil {
+					return err
+				}
 			}
 
 			// Write output.
@@ -157,14 +195,13 @@ Example:
 			fmt.Fprintf(os.Stderr, "  No fields to patch: %d\n", result.NoFields)
 			fmt.Fprintf(os.Stderr, "  Digest mapped:      %d\n", result.DigestMapped)
 
-			_ = strings.TrimSpace // suppress unused import if needed
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&statePath, "state", "", "Exported stack state (from pulumi stack export)")
 	cmd.Flags().StringVar(&digestPath, "digest", "", "TF digest (tf-digest.json)")
-	cmd.Flags().StringVar(&fieldsPath, "fields", "", "aws-import-diff-fields.json")
+	cmd.Flags().StringVar(&fieldsPath, "fields", "", "DEPRECATED: aws-import-diff-fields.json (omit for schema-driven patching)")
 	cmd.Flags().StringVar(&mappingFile, "mapping-file", "", "Path to YAML mapping file")
 	cmd.Flags().StringVarP(&outPath, "out", "o", "", "Output path for patched state")
 	cmd.Flags().StringVar(&projectDir, "project-dir", "", "Pulumi project directory (for reading stack config secrets)")
@@ -173,7 +210,6 @@ Example:
 
 	cmd.MarkFlagRequired("state")
 	cmd.MarkFlagRequired("digest")
-	cmd.MarkFlagRequired("fields")
 	cmd.MarkFlagRequired("out")
 
 	return cmd

@@ -37,6 +37,7 @@ import (
 type ModuleMap struct {
 	Modules       map[string]*ModuleMapEntry `json:"modules"`
 	RootResources []ModuleResource           `json:"rootResources,omitempty"`
+	Providers     map[string]string          `json:"providers,omitempty"`
 }
 
 // ModuleResource represents a single resource within a module instance.
@@ -89,6 +90,14 @@ func BuildModuleMap(
 ) (*ModuleMap, error) {
 	mm := &ModuleMap{
 		Modules: make(map[string]*ModuleMapEntry),
+	}
+
+	// Store provider registry addresses for downstream consumers (e.g., patch-state).
+	if pulumiProviders != nil {
+		mm.Providers = make(map[string]string, len(pulumiProviders))
+		for tfAddr := range pulumiProviders {
+			mm.Providers[string(tfAddr)] = ""
+		}
 	}
 
 	fmt.Fprintf(os.Stderr, "  Building module entries...\n")

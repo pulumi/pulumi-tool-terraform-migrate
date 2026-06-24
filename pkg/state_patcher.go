@@ -29,6 +29,8 @@ import (
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
+	"github.com/pulumi/pulumi-terraform-bridge/v3/pkg/tfbridge/info"
+	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
 	pulumiarchive "github.com/pulumi/pulumi/sdk/v3/go/common/resource/archive"
 	pulumiasset "github.com/pulumi/pulumi/sdk/v3/go/common/resource/asset"
 )
@@ -1082,6 +1084,286 @@ func urnName(urn string) string {
 		return ""
 	}
 	return parts[len(parts)-1]
+}
+
+// PatchStateFromSchema patches imported state using provider schema instead of a hand-curated
+// fields file. For each resource, it looks up the provider schema and iterates ALL
+// input fields, patching any that are nil/empty in the imported state from the digest
+// or schema defaults.
+//
+// configSecrets is an optional map of config key -> decrypted value, used to resolve
+// sensitive fields that the digest redacts as "(sensitive)".
+// configDir is the TF config directory, used to resolve asset file paths.
+func PatchStateFromSchema(
+	stateData []byte,
+	digest *ModuleMap,
+	providers map[providermap.TerraformProviderName]*ProviderWithMetadata,
+	pulumiToTFType map[string]string,
+	moduleMappings, resourceMappings map[string]string,
+	configSecrets map[string]string,
+	configDir string,
+) ([]byte, *PatchStateResult, error) {
+	// Parse state using a decoder with UseNumber to preserve exact number
+	// representations. Without this, large integers (like AWS account IDs)
+	// become float64 and may re-serialize as scientific notation (e.g.,
+	// "5399223e-54"), which Pulumi's state parser rejects.
+	var state map[string]interface{}
+	dec := json.NewDecoder(strings.NewReader(string(stateData)))
+	dec.UseNumber()
+	if err := dec.Decode(&state); err != nil {
+		return nil, nil, fmt.Errorf("parsing state: %w", err)
+	}
+
+	deployment, ok := state["deployment"].(map[string]interface{})
+	if !ok {
+		return nil, nil, fmt.Errorf("state missing deployment")
+	}
+
+	resourcesRaw, ok := deployment["resources"].([]interface{})
+	if !ok {
+		return nil, nil, fmt.Errorf("state missing resources")
+	}
+
+	// Extract resource info from state for matching.
+	stateInfos := make(map[string]stateResourceInfo)
+	for _, raw := range resourcesRaw {
+		rMap, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		custom, _ := rMap["custom"].(bool)
+		if !custom {
+			continue
+		}
+		urn, _ := rMap["urn"].(string)
+		resType, _ := rMap["type"].(string)
+		parent, _ := rMap["parent"].(string)
+
+		name := urnName(urn)
+		parentName := urnName(parent)
+		isRoot := strings.Contains(parent, "pulumi:pulumi:Stack") || parent == ""
+
+		stateInfos[name] = stateResourceInfo{
+			name:         name,
+			resourceType: resType,
+			parentName:   parentName,
+			isRoot:       isRoot,
+		}
+	}
+
+	// Build digest name map.
+	nameMap := BuildDigestNameMap(digest, moduleMappings, resourceMappings, nil, stateInfos)
+
+	result := &PatchStateResult{DigestMapped: len(nameMap)}
+
+	// Patch resources.
+	for i, raw := range resourcesRaw {
+		rMap, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		custom, _ := rMap["custom"].(bool)
+		if !custom {
+			continue
+		}
+		urn, _ := rMap["urn"].(string)
+		resType, _ := rMap["type"].(string)
+		name := urnName(urn)
+
+		// Look up provider schema for this resource type.
+		prov, tfType, provOK := LookupProviderForPulumiType(resType, pulumiToTFType, providers)
+		if !provOK {
+			result.NoFields++
+			continue
+		}
+		schemaFields := GetSchemaFieldInfo(prov, tfType)
+		if len(schemaFields) == 0 {
+			result.NoFields++
+			continue
+		}
+
+		digResource := nameMap[name]
+
+		inputsRaw, _ := rMap["inputs"].(map[string]interface{})
+		outputsRaw, _ := rMap["outputs"].(map[string]interface{})
+		if inputsRaw == nil {
+			inputsRaw = map[string]interface{}{}
+		}
+		if outputsRaw == nil {
+			outputsRaw = map[string]interface{}{}
+		}
+
+		patched := false
+		var patchedAssetFields []assetFieldDeltaInfo
+		var patchedOutputFields []patchedOutputFieldInfo
+
+		for _, fieldInfo := range schemaFields {
+			if fieldInfo.IsComputed && !fieldInfo.IsInput {
+				continue // skip output-only fields
+			}
+
+			pulumiField := fieldInfo.PulumiName
+			tfAttr := fieldInfo.TFName
+
+			// Derive asset type string from schema.
+			assetTypeStr := ""
+			if fieldInfo.IsAsset {
+				switch info.AssetTranslationKind(fieldInfo.AssetKind) {
+				case info.FileAsset:
+					assetTypeStr = "FileAsset"
+				case info.FileArchive:
+					assetTypeStr = "FileArchive"
+				}
+			}
+
+			// Get digest value if we have a match.
+			var digVal interface{}
+			if digResource != nil && tfAttr != "" {
+				digVal = digResource.Attributes[tfAttr]
+				// For complex values (arrays, objects), convert snake_case keys
+				// to camelCase.
+				switch digVal.(type) {
+				case []interface{}, map[string]interface{}:
+					digVal = camelCaseKeys(digVal)
+				}
+			}
+
+			// Treat empty string the same as nil.
+			inputVal := inputsRaw[pulumiField]
+			inputEmpty := isEmptyValue(inputVal)
+			outputVal := outputsRaw[pulumiField]
+			outputEmpty := isEmptyValue(outputVal)
+
+			// Also treat empty-string digest values as unset.
+			digSensitive := digVal == "(sensitive)"
+			digEmpty := digVal == nil || digVal == "" || digSensitive
+
+			// For asset fields, convert the TF source path to a Pulumi asset sentinel.
+			if assetTypeStr != "" && configDir != "" && !digEmpty && !digSensitive {
+				if pathStr, ok := digVal.(string); ok {
+					absPath := filepath.Join(configDir, pathStr)
+					if _, err := os.Stat(absPath); err != nil && filepath.IsAbs(pathStr) {
+						base := strings.TrimSuffix(filepath.Base(pathStr), ".zip")
+						absPath = filepath.Join(configDir, base)
+					}
+					sentinel, err := buildAssetSentinel(absPath, assetTypeStr)
+					if err != nil && assetTypeStr == "FileArchive" && digResource != nil {
+						if fnName, ok := digResource.Attributes["function_name"].(string); ok && fnName != "" {
+							fnArn, _ := digResource.Attributes["arn"].(string)
+							fmt.Fprintf(os.Stderr, "  Downloading Lambda code for %s (%s)...\n", pulumiField, fnName)
+							sentinel, err = downloadLambdaCodeAsArchive(fnName, fnArn)
+						}
+					}
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "  WARNING: could not build asset sentinel for %s (%s): %v\n",
+							pulumiField, absPath, err)
+					} else {
+						digVal = sentinel
+					}
+				}
+			}
+
+			// For sensitive fields, try to resolve from stack config.
+			if digSensitive && digResource != nil && tfAttr != "" && len(configSecrets) > 0 {
+				configKey := flattenAddress(digResource.TerraformAddress, tfAttr)
+				if secretVal, ok := configSecrets[configKey]; ok && secretVal != "" {
+					jsonEncoded, err := json.Marshal(secretVal)
+					if err != nil {
+						return nil, nil, fmt.Errorf("encoding secret value for %s: %w", configKey, err)
+					}
+					digVal = map[string]interface{}{
+						"4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+						"plaintext":                        string(jsonEncoded),
+					}
+					digEmpty = false
+					digSensitive = false
+				}
+			}
+
+			isSentinel := isSecretSentinel(digVal)
+			inputIsBadPlain := isSentinel && inputVal != nil && !isSecretSentinel(inputVal)
+
+			isAssetSentinel := isAssetOrArchiveSentinel(digVal)
+			inputIsBadAsset := isAssetSentinel && inputVal != nil && !isAssetOrArchiveSentinel(inputVal)
+
+			// Patch inputs.
+			if inputEmpty || inputIsBadPlain || inputIsBadAsset {
+				if !digEmpty {
+					inputsRaw[pulumiField] = digVal
+					result.FieldsFromDigest++
+					patched = true
+					// Track asset fields for delta update.
+					if isAssetSentinel && fieldInfo.IsAsset {
+						kind := fieldInfo.AssetKind
+						format := int(fieldInfo.ArchiveFormat)
+						patchedAssetFields = append(patchedAssetFields, assetFieldDeltaInfo{
+							pulumiField: pulumiField,
+							tfField:     tfAttr,
+							kind:        kind,
+							format:      format,
+							hashField:   fieldInfo.HashField,
+						})
+					}
+				} else if digSensitive {
+					result.SkippedSensitive++
+				} else if fieldInfo.HasDefault && fieldInfo.SchemaDefault != nil {
+					inputsRaw[pulumiField] = fieldInfo.SchemaDefault
+					result.FieldsFromDefaults++
+					patched = true
+				}
+			}
+
+			// Patch outputs.
+			outputIsBadPlain := isSentinel && outputVal != nil && !isSecretSentinel(outputVal)
+			outputIsNullSentinel := isSentinel && isNullSentinel(outputVal)
+			outputIsBadAsset := isAssetSentinel && outputVal != nil && !isAssetOrArchiveSentinel(outputVal)
+			if outputEmpty || outputIsBadPlain || outputIsNullSentinel || outputIsBadAsset {
+				var newOutputVal interface{}
+				if !digEmpty {
+					newOutputVal = digVal
+				} else if fieldInfo.HasDefault && fieldInfo.SchemaDefault != nil {
+					newOutputVal = fieldInfo.SchemaDefault
+				}
+				if newOutputVal != nil {
+					outputsRaw[pulumiField] = newOutputVal
+					patchedOutputFields = append(patchedOutputFields, patchedOutputFieldInfo{
+						pulumiField: pulumiField,
+						oldValue:    outputVal,
+						newValue:    newOutputVal,
+					})
+				}
+			}
+		}
+
+		if patched {
+			result.Patched++
+		}
+		if deltaRaw, hasDelta := outputsRaw["__pulumi_raw_state_delta"]; hasDelta {
+			if len(patchedAssetFields) > 0 {
+				outputsRaw["__pulumi_raw_state_delta"] = injectAssetDeltas(deltaRaw, patchedAssetFields)
+			}
+			if len(patchedOutputFields) > 0 {
+				outputsRaw["__pulumi_raw_state_delta"] = updateDeltaForPatchedOutputs(outputsRaw["__pulumi_raw_state_delta"], patchedOutputFields)
+			}
+		}
+		if !patched && digResource == nil {
+			result.NoMatch++
+		}
+
+		rMap["inputs"] = inputsRaw
+		rMap["outputs"] = outputsRaw
+		resourcesRaw[i] = rMap
+	}
+
+	deployment["resources"] = resourcesRaw
+	state["deployment"] = deployment
+
+	out, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
+		return nil, nil, fmt.Errorf("marshaling patched state: %w", err)
+	}
+
+	return out, result, nil
 }
 
 // LoadFieldsFile reads and parses an aws-import-diff-fields.json file.
