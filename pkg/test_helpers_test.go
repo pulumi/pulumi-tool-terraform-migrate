@@ -119,3 +119,30 @@ func buildTestState(pulumiType, name string, inputs map[string]any) []byte {
 	}
 	return data
 }
+
+// buildTestStateIO creates a Pulumi state JSON with separate inputs and outputs maps,
+// mimicking real exported state where inputs and outputs are independent.
+func buildTestStateIO(pulumiType, name string, inputs, outputs map[string]any) []byte {
+	state := map[string]any{
+		"version": 3,
+		"deployment": map[string]any{
+			"resources": []any{
+				map[string]any{
+					"urn":     "urn:pulumi:dev::proj::" + pulumiType + "::" + name,
+					"type":    pulumiType,
+					"custom":  true,
+					"id":      name,
+					"parent":  "urn:pulumi:dev::proj::pulumi:pulumi:Stack::proj-dev",
+					"inputs":  inputs,
+					"outputs": outputs,
+				},
+			},
+		},
+	}
+
+	data, err := json.Marshal(state)
+	if err != nil {
+		panic("buildTestStateIO: " + err.Error())
+	}
+	return data
+}
