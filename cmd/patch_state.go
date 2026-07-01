@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg"
-	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -32,7 +31,6 @@ func newPatchStateCmd() *cobra.Command {
 	var statePath string
 	var digestPath string
 	var fieldsPath string
-	var schemaDriven bool
 	var mappingFile string
 	var outPath string
 	var projectDir string
@@ -50,10 +48,6 @@ are not returned by the cloud API on import and need patching. For each matching
 resource, if the state input is nil:
   1. Use the digest value if available (from TF state)
   2. Fall back to the default from the fields file
-
-Alternatively, use --schema-driven to load provider schemas from the digest
-and patch all nil input fields automatically. This is broader but may patch
-fields the program doesn't set, causing phantom diffs.
 
 After patching, re-import the state with: pulumi stack import --file <output>
 
@@ -141,41 +135,13 @@ Example:
 			var patched []byte
 			var result *pkg.PatchStateResult
 
-			if schemaDriven {
-				// Schema-driven path: load providers from digest metadata.
-				if len(digest.Providers) == 0 {
-					return fmt.Errorf("digest has no providers metadata; regenerate with latest module-map command")
-				}
-
-				var tfProviders []providermap.TerraformProviderName
-				for name := range digest.Providers {
-					tfProviders = append(tfProviders, providermap.TerraformProviderName(name))
-				}
-
-				providers, err := pkg.PulumiProvidersForTerraformProviders(tfProviders, digest.Providers)
-				if err != nil {
-					return fmt.Errorf("loading providers: %w", err)
-				}
-
-				typeMap := pkg.BuildPulumiToTFTypeMap(providers)
-
-				patched, result, err = pkg.PatchStateFromSchema(stateData, &digest, providers, typeMap, moduleMappings, resourceMappings, configSecrets, configDir)
-				if err != nil {
-					return err
-				}
-			} else {
-				// Fields-based path: use curated fields file.
-				if fieldsPath == "" {
-					return fmt.Errorf("--fields is required (or use --schema-driven for automatic patching)")
-				}
-				fieldsFile, err := pkg.LoadFieldsFile(fieldsPath)
-				if err != nil {
-					return err
-				}
-				patched, result, err = pkg.PatchState(stateData, &digest, fieldsFile, moduleMappings, resourceMappings, configSecrets, configDir)
-				if err != nil {
-					return err
-				}
+			fieldsFile, err := pkg.LoadFieldsFile(fieldsPath)
+			if err != nil {
+				return err
+			}
+			patched, result, err = pkg.PatchState(stateData, &digest, fieldsFile, moduleMappings, resourceMappings, configSecrets, configDir)
+			if err != nil {
+				return err
 			}
 
 			// Write output.
@@ -203,7 +169,6 @@ Example:
 	cmd.Flags().StringVar(&statePath, "state", "", "Exported stack state (from pulumi stack export)")
 	cmd.Flags().StringVar(&digestPath, "digest", "", "TF digest (tf-digest.json)")
 	cmd.Flags().StringVar(&fieldsPath, "fields", "", "Curated fields file (aws-import-diff-fields.json)")
-	cmd.Flags().BoolVar(&schemaDriven, "schema-driven", false, "Use schema-driven patching instead of curated fields file")
 	cmd.Flags().StringVar(&mappingFile, "mapping-file", "", "Path to YAML mapping file")
 	cmd.Flags().StringVarP(&outPath, "out", "o", "", "Output path for patched state")
 	cmd.Flags().StringVar(&projectDir, "project-dir", "", "Pulumi project directory (for reading stack config secrets)")
@@ -212,6 +177,7 @@ Example:
 
 	cmd.MarkFlagRequired("state")
 	cmd.MarkFlagRequired("digest")
+	cmd.MarkFlagRequired("fields")
 	cmd.MarkFlagRequired("out")
 
 	return cmd

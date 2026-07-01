@@ -390,23 +390,12 @@ patching and what their defaults are. This targeted approach only patches fields
 1. Not returned by the cloud API on import
 2. Actually set by the Pulumi program (e.g., `forceDestroy`, `acl`, `source`)
 
-An alternative `--schema-driven` mode is available that uses provider schemas to discover
-all nil input fields automatically. However, the Terraform schema does not sufficiently
-specify the functional relationships between fields within provider operations — for example,
-`sourceHash` is a valid optional input on `aws_s3_object` but is semantically redundant when
-`source` is a `FileAsset` (which has its own internal hash). Schema-driven patching has no
-way to know this, so it patches `sourceHash` from the digest, creating phantom diffs because
-the program doesn't set it. Similarly, fields like `tags` may be applied implicitly by the
-provider's `default_tags` configuration rather than explicitly in the program. These semantic
-gaps cause schema-driven patching to produce too many false patches and occasional panics.
-The curated fields file avoids this by only listing fields with known, verified patching
-behavior. Building out the fields file requires manual effort per resource type, but the
+Building out the fields file requires manual effort per resource type, but the
 result is predictable and safe.
 
 ### Usage
 
 ```bash
-# Fields-based (default, recommended):
 pulumi plugin run terraform-migrate -- patch-state \
   --state /tmp/exported-state.json \
   --digest tf-digest.json \
@@ -414,14 +403,6 @@ pulumi plugin run terraform-migrate -- patch-state \
   --mapping-file mappings.yaml \
   --project-dir . --stack dev \
   --config-dir ../environments/develop \
-  --out /tmp/patched-state.json
-
-# Schema-driven (experimental):
-pulumi plugin run terraform-migrate -- patch-state \
-  --state /tmp/exported-state.json \
-  --digest tf-digest.json \
-  --schema-driven \
-  --mapping-file mappings.yaml \
   --out /tmp/patched-state.json
 ```
 
@@ -440,8 +421,7 @@ pulumi plugin run terraform-migrate -- patch-state \
 |------|----------|-------------|
 | `--state` | Yes | Path to exported Pulumi state (`pulumi stack export --show-secrets`) |
 | `--digest` | Yes | Path to `tf-digest.json` |
-| `--fields` | Yes* | Path to `aws-import-diff-fields.json` (*required unless `--schema-driven`) |
-| `--schema-driven` | No | Use provider schemas instead of curated fields file |
+| `--fields` | Yes | Path to `aws-import-diff-fields.json` |
 | `--mapping-file` | No | Path to `mappings.yaml` (same as `import-id-match`) |
 | `--project-dir` | No | Pulumi project dir (for reading config secrets) |
 | `--stack` | No | Stack name (for reading config secrets) |
@@ -485,23 +465,6 @@ Each field entry supports: `default` (value to apply when nil), `asset` (`"FileA
 `"FileArchive"`), `assetKind` (bridge enum: 0=FileAsset, 2=FileArchive), `archiveFormat`
 (3=ZIPArchive), `hashField` (TF attr for source code hash). Fields without a `default` are
 only patched when a digest value is found.
-
-### Why not schema-driven?
-
-The Terraform schema does not sufficiently describe the functional relationships between
-fields within provider operations. Schema-driven patching treats every nil schema-valid
-input as needing a patch, which causes problems:
-
-- **`sourceHash`** on `aws_s3_object` is a valid optional input, but semantically redundant
-  when `source` is a `FileAsset` (which has its own internal hash). Schema-driven patches it
-  from the digest, creating phantom diffs because the program doesn't set it.
-- **`tags`** may be applied implicitly by the provider's `default_tags` configuration. The
-  schema says `tags` is a valid input, so schema-driven patches tags from the digest into
-  state inputs. But the program uses `defaultTags` on the provider — tags don't appear as
-  explicit inputs. The result: tag delete diffs on every resource.
-
-These semantic gaps make schema-driven patching produce too many false patches. The curated
-fields file avoids this by only listing fields with known, verified patching behavior.
 
 ### Patching pipeline
 
