@@ -1,0 +1,83 @@
+{
+  "_comment": "Fields that patch-state patches into imported Pulumi state. Only 'default', 'asset', 'assetKind', 'archiveFormat', and 'hashField' are read by the tool. All other keys are documentation.",
+  "provider": "pulumi-aws",
+  "fields": {
+    "aws:ecs/service:Service": {
+      "not_read": {
+        "waitForSteadyState": { "default": false }
+      }
+    },
+    "aws:ec2/securityGroup:SecurityGroup": {
+      "not_read": {
+        "revokeRulesOnDelete": { "default": false }
+      }
+    },
+    "aws:s3/bucketObject:BucketObject": {
+      "not_read": {
+        "forceDestroy": { "default": false },
+        "acl": { "default": "private" },
+        "content": { "_comment": "Patched from digest when content was set in TF" },
+        "source": { "asset": "FileAsset", "assetKind": 0 }
+      }
+    },
+    "aws:secretsmanager/secretVersion:SecretVersion": {
+      "not_read": {
+        "secretString": { "_comment": "Patched from digest (sensitive, resolved from stack config)" }
+      }
+    },
+    "aws:rds/clusterParameterGroup:ClusterParameterGroup": {
+      "not_read": {
+        "parameters": { "_comment": "Patched from digest (Read filters by source=user)" }
+      }
+    },
+    "aws:rds/clusterInstance:ClusterInstance": {
+      "not_read": {
+        "applyImmediately": { "default": false },
+        "forceDestroy": { "default": false }
+      }
+    },
+    "aws:s3/bucket:Bucket": {
+      "not_read": {
+        "forceDestroy": { "default": false }
+      }
+    },
+    "aws:secretsmanager/secret:Secret": {
+      "not_read": {
+        "forceOverwriteReplicaSecret": { "default": false },
+        "recoveryWindowInDays": { "default": 30 }
+      }
+    },
+    "aws:acm/certificate:Certificate": {
+      "not_read": {
+        "certificateBody": { "_comment": "Patched from digest (sensitive)" },
+        "certificateChain": { "_comment": "Patched from digest (sensitive)" },
+        "privateKey": { "_comment": "Patched from digest (sensitive)" }
+      }
+    },
+    "aws:sns/topicSubscription:TopicSubscription": {
+      "not_read": {
+        "confirmationTimeoutInMinutes": { "default": 1 },
+        "endpointAutoConfirms": { "default": false }
+      }
+    },
+    "aws:rds/cluster:Cluster": {
+      "not_read": {
+        "applyImmediately": { "default": false },
+        "enableGlobalWriteForwarding": { "default": false },
+        "enableLocalWriteForwarding": { "default": false },
+        "masterPassword": { "_comment": "Patched from digest (sensitive)" }
+      }
+    },
+    "aws:lambda/function:Function": {
+      "not_read": {
+        "publish": { "default": false },
+        "code": { "asset": "FileArchive", "assetKind": 2, "archiveFormat": 3, "hashField": "source_code_hash" }
+      }
+    },
+    "aws:ecs/taskDefinition:TaskDefinition": {
+      "not_read": {
+        "skipDestroy": { "default": false }
+      }
+    }
+  }
+}
