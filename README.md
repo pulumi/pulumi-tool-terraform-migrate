@@ -464,31 +464,68 @@ The fields file serves two purposes:
    `secretString` values). These are only patched when the resource is successfully matched
    to a TF digest entry via name mappings, because the values are unique per resource.
 
-Both categories are listed in the same fields file under `not_read`, distinguished by
-`root_cause`: `bridge_default` for TF SDK defaults, `aws_api_limitation` or `provider_design`
-for fields that need digest values. The fields file must be manually built out per resource
-type — resource types not listed in the file receive no patching at all.
+The fields file must be manually built out per resource type — resource types not listed
+in the file receive no patching at all. The v2 format is flat (no `not_read` wrapper):
+
+```json
+{
+  "fields": {
+    "aws:s3/bucket:Bucket": {
+      "forceDestroy": { "default": false }
+    },
+    "aws:lambda/function:Function": {
+      "publish": { "default": false },
+      "code": { "asset": "FileArchive", "assetKind": 2, "archiveFormat": 3, "hashField": "source_code_hash" }
+    }
+  }
+}
+```
+
+Each field entry supports: `default` (value to apply when nil), `asset` (`"FileAsset"` or
+`"FileArchive"`), `assetKind` (bridge enum: 0=FileAsset, 2=FileArchive), `archiveFormat`
+(3=ZIPArchive), `hashField` (TF attr for source code hash). Fields without a `default` are
+only patched when a digest value is found.
+
+### Why not schema-driven?
+
+The Terraform schema does not sufficiently describe the functional relationships between
+fields within provider operations. Schema-driven patching treats every nil schema-valid
+input as needing a patch, which causes problems:
+
+- **`sourceHash`** on `aws_s3_object` is a valid optional input, but semantically redundant
+  when `source` is a `FileAsset` (which has its own internal hash). Schema-driven patches it
+  from the digest, creating phantom diffs because the program doesn't set it.
+- **`tags`** may be applied implicitly by the provider's `default_tags` configuration. The
+  schema says `tags` is a valid input, so schema-driven patches tags from the digest into
+  state inputs. But the program uses `defaultTags` on the provider — tags don't appear as
+  explicit inputs. The result: tag delete diffs on every resource.
+
+These semantic gaps make schema-driven patching produce too many false patches. The curated
+fields file avoids this by only listing fields with known, verified patching behavior.
 
 ### Patching pipeline
 
 For each resource in the state:
 
 1. **Look up fields** by resource type in the fields file (skip if type not listed)
-2. **Try to match** the resource to a TF digest entry via name mappings (optional — defaults still apply without a match)
+2. **Try to match** the resource to a TF digest entry via name mappings (optional — defaults
+   still apply without a match)
 3. **Iterate** the fields listed for this type
-4. **Patch inputs**: if the state input is nil/empty, fill from the digest value (if matched) or the field's default
-4. **Build asset sentinels**: for `FileAsset`/`FileArchive` fields, convert TF file paths to Pulumi
-   asset/archive sentinels with SHA-256 hashes (falls back to downloading Lambda code from AWS
-   when local files aren't available)
-5. **Resolve secrets**: for sensitive fields redacted in the digest, look up decrypted values from
-   Pulumi stack config and wrap in secret sentinels
-6. **Patch outputs**: mirror simple values and asset sentinels to outputs (the bridge uses outputs
-   to reconstruct TF state for diffing)
-7. **Update delta**: inject asset delta entries into `__pulumi_raw_state_delta` so the bridge
+4. **Patch inputs**: if the state input is nil/empty, fill from the digest value (if matched)
+   or the field's default
+5. **Build asset sentinels**: for `FileAsset`/`FileArchive` fields, convert TF file paths to
+   Pulumi asset/archive sentinels with SHA-256 hashes (falls back to downloading Lambda code
+   from AWS when local files aren't available — requires AWS credentials via
+   `pulumi env run oidc-vic/dev --`)
+6. **Resolve secrets**: for sensitive fields redacted in the digest, look up decrypted values
+   from Pulumi stack config and wrap in secret sentinels
+7. **Patch outputs**: mirror simple values and asset sentinels to outputs (the bridge uses
+   outputs to reconstruct TF state for diffing)
+8. **Update delta**: inject asset delta entries into `__pulumi_raw_state_delta` so the bridge
    can correctly reverse asset translations during Diff
-8. **Validate with Recover**: run the bridge's `Recover` function against the patched outputs to
-   verify compatibility with the delta. If Recover fails, **revert output patches** to the
-   pre-patch values and log a warning. This prevents provider panics at preview time.
+9. **Validate with Recover**: run the bridge's `Recover` function against the patched outputs
+   to verify compatibility with the delta. If Recover fails, **revert both inputs and outputs**
+   to pre-patch values and log a warning. This prevents provider panics at preview time.
 
 ### Delta and Recover validation
 
@@ -499,8 +536,7 @@ incompatible with the delta (e.g., a string where the delta expects an object), 
 fails and the provider panics.
 
 The patcher validates every patched resource by running `Recover` inline after patching.
-On failure, it reverts the output changes (inputs remain patched) and increments the
-`Delta FAILED` counter in the output summary. This is safe because the bridge falls back
-to `rawStateRecoverNatural` for the unpatched outputs, which handles simple types correctly.
-The resource may show phantom diffs on the next preview but will not panic. After a
+On failure, it reverts both inputs and outputs to their pre-patch values (keeping them
+consistent) and increments the `Delta FAILED` counter. The resource retains its original
+imported state — it may show phantom diffs on the next preview but will not panic. After a
 successful `pulumi up`, the bridge recomputes a correct delta.
