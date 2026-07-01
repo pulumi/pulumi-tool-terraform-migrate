@@ -969,9 +969,7 @@ func TestPatchState_InjectsAssetDelta(t *testing.T) {
 						"source": "swagger-ui/index.html",
 						"__pulumi_raw_state_delta": map[string]interface{}{
 							"obj": map[string]interface{}{
-								"ps": map[string]interface{}{
-									"tags": map[string]interface{}{"map": map[string]interface{}{}},
-								},
+								"ps": map[string]interface{}{},
 							},
 						},
 					},
@@ -1031,9 +1029,8 @@ func TestPatchState_InjectsAssetDelta(t *testing.T) {
 	require.True(t, hasAsset, "source delta should be an asset delta")
 	assert.Equal(t, float64(0), assetEntry["kind"]) // FileAsset = 0
 
-	// Existing delta entries (tags) should be preserved.
-	_, hasTags := ps["tags"]
-	assert.True(t, hasTags, "existing tags delta should be preserved")
+	// No other delta entries should have been added.
+	assert.Equal(t, 1, len(ps), "only source delta should be in ps")
 }
 
 func TestPatchState_InjectsArchiveDelta(t *testing.T) {

@@ -300,7 +300,8 @@ func TestPatchState_V2_RecoverFailure_RevertsOutputs(t *testing.T) {
 	assert.Nil(t, outputs["acl"], "acl output should be reverted to nil")
 	_, hasDelta := outputs["__pulumi_raw_state_delta"]
 	assert.True(t, hasDelta, "delta should still be present after revert")
-	assert.Equal(t, "private", inputs["acl"], "input should still be patched")
+	// Inputs are also reverted to keep state consistent.
+	assert.Nil(t, inputs["acl"], "acl input should also be reverted")
 }
 
 // Suppress unused import warnings.

@@ -489,7 +489,11 @@ func patchAndValidateResource(
 	configSecrets map[string]string,
 	configDir string,
 ) (*patchResourceFieldsResult, map[string]interface{}, map[string]interface{}, error) {
-	// Snapshot outputs before patching so we can revert on Recover failure.
+	// Snapshot inputs and outputs before patching so we can revert on Recover failure.
+	inputsSnapshot := make(map[string]interface{}, len(inputsRaw))
+	for k, v := range inputsRaw {
+		inputsSnapshot[k] = v
+	}
 	outputsSnapshot := make(map[string]interface{}, len(outputsRaw))
 	for k, v := range outputsRaw {
 		outputsSnapshot[k] = v
@@ -508,12 +512,15 @@ func patchAndValidateResource(
 	}
 
 	// Validate patched outputs against delta using bridge's Recover.
-	// If Recover fails, revert outputs to pre-patch state to avoid panics.
+	// If Recover fails, revert both inputs and outputs to pre-patch state
+	// to avoid panics and keep inputs/outputs consistent.
 	if _, hasDelta := outputsRaw["__pulumi_raw_state_delta"]; hasDelta && res.patched {
 		if recoverErr := validateRecover(urn, outputsRaw); recoverErr != nil {
-			fmt.Fprintf(os.Stderr, "  WARNING: Recover failed for %s: %v — reverting output patches\n", name, recoverErr)
+			fmt.Fprintf(os.Stderr, "  WARNING: Recover failed for %s: %v — reverting all patches\n", name, recoverErr)
+			inputsRaw = inputsSnapshot
 			outputsRaw = outputsSnapshot
 			res.deltaFailed = true
+			res.patched = false
 		} else {
 			res.deltaValidated = true
 		}
