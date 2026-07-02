@@ -66,7 +66,7 @@ func TestPatchState_V2FieldsFile_AssetField(t *testing.T) {
 func TestPatchState_V2FieldsFile_LoadFromDisk(t *testing.T) {
 	t.Parallel()
 
-	ff, err := LoadFieldsFile("../aws-import-diff-fields-v2.json")
+	ff, err := LoadFieldsFile("../aws-import-diff-fields.json")
 	require.NoError(t, err)
 
 	// Verify a few known entries parsed correctly.

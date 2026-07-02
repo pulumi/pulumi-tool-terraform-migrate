@@ -1,502 +1,85 @@
 {
-  "description" : "AWS provider fields that cause post-import diffs. Each field includes metadata describing exactly what the provider does with the value on create, update, and delete.",
-  "provider" : "pulumi-aws",
-  "provider_version" : "7.31.0",
-  "bridge_version" : "3.121.0",
-  "references" : {
-    "bridge_default_diff" : "https://github.com/pulumi/pulumi-terraform-bridge/issues/2436",
-    "bridge_typeset" : "https://github.com/pulumi/pulumi-terraform-bridge/issues/3324",
-    "display_bug" : "https://github.com/pulumi/pulumi/issues/23067"
+  "_comment": "Fields that patch-state patches into imported Pulumi state. Only 'default', 'asset', 'assetKind', 'archiveFormat', and 'hashField' are read by the tool. See docs/aws-import-diff-fields.md for background.",
+  "provider": "pulumi-aws",
+  "falsyDefaultSuppression": {
+    "aws": "7.27.0"
   },
-  "_categories" : {
-    "not_read" : {
-      "description" : "Read doesn't populate this field. Import has null. Diff is null → value. Root cause depends on where the value comes from.",
-      "root_causes" : {
-        "bridge_default" : "Field has a TF SDK Default. Bridge applies it during PlanResourceChange on null import state. Program doesn't set it. Issue: https://github.com/pulumi/pulumi-terraform-bridge/issues/2436",
-        "aws_api_limitation" : "AWS API does not return this data. Program must provide the value explicitly.",
-        "provider_design" : "AWS API returns this data but provider Read doesn't populate it in state. Program must provide the value explicitly."
-      },
-      "_field_schema" : {
-        "default" : "TF SDK schema default applied when program doesn't set the field",
-        "read_from_aws" : "Whether any AWS API returns this value (false for all not_read fields)",
-        "sent_to_aws_on_create" : "Whether provider sends this to an AWS API during Create",
-        "sent_to_aws_on_update" : "Whether provider sends this to an AWS API during Update (true | false | conditional)",
-        "sent_to_aws_on_delete" : "Whether provider sends this to an AWS API during Delete",
-        "provider_side_effect" : "Provider behavior that doesn't involve an AWS API call (e.g. polling, waiting)",
-        "triggers_api" : "If the field conditionally triggers a separate AWS API call, which API and under what conditions",
-        "verify" : {
-          "check_tf_code" : "Whether to verify the default/value matches TF code",
-          "check_tf_state" : "Whether to verify against tf-digest (TF state persists this value from initial create)",
-          "check_aws" : "Whether to verify against deployed AWS resource via CLI",
-          "aws_cli" : "AWS CLI command to check the deployed value (when check_aws is true)",
-          "note" : "Additional verification guidance when direct check is not possible"
-        },
-        "note" : "Human-readable explanation of impact"
+  "fields": {
+    "aws:ecs/service:Service": {
+      "not_read": {
+        "waitForSteadyState": { "default": false }
       }
     },
-    "read_filtered" : {
-      "description" : "Read populates but filters results. Import has partial data.",
-      "root_cause" : "provider_design"
-    },
-    "provider_normalized" : {
-      "description" : "Read populates but normalizes format. Import has different structure, same semantics.",
-      "root_cause" : "provider_design"
-    },
-    "typeset_ordering" : {
-      "description" : "Read populates but bridge compares positionally. Import has different order, same values.",
-      "root_cause" : "bridge_bug",
-      "issue" : "https://github.com/pulumi/pulumi-terraform-bridge/issues/3324",
-      "note" : "Resolves after first pulumi up. Only recurs on pulumi refresh."
-    },
-    "computed_cascade" : {
-      "description" : "Output changes because an upstream field changed. Not directly settable.",
-      "root_cause" : "consequence"
-    },
-    "default_tags_migration" : {
-      "description" : "TF default_tags writes to explicit tags; Pulumi defaultTags writes to tagsAll. No tag lost.",
-      "root_cause" : "provider_difference",
-      "note" : "Applies to ANY resource type. Detected by field name (tags/tagsAll), not per-type."
-    }
-  },
-  "fields" : {
-    "aws:ecs/service:Service" : {
-      "not_read" : {
-        "waitForSteadyState" : {
-          "read_from_aws" : false,
-          "root_cause" : "bridge_default",
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : false,
-          "sent_to_aws_on_delete" : false,
-          "default" : false,
-          "provider_side_effect" : "When true, provider polls ECS until service reaches steady state after create/update. Blocks until stable.",
-          "note" : "No AWS API call. Controls how long the provider waits before returning.",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        }
-      },
-      "computed_cascade" : {
-        "taskDefinition" : "Includes revision number which changes on any task def update"
+    "aws:ec2/securityGroup:SecurityGroup": {
+      "not_read": {
+        "revokeRulesOnDelete": { "default": false }
       }
     },
-    "aws:ec2/securityGroup:SecurityGroup" : {
-      "not_read" : {
-        "revokeRulesOnDelete" : {
-          "default" : false,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : false,
-          "sent_to_aws_on_delete" : true,
-          "note" : "Revokes all ingress/egress rules before deleting the SG. No effect on create or update.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        }
+    "aws:s3/bucketObject:BucketObject": {
+      "not_read": {
+        "forceDestroy": { "default": false },
+        "acl": { "default": "private" },
+        "content": { "_comment": "Patched from digest when content was set in TF" },
+        "source": { "asset": "FileAsset", "assetKind": 0 }
       }
     },
-    "aws:s3/bucketObject:BucketObject" : {
-      "not_read" : {
-        "forceDestroy" : {
-          "default" : false,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : false,
-          "sent_to_aws_on_delete" : true,
-          "note" : "Forces object version deletion. No effect on create or update.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        },
-        "acl" : {
-          "default" : "private",
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "provider_design — GetObjectAcl API returns ACL but provider Read doesn't fetch it. PutObjectAcl called on update.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : false,
-            "check_tf_state" : false,
-            "check_aws" : true,
-            "aws_cli" : "s3api get-object-acl --bucket BUCKET --key KEY"
-          }
-        },
-        "content" : {
-          "default" : null,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "provider_design — GetObject API returns content but provider Read doesn't fetch it. PutObject called on update.",
-          "root_cause" : "provider_design",
-          "verify" : {
-            "check_tf_code" : false,
-            "check_tf_state" : false,
-            "check_aws" : true,
-            "aws_cli" : "s3 cp s3://BUCKET/KEY -"
-          }
-        },
-        "source" : {
-          "default" : null,
-          "asset" : "FileAsset",
-          "assetKind" : 0,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "provider_design — local file path, not an AWS field. Contents uploaded via PutObject.",
-          "root_cause" : "provider_design",
-          "verify" : {
-            "check_tf_code" : false,
-            "check_tf_state" : false,
-            "check_aws" : true,
-            "aws_cli" : "s3 cp s3://BUCKET/KEY -"
-          }
-        }
-      },
-      "computed_cascade" : {
-        "versionId" : "S3 creates new version on PutObject, cascades from content/source"
+    "aws:secretsmanager/secretVersion:SecretVersion": {
+      "not_read": {
+        "secretString": { "_comment": "Patched from digest (sensitive, resolved from stack config)" }
       }
     },
-    "aws:secretsmanager/secretVersion:SecretVersion" : {
-      "not_read" : {
-        "secretString" : {
-          "default" : null,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "provider_design — GetSecretValue API returns the value but provider Read doesn't populate it. PutSecretValue called on update.",
-          "root_cause" : "provider_design",
-          "verify" : {
-            "check_tf_code" : false,
-            "check_tf_state" : false,
-            "check_aws" : true,
-            "aws_cli" : "secretsmanager get-secret-value --secret-id ID"
-          }
-        }
+    "aws:rds/clusterParameterGroup:ClusterParameterGroup": {
+      "not_read": {
+        "parameters": { "_comment": "Patched from digest (Read filters by source=user)" }
       }
     },
-    "aws:rds/clusterParameterGroup:ClusterParameterGroup" : {
-      "not_read" : {
-        "parameters" : {
-          "default" : null,
-          "note" : "read_filtered — Read filters by Source=parameterSourceUser, discarding system defaults. Digest has the TF state value with snake_case keys (apply_method) which get camelCased (applyMethod) by the patcher.",
-          "root_cause" : "provider_design"
-        }
+    "aws:rds/clusterInstance:ClusterInstance": {
+      "not_read": {
+        "applyImmediately": { "default": false },
+        "forceDestroy": { "default": false }
       }
     },
-    "aws:rds/clusterInstance:ClusterInstance" : {
-      "not_read" : {
-        "applyImmediately" : {
-          "default" : false,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "Sent to ModifyDBInstance. false = changes deferred to maintenance window.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : true,
-            "check_aws" : false
-          }
-        },
-        "forceDestroy" : {
-          "default" : false,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : false,
-          "sent_to_aws_on_delete" : true,
-          "note" : "Forces instance deletion. No effect on create or update.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        }
+    "aws:s3/bucket:Bucket": {
+      "not_read": {
+        "forceDestroy": { "default": false }
       }
     },
-    "aws:s3/bucket:Bucket" : {
-      "not_read" : {
-        "forceDestroy" : {
-          "default" : false,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : false,
-          "sent_to_aws_on_delete" : true,
-          "note" : "Empties bucket (deletes all objects and versions) before bucket deletion. No effect on create or update.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        }
+    "aws:secretsmanager/secret:Secret": {
+      "not_read": {
+        "forceOverwriteReplicaSecret": { "default": false },
+        "recoveryWindowInDays": { "default": 30 }
       }
     },
-    "aws:wafv2/webAcl:WebAcl" : {
-      "typeset_ordering" : {
-        "rules" : "schema.TypeSet in TF provider. Bridge #3324 — deeply nested blocks fail element matching"
+    "aws:acm/certificate:Certificate": {
+      "not_read": {
+        "certificateBody": { "_comment": "Patched from digest (sensitive)" },
+        "certificateChain": { "_comment": "Patched from digest (sensitive)" },
+        "privateKey": { "_comment": "Patched from digest (sensitive)" }
       }
     },
-    "aws:secretsmanager/secret:Secret" : {
-      "not_read" : {
-        "forceOverwriteReplicaSecret" : {
-          "read_from_aws" : false,
-          "root_cause" : "bridge_default",
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : "conditional",
-          "sent_to_aws_on_delete" : false,
-          "default" : false,
-          "triggers_api" : "Only sent when replica regions are being added. No effect on update without replica changes.",
-          "note" : "Controls whether to overwrite a secret with the same name in a replica region.",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        },
-        "recoveryWindowInDays" : {
-          "default" : 30,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : false,
-          "sent_to_aws_on_delete" : true,
-          "note" : "Sent as RecoveryWindowInDays to DeleteSecret API. DescribeSecret does not return it. Value persists in TF state from initial create.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : true,
-            "check_aws" : false
-          }
-        }
+    "aws:sns/topicSubscription:TopicSubscription": {
+      "not_read": {
+        "confirmationTimeoutInMinutes": { "default": 1 },
+        "endpointAutoConfirms": { "default": false }
       }
     },
-    "aws:cloudfront/distribution:Distribution" : {
-      "computed_cascade" : {
-        "defaultCacheBehavior" : "lambdaFunctionAssociations[0].lambdaArn cascades from Lambda qualifiedArn"
+    "aws:rds/cluster:Cluster": {
+      "not_read": {
+        "applyImmediately": { "default": false },
+        "enableGlobalWriteForwarding": { "default": false },
+        "enableLocalWriteForwarding": { "default": false },
+        "masterPassword": { "_comment": "Patched from digest (sensitive)" }
       }
     },
-    "aws:acm/certificate:Certificate" : {
-      "not_read" : {
-        "certificateBody" : {
-          "default" : null,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "provider_design — GetCertificate API returns cert body but provider Read doesn't fetch it. ImportCertificate called on update.",
-          "root_cause" : "provider_design",
-          "verify" : {
-            "check_tf_code" : false,
-            "check_tf_state" : false,
-            "check_aws" : true,
-            "aws_cli" : "acm get-certificate --certificate-arn ARN (Certificate field)"
-          }
-        },
-        "certificateChain" : {
-          "default" : null,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "provider_design — GetCertificate API returns cert chain but provider Read doesn't fetch it. ImportCertificate called on update.",
-          "root_cause" : "provider_design",
-          "verify" : {
-            "check_tf_code" : false,
-            "check_tf_state" : false,
-            "check_aws" : true,
-            "aws_cli" : "acm get-certificate --certificate-arn ARN (CertificateChain field)"
-          }
-        },
-        "privateKey" : {
-          "default" : null,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "aws_api_limitation — private keys never returned by any AWS API. ImportCertificate called on update.",
-          "root_cause" : "aws_api_limitation",
-          "verify" : {
-            "check_tf_code" : false,
-            "check_tf_state" : true,
-            "check_aws" : false,
-            "note" : "AWS never returns private keys. Trust config secret from tf-digest."
-          }
-        }
+    "aws:lambda/function:Function": {
+      "not_read": {
+        "publish": { "default": false },
+        "code": { "asset": "FileArchive", "assetKind": 2, "archiveFormat": 3, "hashField": "source_code_hash" }
       }
     },
-    "aws:sns/topicSubscription:TopicSubscription" : {
-      "not_read" : {
-        "confirmationTimeoutInMinutes" : {
-          "read_from_aws" : false,
-          "root_cause" : "bridge_default",
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : false,
-          "sent_to_aws_on_delete" : false,
-          "default" : 1,
-          "provider_side_effect" : "Controls how long provider waits for subscription confirmation during creation.",
-          "note" : "No AWS API parameter. Provider-side timeout only. No effect on update or delete.",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        },
-        "endpointAutoConfirms" : {
-          "read_from_aws" : false,
-          "root_cause" : "bridge_default",
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : false,
-          "sent_to_aws_on_delete" : false,
-          "default" : false,
-          "provider_side_effect" : "Controls whether provider auto-confirms subscription during creation.",
-          "note" : "No AWS API parameter. Provider-side behavior only. No effect on update or delete.",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        }
-      }
-    },
-    "aws:rds/cluster:Cluster" : {
-      "not_read" : {
-        "applyImmediately" : {
-          "default" : false,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "Sent as ApplyImmediately param to ModifyDBCluster on every update. false = changes deferred to maintenance window. Affects ALL future Pulumi updates to this cluster.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : true,
-            "check_aws" : false
-          }
-        },
-        "enableGlobalWriteForwarding" : {
-          "default" : false,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "Sent to ModifyDBCluster. false = disabled. Safe if global write forwarding is not currently enabled.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        },
-        "enableLocalWriteForwarding" : {
-          "default" : false,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "Sent to ModifyDBCluster. false = disabled. Safe if local write forwarding is not currently enabled.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        },
-        "masterPassword" : {
-          "default" : null,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "aws_api_limitation — DescribeDBClusters never returns passwords. ModifyDBCluster called with password on update. Verify config secret matches deployed before applying.",
-          "root_cause" : "aws_api_limitation",
-          "verify" : {
-            "check_tf_code" : false,
-            "check_tf_state" : true,
-            "check_aws" : false,
-            "note" : "AWS never returns passwords. Trust config secret from tf-digest."
-          }
-        }
-      }
-    },
-    "aws:lambda/function:Function" : {
-      "not_read" : {
-        "publish" : {
-          "read_from_aws" : false,
-          "root_cause" : "bridge_default",
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : "conditional",
-          "sent_to_aws_on_delete" : false,
-          "default" : false,
-          "triggers_api" : "When true AND code or config also changes, calls PublishVersion to create a new Lambda version. Changes qualifiedArn, qualifiedInvokeArn, version outputs.",
-          "note" : "Setting false after import is safe — no version published. Setting true only publishes if code/config also changes in the same update.",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        },
-        "code" : {
-          "default" : null,
-          "asset" : "FileArchive",
-          "assetKind" : 2,
-          "archiveFormat" : 3,
-          "hashField" : "source_code_hash",
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : true,
-          "sent_to_aws_on_update" : true,
-          "sent_to_aws_on_delete" : false,
-          "note" : "aws_api_limitation — GetFunction returns presigned download URL, not package content. UpdateFunctionCode called on update. Verify deployed code matches program before applying.",
-          "root_cause" : "aws_api_limitation",
-          "verify" : {
-            "check_tf_code" : false,
-            "check_tf_state" : false,
-            "check_aws" : true,
-            "aws_cli" : "lambda get-function --function-name NAME (download from Code.Location URL)"
-          }
-        }
-      },
-      "computed_cascade" : {
-        "qualifiedArn" : "Changes when new version published (from code + publish)",
-        "qualifiedInvokeArn" : "Changes when new version published (from code + publish)",
-        "lastModified" : "Timestamp updated on any function change",
-        "version" : "Increments when new version published (from code + publish)"
-      }
-    },
-    "aws:lb/listener:Listener" : {
-      "provider_normalized" : {
-        "defaultActions" : "AWS normalizes targetGroupArn into forward block with stickiness.duration=0"
-      }
-    },
-    "aws:ecs/taskDefinition:TaskDefinition" : {
-      "not_read" : {
-        "skipDestroy" : {
-          "default" : false,
-          "read_from_aws" : false,
-          "sent_to_aws_on_create" : false,
-          "sent_to_aws_on_update" : false,
-          "sent_to_aws_on_delete" : true,
-          "note" : "When true, skips DeregisterTaskDefinition on delete. No effect on create or update.",
-          "root_cause" : "bridge_default",
-          "verify" : {
-            "check_tf_code" : true,
-            "check_tf_state" : false,
-            "check_aws" : false
-          }
-        }
+    "aws:ecs/taskDefinition:TaskDefinition": {
+      "not_read": {
+        "skipDestroy": { "default": false }
       }
     }
   }
