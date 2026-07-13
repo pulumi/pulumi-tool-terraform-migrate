@@ -18,18 +18,46 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
-// FetchRegistryVersions returns the set of upstream provider versions (without the "v"
-// prefix) that the Terraform registry actually serves for the given bridged provider.
-// It returns ok=false when the provider has no registry.terraform.io mapping or the
-// registry could not be queried; callers should skip validation in that case rather
-// than treat it as "no versions available".
+// NewUpstreamVersionValidator returns a function that rejects inferred upstream versions
+// the Terraform registry does not actually serve for the given bridged provider (yanked
+// releases, or misparsed versions of tools like pulumi-terraform-bridge). The registry
+// is queried lazily on first use, so providers with nothing to infer never hit the
+// network. If it cannot be queried (or the provider has no registry.terraform.io
+// mapping), a warning is printed once and every version is accepted rather than
+// failing each one.
 //
 // Used in internal offline tooling only.
-func FetchRegistryVersions(bp BridgedProvider) (map[string]bool, bool) {
+func NewUpstreamVersionValidator(bp BridgedProvider) func(ReleaseTag) error {
+	fetch := sync.OnceValues(func() (map[string]bool, bool) {
+		available, ok := fetchRegistryVersions(bp)
+		if !ok {
+			fmt.Fprintf(os.Stderr,
+				"  Warning: cannot validate upstream versions for %s against the Terraform registry\n", bp)
+		}
+		return available, ok
+	})
+	return func(v ReleaseTag) error {
+		available, ok := fetch()
+		if ok && !available[strings.TrimPrefix(string(v), "v")] {
+			return fmt.Errorf("inferred upstream version %s is not available from the Terraform registry", v)
+		}
+		return nil
+	}
+}
+
+// fetchRegistryVersions returns the set of upstream provider versions (without the "v"
+// prefix) that the Terraform registry actually serves for the given bridged provider.
+// It returns ok=false when the provider has no registry.terraform.io mapping or the
+// registry could not be queried. When a provider maps from several registry addresses,
+// one successful fetch is enough for ok=true, so a partially failed fetch can yield an
+// incomplete set — acceptable because a human reviews the resulting versions.yaml diff.
+func fetchRegistryVersions(bp BridgedProvider) (map[string]bool, bool) {
 	var addrs []string
 	for addr, detail := range providerMapping {
 		s := string(addr)

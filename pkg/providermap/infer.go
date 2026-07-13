@@ -124,9 +124,12 @@ func InferUpstreamVersion(bp BridgedProvider, tag ReleaseTag) (ReleaseTag, error
 	return inferUpstreamVersionFromReleaseNotes(bp, tag, repoDir)
 }
 
-// isValidGitRepo reports whether dir exists and git recognizes it as a repository.
+// isValidGitRepo reports whether dir is itself a git repository. Statting dir/.git
+// rather than dir alone matters because rev-parse searches upward: a reaped cache
+// whose enclosing directory happens to be inside some repository must not pass, or
+// later git commands would silently read that repository instead.
 func isValidGitRepo(dir string) bool {
-	if _, err := os.Stat(dir); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
 		return false
 	}
 	cmd := exec.Command("git", "rev-parse", "--git-dir")

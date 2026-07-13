@@ -17,7 +17,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/pulumi/pulumi-tool-terraform-migrate/pkg/providermap"
@@ -86,14 +85,8 @@ func updateProviderMap(versionMapPath string, provider string, recompute bool, p
 			return
 		}
 
-		// Versions the Terraform registry actually serves for this provider, used to
-		// reject inferred upstream versions that cannot be downloaded (yanked releases,
-		// or misparsed versions of tools like pulumi-terraform-bridge). If the registry
-		// cannot be queried, validation is skipped rather than failing every version.
-		registryVersions, validateRegistry := providermap.FetchRegistryVersions(bp)
-		if !validateRegistry {
-			fmt.Fprintf(os.Stderr, "  Warning: cannot validate upstream versions for %s against the Terraform registry\n", bp)
-		}
+		// Rejects inferred upstream versions the Terraform registry does not serve.
+		validateUpstream := providermap.NewUpstreamVersionValidator(bp)
 
 		// For every tag not yet in the VersionMap, try to infer upstream version
 		for _, tag := range tags {
@@ -111,9 +104,8 @@ func updateProviderMap(versionMapPath string, provider string, recompute bool, p
 			}
 
 			upstreamVersion, err := providermap.InferUpstreamVersion(bp, tag)
-			if err == nil && validateRegistry &&
-				!registryVersions[strings.TrimPrefix(string(upstreamVersion), "v")] {
-				err = fmt.Errorf("inferred upstream version %s is not available from the Terraform registry", upstreamVersion)
+			if err == nil {
+				err = validateUpstream(upstreamVersion)
 			}
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "  %s: %v\n", tag, err)
