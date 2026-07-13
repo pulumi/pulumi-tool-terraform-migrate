@@ -650,8 +650,9 @@ func RecommendPulumiProvider(tf TerraformProvider) RecommendedPulumiProvider {
 	var recommendedVersion ReleaseTag
 
 	if tfVersion == "" {
-		// If no desired TF version, use latest.
-		recommendedVersion = latestVersion(versionPairs)
+		// If no desired TF version, use latest. Pass the unfiltered pairs so providers
+		// whose entries are all errors still resolve to their newest Pulumi release.
+		recommendedVersion = latestVersion(originalVersionPairs)
 	} else {
 		tfSemver, err := semver.Parse(tfVersion)
 		contract.AssertNoErrorf(err, "A non-empty tfVersion should be a valid semver: %v", err)
@@ -707,6 +708,12 @@ func latestVersion(versionPairs []VersionPair) ReleaseTag {
 			continue
 		}
 		return vp.Pulumi
+	}
+	// No entry has a known upstream version (e.g. upstream inference failed for every
+	// release of this provider). The newest Pulumi release is still the best available
+	// recommendation.
+	if len(versionPairs) > 0 {
+		return versionPairs[0].Pulumi
 	}
 	contract.Failf("Expected to always find the latest version in data")
 	return ""

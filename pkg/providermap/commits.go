@@ -28,11 +28,23 @@ import (
 // The version is captured in group 1
 var versionPattern = regexp.MustCompile(`(?i)(?:terraform|upstream).*to\s+(v?\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?)`)
 
+// nonUpstreamTerraformPattern matches tool and library names that contain the word
+// "terraform" but never refer to the upstream Terraform provider, such as
+// "pulumi-terraform-bridge" or "terraform-plugin-sdk". Version bumps of these must not
+// be mistaken for upstream provider upgrades (e.g. "Upgrade pulumi-terraform-bridge to
+// v3.130.0" previously recorded v3.130.0 as the provider's upstream version). Separators
+// vary in the wild ("Upgrade pulumi terraform bridge to v3.59.0"), hence [-/ ].
+var nonUpstreamTerraformPattern = regexp.MustCompile(
+	`(?i)(?:pulumi[-/ ])?terraform[- ]bridge|terraform[- ]plugin[- ][a-z0-9-]+`)
+
 // parseVersionFromCommitMsg extracts a version string from a commit message.
 // It looks for patterns like "Upgrade terraform-provider-random to v3.8.0" and returns
 // the version string (e.g., "v3.8.0"). If multiple versions are found, it returns the
 // largest version by semantic versioning rules. Returns an error if no version is found.
 func parseVersionFromCommitMsg(message string) (ReleaseTag, error) {
+	// Mask bridge/plugin-library names so their embedded "terraform" cannot
+	// trigger versionPattern; "bridge" alone is already excluded by the pattern.
+	message = nonUpstreamTerraformPattern.ReplaceAllString(message, "bridge")
 	allMatches := versionPattern.FindAllStringSubmatch(message, -1)
 	if len(allMatches) == 0 {
 		return "", fmt.Errorf("no upstream version found in commit message")
