@@ -116,6 +116,19 @@ func TestRecommendPulumiProvider(t *testing.T) {
 			expectedVersion:              "",
 			expectedUseTerraformProvider: true,
 		},
+		{
+			// Every slack entry in versions.yaml is an error entry (upstream version
+			// inference failed for all of its releases), so this exercises the fallback
+			// to the newest Pulumi release when no upstream mapping is known.
+			name: "Slack - provider with only error entries recommends newest release",
+			input: TerraformProvider{
+				Identifier: "registry.terraform.io/jmatsu/slack",
+				Version:    "",
+			},
+			expectedBridgedProvider:      "slack",
+			expectedMinVersion:           "v0.5.0",
+			expectedUseTerraformProvider: false,
+		},
 	}
 
 	for _, tt := range tests {

@@ -85,6 +85,9 @@ func updateProviderMap(versionMapPath string, provider string, recompute bool, p
 			return
 		}
 
+		// Rejects inferred upstream versions the Terraform registry does not serve.
+		validateUpstream := providermap.NewUpstreamVersionValidator(bp)
+
 		// For every tag not yet in the VersionMap, try to infer upstream version
 		for _, tag := range tags {
 			var hasVersion bool
@@ -101,6 +104,9 @@ func updateProviderMap(versionMapPath string, provider string, recompute bool, p
 			}
 
 			upstreamVersion, err := providermap.InferUpstreamVersion(bp, tag)
+			if err == nil {
+				err = validateUpstream(upstreamVersion)
+			}
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "  %s: %v\n", tag, err)
 				if mu != nil {

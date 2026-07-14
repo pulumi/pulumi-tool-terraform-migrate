@@ -67,8 +67,13 @@ func InferUpstreamVersion(bp BridgedProvider, tag ReleaseTag) (ReleaseTag, error
 	cacheDir := filepath.Join(cacheBase, fmt.Sprintf("pulumi-%s", bp))
 	repoDir := filepath.Join(cacheDir, "repo")
 
-	// Check if repo already exists
-	if _, err := os.Stat(repoDir); os.IsNotExist(err) {
+	// Check if repo already exists and is a usable git repository. The cache lives under
+	// os.TempDir(), where cleaners may reap files while leaving the directory tree behind,
+	// so mere existence of repoDir is not enough.
+	if !isValidGitRepo(repoDir) {
+		if err := os.RemoveAll(repoDir); err != nil {
+			return "", fmt.Errorf("failed to remove stale cache repo: %w", err)
+		}
 		// Create cache directory if it doesn't exist
 		if err := os.MkdirAll(cacheDir, 0755); err != nil {
 			return "", fmt.Errorf("failed to create cache dir: %w", err)
@@ -117,6 +122,19 @@ func InferUpstreamVersion(bp BridgedProvider, tag ReleaseTag) (ReleaseTag, error
 
 	// Fall back to fetching release notes and parsing those.
 	return inferUpstreamVersionFromReleaseNotes(bp, tag, repoDir)
+}
+
+// isValidGitRepo reports whether dir is itself a git repository. Statting dir/.git
+// rather than dir alone matters because rev-parse searches upward: a reaped cache
+// whose enclosing directory happens to be inside some repository must not pass, or
+// later git commands would silently read that repository instead.
+func isValidGitRepo(dir string) bool {
+	if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
+		return false
+	}
+	cmd := exec.Command("git", "rev-parse", "--git-dir")
+	cmd.Dir = dir
+	return cmd.Run() == nil
 }
 
 func inferUpstreamVersionFromCommitMsg(repoDir string) (ReleaseTag, error) {

@@ -174,6 +174,43 @@ Update upstream to 2.0.0-alpha.5`,
 			expected:    "v2.5.0",
 			expectError: false,
 		},
+		{
+			name:        "pulumi-terraform-bridge bump should not match",
+			message:     "Upgrade pulumi-terraform-bridge to v3.130.0",
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "terraform-plugin-sdk bump should not match",
+			message:     "Upgrade terraform-plugin-sdk to v2.34.0",
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "Space-separated bridge bump should not match",
+			message:     "Upgrade pulumi terraform bridge to v3.59.0 (#405)",
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "Bridge bump on a line with another terraform token should not match",
+			message:     "terraform: upgrade pulumi-terraform-bridge to v3.130.0",
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "Bridge bump on a line mentioning upstream should not match",
+			message:     "Update upstream deps: bump pulumi-terraform-bridge to v3.130.0",
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name: "Bridge bump must not win over provider upgrade",
+			message: `Upgrade pulumi-terraform-bridge to v3.130.0
+Upgrade terraform-provider-random to v3.9.0`,
+			expected:    "v3.9.0",
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
