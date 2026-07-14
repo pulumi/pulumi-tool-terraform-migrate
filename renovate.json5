@@ -1,0 +1,17 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["github>pulumi/renovate-config//default.json5"],
+  packageRules: [
+    {
+      // The org preset gates bridge upgrades behind Dependency Dashboard
+      // approval and runs `make renovate` (this repo has no Makefile).
+      // Override: open bridge PRs automatically and automerge on green CI,
+      // like other first-party Pulumi deps.
+      matchManagers: ["gomod"],
+      matchPackageNames: ["github.com/pulumi/pulumi-terraform-bridge/v3"],
+      dependencyDashboardApproval: false,
+      minimumReleaseAge: "0 days",
+      postUpgradeTasks: { commands: [] },
+    },
+  ],
+}
