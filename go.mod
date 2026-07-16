@@ -167,7 +167,7 @@ require (
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/openbao/openbao/api/v2 v2.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0 // indirect
+	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opentofu/registry-address/v2 v2.0.0-20250611143131-d0a99bd8acdd // indirect
 	github.com/opentracing/basictracer-go v1.1.0 // indirect
 	github.com/pgavlin/fx v0.1.6 // indirect
