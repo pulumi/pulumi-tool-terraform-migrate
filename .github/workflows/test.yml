@@ -42,7 +42,7 @@ jobs:
         uses: pulumi/actions@8582a9e8cc630786854029b4e09281acd6794b58 # v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: 'go.mod'
 
