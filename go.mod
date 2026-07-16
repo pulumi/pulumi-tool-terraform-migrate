@@ -167,7 +167,7 @@ require (
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/openbao/openbao/api/v2 v2.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0 // indirect
+	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opentofu/registry-address/v2 v2.0.0-20250611143131-d0a99bd8acdd // indirect
 	github.com/opentracing/basictracer-go v1.1.0 // indirect
 	github.com/pgavlin/fx v0.1.6 // indirect
@@ -260,7 +260,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	lukechampine.com/frand v1.5.1 // indirect
 	mvdan.cc/gofumpt v0.9.2 // indirect
-	oras.land/oras-go/v2 v2.5.0 // indirect
+	oras.land/oras-go/v2 v2.6.1 // indirect
 )
 
 replace github.com/hashicorp/terraform-plugin-sdk/v2 => github.com/pulumi/terraform-plugin-sdk/v2 v2.0.0-20260318212141-5525259d096b
