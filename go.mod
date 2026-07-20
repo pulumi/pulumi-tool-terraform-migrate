@@ -13,7 +13,7 @@ require (
 	github.com/hashicorp/terraform-json v0.27.2
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1
 	github.com/hexops/autogold/v2 v2.3.1
-	github.com/opentofu/svchost v0.0.0-20250610175836-86c9e5e3d8c8
+	github.com/opentofu/svchost v0.0.0-20260410171206-1a42986aa3f4
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pulumi/opentofu v0.0.0-20250808205121-cc4a35131222
 	github.com/pulumi/pulumi-terraform-bridge/v3 v3.134.0
