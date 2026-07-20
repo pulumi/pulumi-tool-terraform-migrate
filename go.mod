@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-cty v1.5.0
 	github.com/hashicorp/go-plugin v1.7.0
-	github.com/hashicorp/terraform-exec v0.25.0
+	github.com/hashicorp/terraform-exec v0.25.2
 	github.com/hashicorp/terraform-json v0.27.2
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1
 	github.com/hexops/autogold/v2 v2.3.1
@@ -20,7 +20,7 @@ require (
 	github.com/pulumi/pulumi/sdk/v3 v3.253.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
-	github.com/zclconf/go-cty v1.17.0
+	github.com/zclconf/go-cty v1.18.1
 	google.golang.org/grpc v1.82.0
 	gopkg.in/yaml.v3 v3.0.1
 )
