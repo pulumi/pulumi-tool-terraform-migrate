@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/go-plugin v1.7.0
 	github.com/hashicorp/terraform-exec v0.25.2
 	github.com/hashicorp/terraform-json v0.27.2
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1
 	github.com/hexops/autogold/v2 v2.3.1
 	github.com/opentofu/svchost v0.0.0-20260410171206-1a42986aa3f4
 	github.com/opentracing/opentracing-go v1.2.0
