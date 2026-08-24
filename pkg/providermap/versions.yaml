@@ -1147,6 +1147,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     auth0:
+        - pulumi: v3.51.0
+          upstream: v1.55.0
         - pulumi: v3.50.1
           upstream: v1.54.1
         - pulumi: v3.50.0
@@ -1388,6 +1390,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     aws:
+        - pulumi: v7.43.0
+          upstream: v6.61.0
         - pulumi: v7.42.0
           upstream: v6.59.0
         - pulumi: v7.41.0
@@ -4385,6 +4389,10 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     databricks:
+        - pulumi: v1.106.0
+          upstream: v1.128.0
+        - pulumi: v1.105.0
+          upstream: v1.127.0
         - pulumi: v1.104.0
           upstream: v1.126.0
         - pulumi: v1.103.0
@@ -5062,6 +5070,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     digitalocean:
+        - pulumi: v4.79.0
+          upstream: v2.100.0
         - pulumi: v4.78.1
           upstream: v2.99.1
         - pulumi: v4.78.0
@@ -6233,6 +6243,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     gcp:
+        - pulumi: v9.35.0
+          upstream: v7.45.0
         - pulumi: v9.34.1
           upstream: v7.43.0
         - pulumi: v9.34.0
@@ -7450,6 +7462,12 @@ bridged:
         - pulumi: v0.18.0
           error: no GitHub release
     harness:
+        - pulumi: v0.16.2
+          upstream: v0.45.2
+        - pulumi: v0.16.1
+          upstream: v0.45.1
+        - pulumi: v0.16.0
+          upstream: v0.45.0
         - pulumi: v0.15.7
           upstream: v0.44.9
         - pulumi: v0.15.6
@@ -9151,6 +9169,8 @@ bridged:
         - pulumi: v1.0.0
           error: no GitHub release
     newrelic:
+        - pulumi: v5.75.3
+          upstream: v3.96.3
         - pulumi: v5.75.2
           upstream: v3.96.2
         - pulumi: v5.75.1
@@ -11893,6 +11913,8 @@ bridged:
         - pulumi: v0.1.0
           error: no GitHub release
     snowflake:
+        - pulumi: v2.20.0
+          error: inferred upstream version v2.20.0 is not available from the Terraform registry
         - pulumi: v2.19.0
           error: inferred upstream version v2.19.0 is not available from the Terraform registry
         - pulumi: v2.18.0
