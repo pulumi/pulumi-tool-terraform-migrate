@@ -1,6 +1,6 @@
 module github.com/pulumi/pulumi-tool-terraform-migrate
 
-go 1.26.0
+go 1.26.8
 
 require (
 	github.com/apparentlymart/go-versions v1.0.3
